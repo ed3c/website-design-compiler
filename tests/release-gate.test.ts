@@ -11,7 +11,8 @@ const pass = {
   arena: "PASS",
   showcase: "PASS",
   externalSkills: "PASS",
-  mediaGenerator: "PASS"
+  mediaGenerator: "PASS",
+  authoringStudio: "PASS"
 } as const;
 
 test("release gate passes only when all hard evidence layers pass", () => {
@@ -46,6 +47,10 @@ test("media generator evidence regression makes release fail", () => {
   assert.equal(evaluateReleaseGate({ ...pass, mediaGenerator: "FAIL" }).overall, "FAIL");
 });
 
+test("governed authoring projection regression makes release fail", () => {
+  assert.equal(evaluateReleaseGate({ ...pass, authoringStudio: "FAIL" }).overall, "FAIL");
+});
+
 test("missing or unimplemented evidence cannot become release PASS", () => {
   assert.equal(evaluateReleaseGate({ ...pass, browser: "NOT_EXERCISED" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, runtime: "NOT_IMPLEMENTED" }).overall, "FAIL");
@@ -55,4 +60,5 @@ test("missing or unimplemented evidence cannot become release PASS", () => {
   assert.equal(evaluateReleaseGate({ ...pass, showcase: "ABSENT" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, externalSkills: "ABSENT" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, mediaGenerator: "ABSENT" }).overall, "FAIL");
+  assert.equal(evaluateReleaseGate({ ...pass, authoringStudio: "ABSENT" }).overall, "FAIL");
 });
