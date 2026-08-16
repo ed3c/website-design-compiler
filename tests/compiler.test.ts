@@ -4,7 +4,7 @@ import test from "node:test";
 import { compile } from "../src/compiler.js";
 import { validateCompilerInput } from "../src/validate.js";
 
-test("minimal fixture validates and produces PASS for implemented reference, art direction, frontend, motion, graphics 2d, and release stages", async () => {
+test("minimal fixture validates and produces PASS for implemented reference, art direction, frontend, motion, 2d, 3d, and release stages", async () => {
   const fixtureUrl = new URL("../fixtures/minimal/compiler-input.json", import.meta.url);
   const raw = JSON.parse(await readFile(fixtureUrl, "utf8")) as unknown;
   const input = await validateCompilerInput(raw);
@@ -19,6 +19,7 @@ test("minimal fixture validates and produces PASS for implemented reference, art
     ["frontend-builder", "PASS"],
     ["motion-director", "PASS"],
     ["graphics-2d", "PASS"],
+    ["graphics-3d", "PASS"],
     ["release-receipt", "PASS"]
   ]);
   assert.match(receipt.inputSha256, /^[a-f0-9]{64}$/);
