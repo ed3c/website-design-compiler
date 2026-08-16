@@ -25,12 +25,26 @@ test("minimal fixture validates and produces PASS for implemented reference, art
   assert.match(receipt.inputSha256, /^[a-f0-9]{64}$/);
 });
 
+test("media-generator is executable and reports its governed plan artifact", async () => {
+  const input = await validateCompilerInput({
+    schema: "website-design-compiler/input/v1",
+    project: "media-generator-stage",
+    brief: { pageType: "landing", audience: "teams", objective: "test media evidence" },
+    requestedStages: ["media-generator"]
+  });
+  const receipt = compile(input, new Date("2026-08-16T00:00:00.000Z"));
+
+  assert.equal(receipt.overall, "PASS");
+  assert.equal(receipt.stages[0]?.state, "PASS");
+  assert.deepEqual(receipt.stages[0]?.artifacts, ["media-generator/media-generator-plan.json"]);
+});
+
 test("known but unavailable stage is NOT_IMPLEMENTED, never PASS", async () => {
   const input = await validateCompilerInput({
     schema: "website-design-compiler/input/v1",
     project: "unimplemented-stage",
     brief: { pageType: "landing", audience: "teams", objective: "test evidence" },
-    requestedStages: ["media-generator"]
+    requestedStages: ["originality-gate"]
   });
   const receipt = compile(input, new Date("2026-08-16T00:00:00.000Z"));
 
