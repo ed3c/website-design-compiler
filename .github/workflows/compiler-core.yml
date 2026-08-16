@@ -38,5 +38,6 @@ jobs:
             artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
             artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
             artifacts/runtime/minimal/reference-intelligence/originality-plan.json
+            artifacts/runtime/minimal/reference-intelligence/originality-plan.md
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: error
