@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput, CompilerReference, EvidenceState } from "./contracts.js";
+import { captureReference } from "./reference-capture.js";
 
 export interface ReferenceManifestEntry {
   id: string;
@@ -9,6 +10,12 @@ export interface ReferenceManifestEntry {
   captureState: EvidenceState;
   observableFacts: string[];
   unknownImplementationDetails: true;
+  provenance: {
+    adapter: string;
+    sourceKind: CompilerReference["kind"];
+    sourceMode: "INLINE" | "FILE" | "REMOTE" | "UNEXERCISED";
+  };
+  reason?: string;
 }
 
 export interface ReferenceManifest {
@@ -25,18 +32,27 @@ export interface OriginalityPlan {
   reject: string[];
 }
 
-export function buildReferenceManifest(input: CompilerInput): ReferenceManifest {
+export async function buildReferenceManifest(input: CompilerInput): Promise<ReferenceManifest> {
+  const entries = await Promise.all(
+    (input.references ?? []).map(async (reference, index): Promise<ReferenceManifestEntry> => {
+      const capture = await captureReference(reference);
+      return {
+        id: `ref-${String(index + 1).padStart(3, "0")}`,
+        kind: reference.kind,
+        source: reference.value,
+        captureState: capture.state,
+        observableFacts: capture.facts,
+        unknownImplementationDetails: true,
+        provenance: capture.provenance,
+        ...(capture.reason ? { reason: capture.reason } : {})
+      };
+    })
+  );
+
   return {
     schema: "website-design-compiler/reference-manifest/v1",
     project: input.project,
-    entries: (input.references ?? []).map((reference, index) => ({
-      id: `ref-${String(index + 1).padStart(3, "0")}`,
-      kind: reference.kind,
-      source: reference.value,
-      captureState: "NOT_EXERCISED",
-      observableFacts: [],
-      unknownImplementationDetails: true
-    }))
+    entries
   };
 }
 
@@ -73,11 +89,22 @@ export async function writeReferenceIntelligenceArtifacts(
   const directory = join(outputDirectory, "reference-intelligence");
   await mkdir(directory, { recursive: true });
 
-  const manifest = buildReferenceManifest(input);
+  const manifest = await buildReferenceManifest(input);
   const originalityPlan = buildOriginalityPlan();
   const manifestPath = join(directory, "reference-manifest.json");
   const originalityPath = join(directory, "originality-plan.json");
   const analysisPath = join(directory, "reference-analysis.md");
+
+  const observed = manifest.entries.filter((entry) => entry.captureState === "PASS");
+  const pending = manifest.entries.filter((entry) => entry.captureState !== "PASS");
+  const factLines = observed.flatMap((entry) => [
+    `## ${entry.id} (${entry.kind})`,
+    "",
+    ...(entry.observableFacts.length > 0
+      ? entry.observableFacts.map((fact) => `- ${fact}`)
+      : ["- Capture succeeded but no supported observable facts were found."]),
+    ""
+  ]);
 
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   await writeFile(originalityPath, `${JSON.stringify(originalityPlan, null, 2)}\n`, "utf8");
@@ -88,9 +115,12 @@ export async function writeReferenceIntelligenceArtifacts(
       "",
       `Project: ${input.project}`,
       "",
-      "Reference inputs are normalized, but remote/image/video/HTML capture has not been exercised by this adapter yet.",
-      "Observable facts therefore remain empty and implementation details remain explicitly unknown.",
-      ""
+      `Observed references: ${observed.length}`,
+      `Not fully observed references: ${pending.length}`,
+      "",
+      "Only adapter-observed facts are listed below. Source implementation details remain explicitly unknown.",
+      "",
+      ...factLines
     ].join("\n"),
     "utf8"
   );
