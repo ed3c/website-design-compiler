@@ -18,7 +18,8 @@ if (localSkillsDir && localSkillsDir !== "-") {
     .catch(() => []);
 }
 
-const receipt = resolveSharedBindings(bindingFile, projection, localSkillNames);
+const consumerIdentity = process.env.GITHUB_SHA ? `git:${process.env.GITHUB_SHA}` : "NOT_EXERCISED";
+const receipt = resolveSharedBindings(bindingFile, projection, localSkillNames, consumerIdentity);
 await writeFile(outputPath, JSON.stringify(receipt, null, 2) + "\n", "utf8");
 
 if (receipt.overall !== "PASS") {
