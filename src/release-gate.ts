@@ -5,6 +5,7 @@ export interface ReleaseGateInputs {
   browser: ReleaseInputState;
   accessibilityPerformance: ReleaseInputState;
   storybook: ReleaseInputState;
+  sharedBindings: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {
