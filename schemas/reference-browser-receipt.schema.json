@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/reference-browser-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "browser", "sourceMode", "observations", "responsiveBehavior", "supportedFacts", "cameraObservation", "implementationDetails"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/reference-browser-receipt/v1" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "browser": {
+      "type": "object", "additionalProperties": false, "required": ["engine", "version"],
+      "properties": { "engine": { "const": "chromium" }, "version": { "type": "string", "minLength": 1 } }
+    },
+    "sourceMode": { "const": "DETERMINISTIC_HTML_FIXTURE" },
+    "observations": {
+      "type": "object", "additionalProperties": false, "required": ["desktop", "mobile"],
+      "properties": { "desktop": { "$ref": "#/$defs/snapshot" }, "mobile": { "$ref": "#/$defs/snapshot" } }
+    },
+    "responsiveBehavior": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "desktopColumns", "mobileColumns", "desktopHeadingSize", "mobileHeadingSize"],
+      "properties": {
+        "state": { "enum": ["PASS", "FAIL"] },
+        "desktopColumns": { "type": "integer", "minimum": 1 },
+        "mobileColumns": { "type": "integer", "minimum": 1 },
+        "desktopHeadingSize": { "type": "string", "minLength": 1 },
+        "mobileHeadingSize": { "type": "string", "minLength": 1 }
+      }
+    },
+    "supportedFacts": { "type": "array", "minItems": 6, "items": { "type": "string", "minLength": 1 } },
+    "cameraObservation": { "const": "NOT_APPLICABLE" },
+    "implementationDetails": { "const": "UNKNOWN" }
+  },
+  "$defs": {
+    "snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["viewport", "main", "hierarchy", "typography", "layout", "motion", "assets"],
+      "properties": {
+        "viewport": { "type": "object", "additionalProperties": false, "required": ["width", "height"], "properties": { "width": { "type": "integer", "minimum": 1 }, "height": { "type": "integer", "minimum": 1 } } },
+        "main": { "type": "object", "additionalProperties": false, "required": ["x", "y", "width", "height"], "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "width": { "type": "number", "exclusiveMinimum": 0 }, "height": { "type": "number", "exclusiveMinimum": 0 } } },
+        "hierarchy": { "type": "object", "additionalProperties": false, "required": ["h1", "h2", "nav", "main", "section", "article"], "properties": { "h1": { "type": "integer", "minimum": 0 }, "h2": { "type": "integer", "minimum": 0 }, "nav": { "type": "integer", "minimum": 0 }, "main": { "type": "integer", "minimum": 0 }, "section": { "type": "integer", "minimum": 0 }, "article": { "type": "integer", "minimum": 0 } } },
+        "typography": { "type": "object", "additionalProperties": false, "required": ["fontFamily", "fontSize", "fontWeight", "lineHeight"], "properties": { "fontFamily": { "type": "string" }, "fontSize": { "type": "string" }, "fontWeight": { "type": "string" }, "lineHeight": { "type": "string" } } },
+        "layout": { "type": "object", "additionalProperties": false, "required": ["gridColumnCount", "gridTemplateColumns", "gap"], "properties": { "gridColumnCount": { "type": "integer", "minimum": 1 }, "gridTemplateColumns": { "type": "string" }, "gap": { "type": "string" } } },
+        "motion": { "type": "object", "additionalProperties": false, "required": ["transitionDuration", "transitionProperty"], "properties": { "transitionDuration": { "type": "string" }, "transitionProperty": { "type": "string" } } },
+        "assets": { "type": "object", "additionalProperties": false, "required": ["images", "videos", "canvases"], "properties": { "images": { "type": "integer", "minimum": 0 }, "videos": { "type": "integer", "minimum": 0 }, "canvases": { "type": "integer", "minimum": 0 } } }
+      }
+    }
+  }
+}

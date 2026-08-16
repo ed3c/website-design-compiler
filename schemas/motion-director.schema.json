@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/motion-director.schema.json",
+  "title": "Motion Director Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "policy", "effects"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/motion-director/v1" },
+    "project": { "type": "string", "minLength": 1 },
+    "policy": { "const": "PURPOSE_REQUIRED" },
+    "effects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "engine", "target", "purpose", "trigger", "durationMs", "easing", "interruption", "mobilePolicy", "reducedMotionPolicy", "blocksPrimaryInteraction"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "engine": { "enum": ["motion", "gsap"] },
+          "target": { "type": "string", "minLength": 1 },
+          "purpose": { "enum": ["feedback", "spatial-continuity", "causality", "hierarchy", "brand-expression"] },
+          "trigger": { "enum": ["mount", "interaction", "scroll"] },
+          "durationMs": { "type": "integer", "minimum": 0, "maximum": 2000 },
+          "easing": { "type": "string", "minLength": 1 },
+          "interruption": { "enum": ["cancel-and-settle", "reverse", "complete-current"] },
+          "mobilePolicy": { "enum": ["allow", "simplify", "disable-on-coarse-pointer"] },
+          "reducedMotionPolicy": { "enum": ["disable", "instant", "simplify"] },
+          "blocksPrimaryInteraction": { "const": false }
+        }
+      }
+    }
+  }
+}

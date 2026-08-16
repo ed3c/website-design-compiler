@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/design-contract-bundle.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "tokens", "componentStates", "motion", "scene"],
+  "properties": {
+    "schema": {"const":"website-design-compiler/design-contract-bundle/v1"},
+    "tokens": {
+      "type":"object","additionalProperties":false,
+      "required":["colorRoles","typeRoles","spacing","radii","motion"],
+      "properties": {
+        "colorRoles":{"type":"array","minItems":4,"uniqueItems":true,"items":{"type":"string"}},
+        "typeRoles":{"type":"array","minItems":3,"uniqueItems":true,"items":{"type":"string"}},
+        "spacing":{"type":"array","minItems":4,"uniqueItems":true,"items":{"type":"string"}},
+        "radii":{"type":"array","minItems":2,"uniqueItems":true,"items":{"type":"string"}},
+        "motion":{"type":"object","required":["fastMs","baseMs","slowMs"],"properties":{"fastMs":{"type":"integer","minimum":0},"baseMs":{"type":"integer","minimum":0},"slowMs":{"type":"integer","minimum":0}},"additionalProperties":false}
+      }
+    },
+    "componentStates":{"type":"array","minItems":1,"items":{"type":"object","required":["component","states"],"properties":{"component":{"type":"string","minLength":1},"states":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string"}}},"additionalProperties":false}},
+    "motion":{"type":"object","required":["policy","reducedMotion","allowedPurposes"],"properties":{"policy":{"const":"PURPOSE_REQUIRED"},"reducedMotion":{"const":"REQUIRED"},"allowedPurposes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string"}}},"additionalProperties":false},
+    "scene":{"type":"object","required":["policy","fallback","loadPolicy"],"properties":{"policy":{"const":"OPTIONAL_PROGRESSIVE_ENHANCEMENT"},"fallback":{"const":"REQUIRED"},"loadPolicy":{"const":"LAZY_NON_BLOCKING"}},"additionalProperties":false}
+  }
+}

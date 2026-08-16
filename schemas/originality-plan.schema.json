@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/originality-plan.schema.json",
+  "title": "Originality Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "policy", "retain", "transform", "reject"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/originality-plan/v1" },
+    "policy": { "const": "GRAMMAR_ONLY_NO_IDENTITY_CLONING" },
+    "retain": { "type": "array", "items": { "type": "string" } },
+    "transform": { "type": "array", "items": { "type": "string" } },
+    "reject": { "type": "array", "items": { "type": "string" } }
+  }
+}

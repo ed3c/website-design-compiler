@@ -1,0 +1,51 @@
+{
+  "schema": "website-design-compiler/external-skill-registry/v1",
+  "mode": "reference-only-no-vendoring",
+  "localPrimaryArtDirector": "local:art-direction",
+  "capabilitySlots": {
+    "reference-intelligence": "NOT_ADMITTED",
+    "art-direction": "PASS",
+    "frontend-engineering": "NOT_ADMITTED",
+    "motion": "NOT_ADMITTED",
+    "shadcn": "NOT_ADMITTED",
+    "browser-qa": "PASS"
+  },
+  "entries": [
+    {
+      "id": "anthropic-frontend-design",
+      "enabled": true,
+      "capability": "art-direction",
+      "authority": "reviewer",
+      "source": {
+        "repository": "anthropics/skills",
+        "commit": "f6656c1256d5a8adfa37db9110046ef20bac644c",
+        "path": "skills/frontend-design/SKILL.md",
+        "blob": "decdff43d05908b4c1fc2cfd2d80fc5743440934"
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "evidencePath": "skills/frontend-design/LICENSE.txt",
+        "evidenceBlob": "f433b1a53f5b830a205fd2df78e2b34974656c7b"
+      },
+      "bodyPolicy": "REMOTE_REFERENCE_ONLY"
+    },
+    {
+      "id": "anthropic-webapp-testing",
+      "enabled": true,
+      "capability": "browser-qa",
+      "authority": "specialist",
+      "source": {
+        "repository": "anthropics/skills",
+        "commit": "f6656c1256d5a8adfa37db9110046ef20bac644c",
+        "path": "skills/webapp-testing/SKILL.md",
+        "blob": "4726215301db64a0cc4d41fc3219c61f37a30f4a"
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "evidencePath": "skills/webapp-testing/LICENSE.txt",
+        "evidenceBlob": "4f881c52d1f72f4cfb720e339e2d35c3058d01a9"
+      },
+      "bodyPolicy": "REMOTE_REFERENCE_ONLY"
+    }
+  ]
+}

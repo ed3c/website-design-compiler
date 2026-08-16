@@ -1,0 +1,61 @@
+[
+  {
+    "name": "allow",
+    "expected": "PASS",
+    "subjects": [
+      {
+        "id": "package:allowed",
+        "kind": "code",
+        "role": "product-core",
+        "license": "MIT",
+        "versionOrCommit": "1.2.3",
+        "source": "fixture://allowed",
+        "attribution": "notice retained"
+      }
+    ]
+  },
+  {
+    "name": "review",
+    "expected": "REVIEW_REQUIRED",
+    "subjects": [
+      {
+        "id": "package:review",
+        "kind": "code",
+        "role": "product-core",
+        "license": "LicenseRef-GSAP-Standard-No-Charge",
+        "versionOrCommit": "3.15.0",
+        "source": "fixture://review",
+        "attribution": "terms recorded"
+      }
+    ]
+  },
+  {
+    "name": "deny",
+    "expected": "FAIL",
+    "subjects": [
+      {
+        "id": "package:denied",
+        "kind": "code",
+        "role": "product-core",
+        "license": "AGPL-3.0-only",
+        "versionOrCommit": "1.0.0",
+        "source": "fixture://denied",
+        "attribution": "notice retained"
+      }
+    ]
+  },
+  {
+    "name": "unknown",
+    "expected": "FAIL",
+    "subjects": [
+      {
+        "id": "package:unknown",
+        "kind": "code",
+        "role": "product-core",
+        "versionOrCommit": "1.0.0",
+        "source": "fixture://unknown",
+        "attribution": "unknown license"
+      }
+    ]
+  }
+]

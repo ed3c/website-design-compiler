@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ed3c/website-design-compiler/schemas/release-receipt.schema.json",
+  "title": "Website Design Compiler Release Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "commit", "skills", "checks", "artifacts", "status"],
+  "properties": {
+    "schema": {"const": "website-design-compiler/release-receipt/v1"},
+    "commit": {"type": "string", "minLength": 7},
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "source", "version"],
+        "properties": {
+          "name": {"type": "string"},
+          "source": {"enum": ["skills-shared", "repository", "external"]},
+          "version": {"type": "string"}
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "state"],
+        "properties": {
+          "name": {"type": "string"},
+          "state": {"enum": ["PASS", "FAIL", "ABSENT", "NOT_IMPLEMENTED", "NOT_EXERCISED", "SKIPPED_BY_POLICY"]},
+          "evidence": {"type": "array", "items": {"type": "string"}},
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "artifacts": {"type": "array", "items": {"type": "string"}},
+    "known_deviations": {"type": "array", "items": {"type": "string"}},
+    "unresolved_risks": {"type": "array", "items": {"type": "string"}},
+    "status": {"enum": ["PASS", "FAIL", "ABSENT", "NOT_IMPLEMENTED", "NOT_EXERCISED", "SKIPPED_BY_POLICY"]}
+  }
+}

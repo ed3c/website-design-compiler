@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "@playwright/test"],
+    "noEmit": true,
+    "declaration": false,
+    "rootDir": "."
+  },
+  "include": [
+    "playwright.config.ts",
+    "tests/browser/**/*.ts",
+    "scripts/browser-qa-receipt.ts",
+    "scripts/reference-media-fixture.ts",
+    "scripts/reference-browser-fixture.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
+}

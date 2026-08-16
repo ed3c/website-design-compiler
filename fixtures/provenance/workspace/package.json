@@ -1,0 +1,10 @@
+{
+  "name": "provenance-fixture",
+  "private": true,
+  "dependencies": {
+    "allowed-core": "^1.0.0"
+  },
+  "devDependencies": {
+    "allowed-dev": "^2.0.0"
+  }
+}

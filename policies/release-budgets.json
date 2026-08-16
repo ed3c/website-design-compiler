@@ -1,0 +1,28 @@
+{
+  "schema": "website-design-compiler/release-budgets/v1",
+  "version": 1,
+  "hardGates": {
+    "axeSeriousCriticalViolations": 0,
+    "mainLandmarks": 1,
+    "h1Count": 1,
+    "touchTargetMinCssPx": 44,
+    "lcpMaxMs": 2500,
+    "clsMax": 0.1,
+    "ttfbMaxMs": 800,
+    "inpMaxMs": 200,
+    "totalTransferMaxBytes": 2621440,
+    "scriptTransferMaxBytes": 2097152,
+    "imageTransferMaxBytes": 262144,
+    "videoTransferMaxBytes": 0,
+    "domNodesMax": 400,
+    "graphics2dExternalAssetMaxBytes": 262144,
+    "graphics3dExternalAssetMaxBytes": 0,
+    "graphics3dTextureAssetMaxBytes": 0,
+    "graphics3dMaxTriangles": 10000,
+    "graphics3dMaxDrawCalls": 20
+  },
+  "requiredStates": ["loading", "empty", "error", "success"],
+  "requiredProjects": ["desktop-chromium", "tablet-chromium", "mobile-chromium", "reduced-motion-chromium"],
+  "requiredDegradationPaths": ["prefers-reduced-motion", "coarse-pointer", "graphics=off", "graphics3d=off"],
+  "exceptions": []
+}

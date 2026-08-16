@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/page-architecture-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "pageType", "primaryObjective", "semanticLandmarks", "sections", "optionalEnhancements"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/page-architecture-plan/v1" },
+    "project": { "type": "string", "minLength": 1 },
+    "pageType": { "type": "string", "minLength": 1 },
+    "primaryObjective": { "type": "string", "minLength": 1 },
+    "semanticLandmarks": { "type": "array", "prefixItems": [{ "const": "main" }], "minItems": 1, "maxItems": 1 },
+    "sections": {
+      "type": "array", "minItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "role", "required", "componentIds"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "role": { "enum": ["hero", "runtime-evidence", "progressive-enhancement"] },
+          "required": { "type": "boolean" },
+          "componentIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    },
+    "optionalEnhancements": {
+      "type": "array", "minItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["capability", "blocksPrimaryAction", "fallbackRequired"],
+        "properties": {
+          "capability": { "enum": ["motion", "graphics-2d", "graphics-3d"] },
+          "blocksPrimaryAction": { "const": false },
+          "fallbackRequired": { "const": true }
+        }
+      }
+    }
+  }
+}

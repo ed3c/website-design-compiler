@@ -1,0 +1,119 @@
+name: compiler-core
+
+on:
+  push:
+    branches:
+      - agent/bootstrap-website-design-compiler
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm provenance:fixture
+      - run: pnpm compile:fixture
+      - run: pnpm showcase:typecheck
+      - run: pnpm showcase:compile
+      - run: pnpm showcase:compiler-receipt
+      - name: Verify pinned external design skill registry
+        run: pnpm external-skills:receipt
+      - name: Verify deterministic authenticated media worker
+        run: pnpm media:fixture
+      - name: Verify governed Puck authoring projection
+        run: pnpm authoring:receipt
+      - name: Verify Payload CMS draft/published persistence and auth boundary
+        env:
+          NODE_ENV: development
+        run: pnpm cms:fixture
+      - run: pnpm ui:typecheck
+      - run: pnpm ui:build
+      - run: pnpm browser:typecheck
+      - run: pnpm storybook:typecheck
+      - run: pnpm arena:typecheck
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify deterministic reference image/video decode evidence
+        run: pnpm reference:media-fixture
+      - name: Verify browser-derived reference layout/typography/responsive evidence
+        run: pnpm reference:browser-fixture
+      - name: Bind exact head runtime receipt
+        run: |
+          node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
+      - name: Verify shared binding resolver fixture
+        run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
+      - name: Run Storybook, browser, accessibility-performance, arena, and release gates
+        run: |
+          set +e
+          pnpm storybook:build
+          storybook_build_status=$?
+          pnpm storybook:qa
+          storybook_qa_status=$?
+          pnpm storybook:receipt
+          storybook_receipt_status=$?
+          pnpm browser:qa
+          qa_status=$?
+          pnpm browser:receipt
+          browser_receipt_status=$?
+          pnpm quality:receipt
+          quality_status=$?
+          pnpm arena:smoke
+          arena_status=$?
+          pnpm release:receipt
+          release_status=$?
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compiler-core-receipt-${{ github.sha }}
+          path: |
+            artifacts/runtime/minimal/runtime-receipt.json
+            artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
+            artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
+            artifacts/runtime/minimal/reference-intelligence/originality-plan.json
+            artifacts/runtime/minimal/reference-intelligence/originality-plan.md
+            artifacts/reference-media/reference-media-receipt.json
+            artifacts/reference-browser/reference-browser-receipt.json
+            artifacts/runtime/minimal/art-direction/design-read.json
+            artifacts/runtime/minimal/art-direction/DESIGN.md
+            artifacts/runtime/minimal/art-direction/semantic-tokens.json
+            artifacts/runtime/minimal/art-direction/component-state-matrix.json
+            artifacts/runtime/minimal/art-direction/motion-spec.json
+            artifacts/runtime/minimal/art-direction/scene-spec.json
+            artifacts/runtime/minimal/frontend-builder/frontend-plan.json
+            artifacts/runtime/minimal/motion-director/motion-plan.json
+            artifacts/runtime/minimal/graphics-2d/graphics-2d-plan.json
+            artifacts/runtime/minimal/graphics-3d/graphics-3d-plan.json
+            artifacts/runtime/minimal/graphics-3d/procedural-provenance.json
+            artifacts/showcase/
+            artifacts/external-skills/registry-receipt.json
+            artifacts/media-generator/
+            artifacts/authoring/
+            artifacts/cms/
+            artifacts/provenance/license-receipt.json
+            artifacts/storybook/
+            artifacts/browser-qa/browser-qa.json
+            artifacts/browser-qa/playwright-report.json
+            artifacts/browser-qa/screenshots/
+            artifacts/browser-qa/test-results/
+            artifacts/accessibility-performance/
+            artifacts/arena/
+            artifacts/release/release-gate-receipt.json
+            artifacts/runtime/shared-binding-receipt.json
+          if-no-files-found: warn

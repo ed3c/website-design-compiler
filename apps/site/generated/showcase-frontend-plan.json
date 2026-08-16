@@ -1,0 +1,25 @@
+{
+  "schema": "website-design-compiler/frontend-plan/v1",
+  "project": "evidence-first-showcase",
+  "renderer": "nextjs-registry",
+  "arbitraryMarkupAllowed": false,
+  "components": [
+    {
+      "id": "primary-action",
+      "component": "button",
+      "props": {
+        "intent": "primary",
+        "children": "Open compiler contract"
+      }
+    },
+    {
+      "id": "runtime-status",
+      "component": "status-panel",
+      "props": {
+        "state": "success",
+        "title": "Runtime status",
+        "message": "Governed component plan emitted"
+      }
+    }
+  ]
+}

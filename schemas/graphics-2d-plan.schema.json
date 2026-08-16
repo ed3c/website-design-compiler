@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/graphics-2d-plan/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "engine", "rendererPolicy", "dprPolicy", "scene", "fallback", "lifecycle", "assetBudget"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/graphics-2d-plan/v1" },
+    "engine": { "const": "pixi.js" },
+    "rendererPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preferred", "capabilityOrder", "progressiveEnhancement"],
+      "properties": {
+        "preferred": { "const": "webgl" },
+        "capabilityOrder": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [{"const":"webgpu"},{"const":"webgl"},{"const":"canvas2d"}],
+          "items": false
+        },
+        "progressiveEnhancement": { "const": true }
+      }
+    },
+    "dprPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desktopMax", "coarsePointerMax"],
+      "properties": {
+        "desktopMax": { "type": "number", "minimum": 1, "maximum": 2 },
+        "coarsePointerMax": { "type": "number", "minimum": 1, "maximum": 1.5 }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "purpose", "criticalContent", "proceduralObjects"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "purpose": { "enum": ["hierarchy", "orientation", "feedback", "illustration"] },
+        "criticalContent": { "const": false },
+        "proceduralObjects": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semanticDom", "staticPoster", "forcedTestHook"],
+      "properties": {
+        "semanticDom": { "const": "REQUIRED" },
+        "staticPoster": { "const": "REQUIRED" },
+        "forcedTestHook": { "const": "graphics=off" }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lazyImport", "privateTicker", "removeListeners", "destroyApplication"],
+      "properties": {
+        "lazyImport": { "const": true },
+        "privateTicker": { "const": true },
+        "removeListeners": { "const": true },
+        "destroyApplication": { "const": true }
+      }
+    },
+    "assetBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalBytes", "textureBytes", "maxExternalBytes"],
+      "properties": {
+        "externalBytes": { "const": 0 },
+        "textureBytes": { "const": 0 },
+        "maxExternalBytes": { "type": "integer", "minimum": 0, "maximum": 262144 }
+      }
+    }
+  }
+}

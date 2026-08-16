@@ -1,0 +1,12 @@
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      allowed-core:
+        specifier: ^1.0.0
+        version: 1.2.3
+    devDependencies:
+      allowed-dev:
+        specifier: ^2.0.0
+        version: 2.4.0

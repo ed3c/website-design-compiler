@@ -1,0 +1,20 @@
+{
+  "schema": "website-design-compiler/input/v1",
+  "project": "minimal-showcase",
+  "brief": {
+    "pageType": "product-landing",
+    "audience": "design engineering teams",
+    "objective": "prove deterministic compiler, evidence, governed UI, bounded motion, progressive 2D, and provenance-gated procedural 3D"
+  },
+  "references": [
+    {
+      "kind": "html",
+      "value": "<!doctype html><html><head><title>Reference Fixture</title></head><body><nav><a href='/docs'>Docs</a></nav><main><h1>Evidence-first design</h1><section><h2>Runtime receipts</h2></section></main></body></html>"
+    }
+  ],
+  "artDirection": {
+    "primary": ["repo-native"],
+    "reviewers": ["anthropic-frontend-design"]
+  },
+  "requestedStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"]
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/reference-manifest.schema.json",
+  "title": "Reference Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "entries"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/reference-manifest/v1" },
+    "project": { "type": "string", "minLength": 1 },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "source", "captureState", "observableFacts", "unknownImplementationDetails", "provenance"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^ref-[0-9]{3,}$" },
+          "kind": { "enum": ["url", "image", "video", "html"] },
+          "source": { "type": "string", "minLength": 1 },
+          "captureState": { "enum": ["PASS", "FAIL", "ABSENT", "NOT_IMPLEMENTED", "NOT_EXERCISED", "SKIPPED_BY_POLICY"] },
+          "observableFacts": { "type": "array", "items": { "type": "string" } },
+          "unknownImplementationDetails": { "const": true },
+          "reason": { "type": "string" },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["adapter", "sourceKind", "sourceMode"],
+            "properties": {
+              "adapter": { "type": "string", "minLength": 1 },
+              "sourceKind": { "enum": ["url", "image", "video", "html"] },
+              "sourceMode": { "enum": ["INLINE", "FILE", "REMOTE", "UNEXERCISED"] },
+              "finalUrl": { "type": "string", "format": "uri" },
+              "httpStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+              "contentType": { "type": "string", "minLength": 1 },
+              "responseSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

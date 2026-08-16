@@ -1,0 +1,36 @@
+{
+  "content": [
+    {
+      "type": "Section",
+      "props": {
+        "id": "showcase-section",
+        "surfaceToken": "surface-muted",
+        "content": [
+          {
+            "type": "ButtonBlock",
+            "props": {
+              "id": "primary-action",
+              "label": "Open compiler contract",
+              "intent": "primary"
+            }
+          },
+          {
+            "type": "StatusPanelBlock",
+            "props": {
+              "id": "runtime-status",
+              "state": "success",
+              "title": "Runtime status",
+              "message": "Governed component plan emitted"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "root": {
+    "props": {
+      "pageTitle": "evidence-first-showcase",
+      "surfaceToken": "surface-default"
+    }
+  }
+}

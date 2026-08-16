@@ -1,0 +1,45 @@
+{
+  "schema": "website-design-compiler/media-model-policy/v1",
+  "productCoreForbiddenImports": ["WanGP", "wangp"],
+  "entries": [
+    {
+      "id": "deterministic-mock-image-v1",
+      "kind": "image",
+      "adapter": "mock",
+      "admission": "ALLOW",
+      "versionOrCommit": "internal:deterministic-mock-image-v1",
+      "provenanceSubjectId": "model:deterministic-mock-image-v1",
+      "outputTermsSubjectId": "generated-output:deterministic-mock-image-v1"
+    },
+    {
+      "id": "diffusers-image-candidate",
+      "kind": "image",
+      "adapter": "diffusers-image",
+      "admission": "REVIEW_REQUIRED",
+      "versionOrCommit": "adapter-contract:v1",
+      "provenanceSubjectId": "model:diffusers-image-candidate",
+      "outputTermsSubjectId": "generated-output:diffusers-image-candidate",
+      "reason": "No production model weights are admitted until exact model-weight license and output terms pass license-provenance."
+    },
+    {
+      "id": "diffusers-video-candidate",
+      "kind": "video",
+      "adapter": "diffusers-video",
+      "admission": "REVIEW_REQUIRED",
+      "versionOrCommit": "adapter-contract:v1",
+      "provenanceSubjectId": "model:diffusers-video-candidate",
+      "outputTermsSubjectId": "generated-output:diffusers-video-candidate",
+      "reason": "No production model weights are admitted until exact model-weight license and output terms pass license-provenance."
+    },
+    {
+      "id": "three-d-worker-candidate",
+      "kind": "3d",
+      "adapter": "three-d-worker",
+      "admission": "REVIEW_REQUIRED",
+      "versionOrCommit": "adapter-contract:v1",
+      "provenanceSubjectId": "model:three-d-worker-candidate",
+      "outputTermsSubjectId": "generated-output:three-d-worker-candidate",
+      "reason": "Trellis/TripoSR-class workers remain candidates only; exact-version rights review is required before admission."
+    }
+  ]
+}

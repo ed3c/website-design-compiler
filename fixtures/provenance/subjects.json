@@ -1,0 +1,40 @@
+[
+  {
+    "id": "model:fixture-model",
+    "kind": "model",
+    "role": "optional",
+    "license": "Apache-2.0",
+    "versionOrCommit": "commit:0123456789abcdef",
+    "source": "fixture://model",
+    "attribution": "model license and authors recorded"
+  },
+  {
+    "id": "font:fixture-font",
+    "kind": "font",
+    "role": "optional",
+    "license": "OFL-1.1",
+    "versionOrCommit": "1.0.0",
+    "source": "fixture://font",
+    "attribution": "font attribution retained"
+  },
+  {
+    "id": "generated:fixture-output",
+    "kind": "generated-output",
+    "role": "optional",
+    "license": "MIT",
+    "versionOrCommit": "generator:fixture-v1",
+    "source": "fixture://generated-output",
+    "attribution": "generator and source prompt provenance retained",
+    "hashSha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "outputTerms": "fixture output redistribution permitted"
+  },
+  {
+    "id": "service:fixture-host",
+    "kind": "hosted-service",
+    "role": "optional",
+    "license": "LicenseRef-SaaS-Terms",
+    "versionOrCommit": "terms:2026-08-16",
+    "source": "fixture://service-terms",
+    "attribution": "service terms snapshot recorded"
+  }
+]

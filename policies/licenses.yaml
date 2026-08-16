@@ -1,0 +1,41 @@
+version: 1
+
+allow:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - CC0-1.0
+
+review:
+  - MPL-2.0
+  - LGPL-2.1-only
+  - LGPL-3.0-only
+  - OFL-1.1
+  - LicenseRef-GSAP-Standard-No-Charge
+  - LicenseRef-Commons-Clause
+  - LicenseRef-Model-Custom
+  - LicenseRef-SaaS-Terms
+
+deny_product_core:
+  - GPL-2.0-only
+  - GPL-3.0-only
+  - AGPL-3.0-only
+  - SSPL-1.0
+  - BSL-1.1
+  - LicenseRef-NonCommercial
+  - LicenseRef-ResearchOnly
+  - LicenseRef-GeographicRestriction
+  - LicenseRef-MAURestriction
+  - NOASSERTION
+  - NONE
+
+rules:
+  unknown_license: fail
+  preserve_notices: true
+  require_exact_version_or_commit: true
+  require_model_license: true
+  require_generated_output_terms: true
+  require_asset_hash: true
+  require_attribution_record: true

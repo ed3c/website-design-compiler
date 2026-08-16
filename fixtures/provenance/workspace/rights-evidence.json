@@ -1,0 +1,12 @@
+{
+  "allowed-core": {
+    "license": "MIT",
+    "source": "fixture://allowed-core",
+    "attribution": "allowed-core copyright notice retained"
+  },
+  "allowed-dev": {
+    "license": "Apache-2.0",
+    "source": "fixture://allowed-dev",
+    "attribution": "allowed-dev NOTICE retained"
+  }
+}

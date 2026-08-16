@@ -1,0 +1,27 @@
+{
+  "schema": "website-design-compiler/external-skill-upstream-evidence/v1",
+  "verifiedAt": "2026-08-16T13:15:00Z",
+  "verificationMode": "github-api-exact-commit-metadata",
+  "entries": [
+    {
+      "id": "anthropic-frontend-design",
+      "repository": "anthropics/skills",
+      "commit": "f6656c1256d5a8adfa37db9110046ef20bac644c",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "skillBlob": "decdff43d05908b4c1fc2cfd2d80fc5743440934",
+      "licenseSpdx": "Apache-2.0",
+      "licensePath": "skills/frontend-design/LICENSE.txt",
+      "licenseBlob": "f433b1a53f5b830a205fd2df78e2b34974656c7b"
+    },
+    {
+      "id": "anthropic-webapp-testing",
+      "repository": "anthropics/skills",
+      "commit": "f6656c1256d5a8adfa37db9110046ef20bac644c",
+      "skillPath": "skills/webapp-testing/SKILL.md",
+      "skillBlob": "4726215301db64a0cc4d41fc3219c61f37a30f4a",
+      "licenseSpdx": "Apache-2.0",
+      "licensePath": "skills/webapp-testing/LICENSE.txt",
+      "licenseBlob": "4f881c52d1f72f4cfb720e339e2d35c3058d01a9"
+    }
+  ]
+}
