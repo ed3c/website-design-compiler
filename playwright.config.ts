@@ -33,11 +33,7 @@ export default defineConfig({
     },
     {
       name: "reduced-motion-chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        viewport: { width: 1440, height: 1000 },
-        reducedMotion: "reduce"
-      }
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 1000 } }
     }
   ]
 });
