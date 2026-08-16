@@ -8,6 +8,7 @@ export interface ReleaseGateInputs {
   sharedBindings: ReleaseInputState;
   arena: ReleaseInputState;
   showcase: ReleaseInputState;
+  externalSkills: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {
