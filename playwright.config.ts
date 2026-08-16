@@ -11,7 +11,7 @@ export default defineConfig({
     screenshot: "off"
   },
   webServer: {
-    command: "pnpm --filter @website-design-compiler/site start --hostname 127.0.0.1 --port 3000",
+    command: "pnpm --filter @website-design-compiler/site start",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
