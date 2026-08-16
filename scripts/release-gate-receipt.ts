@@ -51,6 +51,7 @@ const browserPath = join(root, "artifacts", "browser-qa", "browser-qa.json");
 const qualityPath = join(root, "artifacts", "accessibility-performance", "accessibility-performance.json");
 const storybookPath = join(root, "artifacts", "storybook", "storybook-workshop.json");
 const sharedBindingPath = join(root, "artifacts", "runtime", "shared-binding-receipt.json");
+const arenaPath = join(root, "artifacts", "arena", "arena-score.json");
 const projectPath = join(root, "project.json");
 const outputDirectory = join(root, "artifacts", "release");
 const outputPath = join(outputDirectory, "release-gate-receipt.json");
@@ -72,7 +73,8 @@ const evaluation = evaluateReleaseGate({
   browser: await readOverall(browserPath),
   accessibilityPerformance: await readOverall(qualityPath),
   storybook: await readOverall(storybookPath),
-  sharedBindings: await readOverall(sharedBindingPath)
+  sharedBindings: await readOverall(sharedBindingPath),
+  arena: await readOverall(arenaPath)
 });
 
 const unresolvedRisks = [
@@ -100,11 +102,6 @@ const unresolvedRisks = [
     id: "repository-wide-rights-clearance",
     state: project?.licenseProvenance?.repositoryWideRightsClearance ?? "ABSENT",
     reason: project?.licenseProvenance?.repositoryWideRightsClearanceReason ?? "repository-wide rights clearance is not established"
-  },
-  {
-    id: "website-design-skill-arena-smoke",
-    state: "NOT_IMPLEMENTED",
-    reason: "Issue #15 is not implemented yet; arena smoke tests are therefore explicit optional unresolved evidence rather than fabricated PASS"
   }
 ].filter((risk) => risk.state !== "PASS");
 
@@ -119,6 +116,7 @@ const commands = [
   "pnpm ui:build",
   "pnpm browser:typecheck",
   "pnpm storybook:typecheck",
+  "pnpm arena:typecheck",
   "pnpm exec playwright install --with-deps chromium",
   "pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json",
   "pnpm storybook:build",
@@ -127,6 +125,7 @@ const commands = [
   "pnpm browser:qa",
   "pnpm browser:receipt",
   "pnpm quality:receipt",
+  "pnpm arena:smoke",
   "pnpm release:receipt"
 ];
 
@@ -170,7 +169,8 @@ const receipt = {
     browser: "artifacts/browser-qa/browser-qa.json",
     accessibilityPerformance: "artifacts/accessibility-performance/accessibility-performance.json",
     storybook: "artifacts/storybook/storybook-workshop.json",
-    sharedBindings: "artifacts/runtime/shared-binding-receipt.json"
+    sharedBindings: "artifacts/runtime/shared-binding-receipt.json",
+    arena: "artifacts/arena/arena-score.json"
   },
   unresolvedRisks
 };
