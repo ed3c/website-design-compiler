@@ -35,6 +35,8 @@ jobs:
         run: pnpm v2:content-architecture
       - name: Verify deterministic multi-candidate visual direction search
         run: pnpm v2:visual-directions
+      - name: Verify concrete semantic tokens and production projection drift
+        run: pnpm v2:semantic-tokens
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
