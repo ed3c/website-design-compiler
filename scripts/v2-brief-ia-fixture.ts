@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { normalizeBrief, type NaturalLanguageBriefInput } from "../src/brief-normalizer.js";
 import { compileInformationArchitecture } from "../src/information-architecture.js";
+import { validateAgainstSchema } from "../src/validate.js";
 
 const inputPath = resolve("fixtures/v2/brief-ready.json");
 const outputDirectory = resolve("artifacts/v2/brief-ia");
@@ -9,6 +10,7 @@ await mkdir(outputDirectory, { recursive: true });
 
 const raw = JSON.parse(await readFile(inputPath, "utf8")) as NaturalLanguageBriefInput;
 const normalization = normalizeBrief(raw);
+await validateAgainstSchema(normalization, "brief-normalization-v2.schema.json");
 await writeFile(resolve(outputDirectory, "brief-normalization.json"), `${JSON.stringify(normalization, null, 2)}\n`, "utf8");
 
 if (normalization.state !== "READY" || !normalization.compilerInput) {
@@ -16,6 +18,7 @@ if (normalization.state !== "READY" || !normalization.compilerInput) {
   process.exitCode = 1;
 } else {
   const ia = compileInformationArchitecture(normalization.compilerInput);
+  await validateAgainstSchema(ia, "information-architecture-v2.schema.json");
   await writeFile(resolve(outputDirectory, "information-architecture.json"), `${JSON.stringify(ia, null, 2)}\n`, "utf8");
   const receipt = {
     schema: "website-design-compiler/v2-brief-ia-fixture-receipt/v1",
