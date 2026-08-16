@@ -47,5 +47,6 @@ jobs:
             artifacts/runtime/minimal/art-direction/component-state-matrix.json
             artifacts/runtime/minimal/art-direction/motion-spec.json
             artifacts/runtime/minimal/art-direction/scene-spec.json
+            artifacts/runtime/minimal/frontend-builder/frontend-plan.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: error
