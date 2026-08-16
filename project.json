@@ -6,7 +6,7 @@
     "packageManager": "pnpm",
     "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-evidence",
+    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-provenance-evidence",
     "applicationStatus": "PASS"
   },
   "pipeline": [
@@ -89,6 +89,27 @@
     "lastVerifiedHead": "c1557684699120e8751b7fe3217a2088a3176a64",
     "workflowRun": 31940897229
   },
+  "licenseProvenance": {
+    "scannerAdapter": "PASS",
+    "packageManifestParser": "PASS",
+    "pnpmLockExactVersionParser": "PASS",
+    "rightsEvidenceJoin": "PASS",
+    "subjectManifestAdapter": "PASS",
+    "codeLicenseClassification": "PASS",
+    "modelWeightLicenseGate": "PASS",
+    "fontLicenseClassification": "PASS",
+    "generatedOutputTermsGate": "PASS",
+    "hostedServiceTermsClassification": "PASS",
+    "assetSha256": "PASS",
+    "allowReviewDenyUnknownFixtures": "PASS",
+    "missingRightsFailClosed": "PASS",
+    "productCoreDeniedLicenseFailClosed": "PASS",
+    "machineReadableReceipt": "PASS",
+    "repositoryWideRightsClearance": "NOT_EXERCISED",
+    "repositoryWideRightsClearanceReason": "The repository does not yet provide a complete committed lockfile plus rights-evidence manifest for every real dependency, model, font, asset, generated output, and hosted service. Scanner capability PASS does not imply legal clearance.",
+    "lastVerifiedHead": "4c1fe6223504efb87172a1bc458847ad42d32b3b",
+    "workflowRun": 31941228353
+  },
   "browserVisualQa": {
     "playwrightMatrix": "PASS",
     "desktop": "PASS",
@@ -104,8 +125,8 @@
     "graphics2dNormalPath": "PASS",
     "graphics2dForcedFallback": "PASS",
     "graphics3dFallback": "NOT_IMPLEMENTED",
-    "lastVerifiedHead": "c1557684699120e8751b7fe3217a2088a3176a64",
-    "workflowRun": 31940897229
+    "lastVerifiedHead": "4c1fe6223504efb87172a1bc458847ad42d32b3b",
+    "workflowRun": 31941228353
   },
   "evidenceStates": [
     "PASS",
