@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import type { CompilerInput } from "./contracts.js";
@@ -15,8 +16,8 @@ export class ContractValidationError extends Error {
 }
 
 export async function validateCompilerInput(value: unknown): Promise<CompilerInput> {
-  const schemaUrl = new URL("../schemas/compiler-input.schema.json", import.meta.url);
-  const schema = JSON.parse(await readFile(schemaUrl, "utf8")) as object;
+  const schemaPath = resolve(process.cwd(), "schemas/compiler-input.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8")) as object;
 
   const ajv = new Ajv2020({ allErrors: true, strict: true, useDefaults: true });
   addFormats(ajv);
