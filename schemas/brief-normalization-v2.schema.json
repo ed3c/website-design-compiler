@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/brief-normalization/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "inputSha256", "state", "fields", "hardConstraints", "needsInput", "riskyContentRequests", "compilerInput"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/brief-normalization/v2" },
+    "project": { "type": "string", "minLength": 1 },
+    "inputSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "state": { "enum": ["READY", "NEEDS_INPUT"] },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pageType", "audience", "objective"],
+      "properties": {
+        "pageType": { "$ref": "#/$defs/field" },
+        "audience": { "$ref": "#/$defs/field" },
+        "objective": { "$ref": "#/$defs/field" }
+      }
+    },
+    "hardConstraints": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "needsInput": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "riskyContentRequests": { "type": "array", "items": { "enum": ["testimonials", "customer-logos", "metrics", "pricing"] }, "uniqueItems": true },
+    "compilerInput": { "type": ["object", "null"] }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "state", "sourceExcerpt"],
+      "properties": {
+        "value": { "type": ["string", "null"] },
+        "state": { "enum": ["EXPLICIT", "INFERRED", "NEEDS_INPUT"] },
+        "sourceExcerpt": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
