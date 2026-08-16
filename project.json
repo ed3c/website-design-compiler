@@ -6,7 +6,7 @@
     "packageManager": "pnpm",
     "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-graphics3d-provenance-evidence",
+    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-graphics3d-provenance-accessibility-performance-release-evidence",
     "applicationStatus": "PASS"
   },
   "pipeline": [
@@ -25,7 +25,7 @@
     "license-provenance",
     "release-receipt"
   ],
-  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"],
+  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "accessibility-performance", "release-receipt"],
   "sharedSkillBindings": {
     "config": ".skill-bindings/skills-shared.json",
     "resolver": "PASS",
@@ -84,10 +84,12 @@
     "semanticDomFallback": "PASS",
     "staticPosterFallback": "PASS",
     "forcedGpuOffFallback": "PASS",
+    "decorativeAccessibilityOwnership": "DOM",
+    "pixiMobileAccessibilityHookSuppressed": "PASS",
     "externalAssetBytes": 0,
     "textureAssetBytes": 0,
-    "lastVerifiedHead": "c1557684699120e8751b7fe3217a2088a3176a64",
-    "workflowRun": 31940897229
+    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
+    "workflowRun": 31942773003
   },
   "graphics3d": {
     "engine": "@react-three/fiber@9.6.1 + three@0.184.0",
@@ -155,8 +157,49 @@
     "graphics3dNormalPath": "PASS",
     "graphics3dTeardown": "PASS",
     "graphics3dForcedFallback": "PASS",
-    "lastVerifiedHead": "be8142197608c8f7e47f2339a49cf8c86f07214b",
-    "workflowRun": 31941566413
+    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
+    "workflowRun": 31942773003
+  },
+  "accessibilityPerformance": {
+    "budgetContract": "website-design-compiler/release-budgets/v1",
+    "budgetVersion": 1,
+    "machineReadableProjectEvidence": "PASS",
+    "machineReadableMatrixReceipt": "PASS",
+    "axeSeriousCritical": "PASS",
+    "fallbackAxe": "PASS",
+    "mainLandmark": "PASS",
+    "singleH1": "PASS",
+    "touchTargets": "PASS",
+    "lcp": "PASS",
+    "cls": "PASS",
+    "ttfb": "PASS",
+    "inp": "PASS",
+    "totalTransfer": "PASS",
+    "scriptTransfer": "PASS",
+    "imageTransfer": "PASS",
+    "videoTransfer": "PASS",
+    "domNodes": "PASS",
+    "explicitLoadingEmptyErrorSuccessStates": "PASS",
+    "reducedMotion": "PASS",
+    "coarsePointer": "PASS",
+    "graphics2dFallback": "PASS",
+    "graphics3dFallback": "PASS",
+    "graphics2dAssetBudget": "PASS",
+    "graphics3dAssetBudget": "PASS",
+    "graphics3dComplexity": "PASS",
+    "releaseFailClosedUnitFixtures": "PASS",
+    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
+    "workflowRun": 31942773003
+  },
+  "releaseGate": {
+    "runtime": "PASS",
+    "browser": "PASS",
+    "accessibilityPerformance": "PASS",
+    "aggregateReceipt": "PASS",
+    "failWithReceiptWorkflow": "PASS",
+    "exactHeadBinding": "PASS",
+    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
+    "workflowRun": 31942773003
   },
   "evidenceStates": [
     "PASS",
