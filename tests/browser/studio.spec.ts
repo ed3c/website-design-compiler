@@ -11,6 +11,18 @@ test("governed authoring render uses production registry components", async ({ p
   expect(pageErrors).toEqual([]);
 });
 
+test("Payload-persisted published data renders through the same production registry", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/studio/render?source=payload", { waitUntil: "networkidle" });
+  await expect(page.locator("main[data-authoring-source='payload']")).toBeVisible();
+  await expect(page.locator("[data-authoring-renderer='puck-production-registry']")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open compiler contract" })).toBeVisible();
+  await expect(page.getByText("Governed component plan emitted")).toBeVisible();
+  await expect(page.getByText("Newer draft content stored only in Payload versions")).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
 test("invalid authoring data fails closed before production registry render", async ({ page }) => {
   await page.goto("/studio/render?fixture=invalid", { waitUntil: "networkidle" });
   await expect(page.locator("main[data-authoring-rejected='true']")).toBeVisible();
