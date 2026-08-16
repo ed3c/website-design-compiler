@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildDesignContractBundle } from "./design-contracts.js";
 import { GOVERNED_COMPONENTS } from "./frontend-builder.js";
+import { searchVisualDirections, type VisualDirectionDimensions } from "./visual-direction-search.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface DesignSystemPlan {
@@ -11,6 +12,11 @@ export interface DesignSystemPlan {
   sourceContract: "website-design-compiler/design-contract-bundle/v1";
   identityPolicy: "ORIGINAL_VALUES_ONLY";
   arbitraryComponentAdmission: false;
+  selectedVisualDirection: {
+    source: "website-design-compiler/visual-direction-search/v2";
+    candidateId: string;
+    dimensions: VisualDirectionDimensions;
+  };
   tokenRoles: {
     color: string[];
     type: string[];
@@ -24,12 +30,18 @@ export interface DesignSystemPlan {
 
 export function buildDesignSystemPlan(input: CompilerInput): DesignSystemPlan {
   const contract = buildDesignContractBundle();
+  const visualSearch = searchVisualDirections(input);
   return {
     schema: "website-design-compiler/design-system-plan/v1",
     project: input.project,
     sourceContract: contract.schema,
     identityPolicy: "ORIGINAL_VALUES_ONLY",
     arbitraryComponentAdmission: false,
+    selectedVisualDirection: {
+      source: visualSearch.schema,
+      candidateId: visualSearch.selectedCandidateId,
+      dimensions: { ...visualSearch.selectedDirection }
+    },
     tokenRoles: {
       color: [...contract.tokens.colorRoles],
       type: [...contract.tokens.typeRoles],
