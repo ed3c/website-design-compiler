@@ -5,6 +5,7 @@ import { compile, writeRuntimeReceipt } from "./compiler.js";
 import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js";
 import { writeDesignContracts } from "./design-contracts.js";
 import { writeInformationArchitecturePlan } from "./information-architecture.js";
+import { writeContentArchitecturePlan } from "./content-architecture.js";
 import { writeDesignSystemPlan } from "./design-system-compiler.js";
 import { writePageArchitecturePlan } from "./page-architect.js";
 import { writeFrontendPlan } from "./frontend-builder.js";
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
     if (input.requestedStages.includes("reference-intelligence")) await writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("art-direction")) await writeDesignContracts(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("information-architecture")) await writeInformationArchitecturePlan(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("content-architecture")) await writeContentArchitecturePlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("design-system-compiler")) await writeDesignSystemPlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("page-architect")) await writePageArchitecturePlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("frontend-builder")) await writeFrontendPlan(input, resolvedOutputDirectory);
