@@ -5,7 +5,9 @@
     "language": "TypeScript",
     "packageManager": "pnpm",
     "applicationTarget": "CLI core first; Next.js governed UI follows in issue #7",
-    "status": "NOT_EXERCISED"
+    "status": "PASS",
+    "scope": "compiler-core",
+    "applicationStatus": "NOT_IMPLEMENTED"
   },
   "pipeline": [
     "reference-intelligence",
