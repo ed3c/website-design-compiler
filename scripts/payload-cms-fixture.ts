@@ -144,8 +144,7 @@ try {
     productionCredentialInSource: false
   };
 
-  const overall = Object.values(checks).every((value) => value === true || value === "PASS" || value === "published" || value === "draft" || typeof value === "string")
-    && checks.sourceValidation === "PASS"
+  const overall = checks.sourceValidation === "PASS"
     && checks.publishedStatus === "published"
     && checks.draftStatus === "draft"
     && checks.draftPublishedDistinguishable
@@ -155,14 +154,25 @@ try {
     && checks.guestCanReadPublished
     && checks.guestCannotReadMediaMetadata
     && checks.guestCannotReadLatestDraft
-    && checks.mediaProvenanceLinked;
+    && checks.mediaProvenanceLinked
+    && checks.localizationReady
+    && checks.secretPersistedInReceipt === false
+    && checks.productionCredentialInSource === false;
 
   await writeFile(publishedFixturePath, `${JSON.stringify(publishedAuthoring, null, 2)}\n`, "utf8");
   const receipt = {
     schema: "website-design-compiler/payload-cms-receipt/v1",
     overall: overall ? "PASS" : "FAIL",
     git: { sha: process.env.GITHUB_SHA ?? "UNBOUND", ref: process.env.GITHUB_REF ?? "UNBOUND" },
-    payload: { version: PAYLOAD_VERSION, adapter: "@payloadcms/db-sqlite", database: "EPHEMERAL_ARTIFACT", secretSource: "RUNTIME_RANDOM_ONLY" },
+    payload: {
+      version: PAYLOAD_VERSION,
+      adapter: "@payloadcms/db-sqlite",
+      database: "EPHEMERAL_ARTIFACT",
+      secretSource: "RUNTIME_RANDOM_ONLY",
+      ciSchemaSync: "DEVELOPMENT_PUSH",
+      productionSchemaSync: "MIGRATIONS_REQUIRED",
+      productionCredentialSource: "ENVIRONMENT_ONLY"
+    },
     ownership: {
       compilerSchema: "website-design-compiler/frontend-plan/v1",
       authoringSchema: "website-design-compiler/governed-authoring/v1",
