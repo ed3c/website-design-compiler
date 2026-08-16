@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-test("core runtime is keyboard reachable, motion-bounded, console clean, network clean, and screenshotable", async ({ page }, testInfo) => {
+test("core runtime is keyboard reachable, motion-bounded, graphics-degradable, console clean, network clean, and screenshotable", async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
   const failedRequests: string[] = [];
 
@@ -47,11 +47,30 @@ test("core runtime is keyboard reachable, motion-bounded, console clean, network
     await expect(gsapEffect).toHaveAttribute("data-gsap-active", "true");
   }
 
+  const graphics = page.locator("[data-graphics-state]");
+  await expect(graphics).toHaveAttribute("data-graphics-state", "ready", { timeout: 10_000 });
+  await expect(page.locator("[data-pixi-canvas='true']")).toHaveCount(1);
+  await expect(page.locator("[data-semantic-fallback='true']")).toHaveCount(1);
+  const graphicsResolution = Number(await graphics.getAttribute("data-resolution"));
+  expect(graphicsResolution).toBeGreaterThanOrEqual(1);
+  expect(graphicsResolution).toBeLessThanOrEqual(testInfo.project.name === "mobile-chromium" ? 1.5 : 2);
+
   const screenshotDirectory = join(process.cwd(), "artifacts", "browser-qa", "screenshots");
   await mkdir(screenshotDirectory, { recursive: true });
   const screenshotPath = join(screenshotDirectory, `${testInfo.project.name}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
   await testInfo.attach("full-page", { path: screenshotPath, contentType: "image/png" });
+
+  if (testInfo.project.name === "desktop-chromium") {
+    const fallbackResponse = await page.goto("/?graphics=off", { waitUntil: "networkidle" });
+    expect(fallbackResponse?.ok()).toBeTruthy();
+    const fallbackGraphics = page.locator("[data-graphics-state]");
+    await expect(fallbackGraphics).toHaveAttribute("data-graphics-state", "fallback");
+    await expect(page.locator("[data-pixi-host='true']")).toHaveAttribute("data-forced-fallback", "true");
+    await expect(page.locator("[data-pixi-canvas='true']")).toHaveCount(0);
+    await expect(page.locator("[data-static-poster='true']")).toHaveCount(1);
+    await expect(page.locator("[data-semantic-fallback='true']")).toHaveCount(1);
+  }
 
   expect(consoleErrors, `console/page errors: ${consoleErrors.join(" | ")}`).toEqual([]);
   expect(failedRequests, `failed requests: ${failedRequests.join(" | ")}`).toEqual([]);
