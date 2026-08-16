@@ -6,7 +6,7 @@
     "packageManager": "pnpm",
     "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-provenance-evidence",
+    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-graphics3d-provenance-evidence",
     "applicationStatus": "PASS"
   },
   "pipeline": [
@@ -25,7 +25,7 @@
     "license-provenance",
     "release-receipt"
   ],
-  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "release-receipt"],
+  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"],
   "sharedSkillBindings": {
     "config": ".skill-bindings/skills-shared.json",
     "resolver": "PASS",
@@ -89,6 +89,33 @@
     "lastVerifiedHead": "c1557684699120e8751b7fe3217a2088a3176a64",
     "workflowRun": 31940897229
   },
+  "graphics3d": {
+    "engine": "@react-three/fiber@9.6.1 + three@0.184.0",
+    "runtime": "PASS",
+    "machineReadableContract": "PASS",
+    "sceneValidationBeforeRuntime": "PASS",
+    "webglRuntime": "PASS",
+    "lazyChunk": "PASS",
+    "frameloopDemand": "PASS",
+    "desktopDprCap": 1.75,
+    "coarsePointerDprCap": 1.25,
+    "proceduralFactoryContract": "THREE.Group",
+    "proceduralSemantics": ["pivots", "sockets", "colliders"],
+    "img2threejsSourceCommit": "d6673386f89673a58736f8d398dd16ece67874f5",
+    "proceduralFixtureHash": "PASS",
+    "proceduralFixtureProvenance": "PASS",
+    "geometryMaterialDisposal": "PASS",
+    "browserTeardownProof": "PASS",
+    "semanticDomFallback": "PASS",
+    "staticPosterFallback": "PASS",
+    "forcedFailedWebglFallback": "PASS",
+    "primaryActionDependency": "ABSENT",
+    "externalAssetBytes": 0,
+    "textureAssetBytes": 0,
+    "webgpuTsl": "NOT_EXERCISED",
+    "lastVerifiedHead": "be8142197608c8f7e47f2339a49cf8c86f07214b",
+    "workflowRun": 31941566413
+  },
   "licenseProvenance": {
     "scannerAdapter": "PASS",
     "packageManifestParser": "PASS",
@@ -105,10 +132,11 @@
     "missingRightsFailClosed": "PASS",
     "productCoreDeniedLicenseFailClosed": "PASS",
     "machineReadableReceipt": "PASS",
+    "graphics3dProceduralFixtureGate": "PASS",
     "repositoryWideRightsClearance": "NOT_EXERCISED",
     "repositoryWideRightsClearanceReason": "The repository does not yet provide a complete committed lockfile plus rights-evidence manifest for every real dependency, model, font, asset, generated output, and hosted service. Scanner capability PASS does not imply legal clearance.",
-    "lastVerifiedHead": "4c1fe6223504efb87172a1bc458847ad42d32b3b",
-    "workflowRun": 31941228353
+    "lastVerifiedHead": "be8142197608c8f7e47f2339a49cf8c86f07214b",
+    "workflowRun": 31941566413
   },
   "browserVisualQa": {
     "playwrightMatrix": "PASS",
@@ -124,9 +152,11 @@
     "runtimeReceipt": "PASS",
     "graphics2dNormalPath": "PASS",
     "graphics2dForcedFallback": "PASS",
-    "graphics3dFallback": "NOT_IMPLEMENTED",
-    "lastVerifiedHead": "4c1fe6223504efb87172a1bc458847ad42d32b3b",
-    "workflowRun": 31941228353
+    "graphics3dNormalPath": "PASS",
+    "graphics3dTeardown": "PASS",
+    "graphics3dForcedFallback": "PASS",
+    "lastVerifiedHead": "be8142197608c8f7e47f2339a49cf8c86f07214b",
+    "workflowRun": 31941566413
   },
   "evidenceStates": [
     "PASS",
