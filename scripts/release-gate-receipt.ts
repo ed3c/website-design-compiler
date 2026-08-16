@@ -100,6 +100,11 @@ const unresolvedRisks = [
     id: "repository-wide-rights-clearance",
     state: project?.licenseProvenance?.repositoryWideRightsClearance ?? "ABSENT",
     reason: project?.licenseProvenance?.repositoryWideRightsClearanceReason ?? "repository-wide rights clearance is not established"
+  },
+  {
+    id: "website-design-skill-arena-smoke",
+    state: "NOT_IMPLEMENTED",
+    reason: "Issue #15 is not implemented yet; arena smoke tests are therefore explicit optional unresolved evidence rather than fabricated PASS"
   }
 ].filter((risk) => risk.state !== "PASS");
 
