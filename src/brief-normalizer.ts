@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import type { CompilerInput, CompilerReference } from "./contracts.js";
 
+export const BRIEF_NORMALIZER_VERSION = "2.0.0";
+export const BRIEF_NORMALIZER_CONFIG = "deterministic-regex-v1";
+
 export type NormalizedFieldState = "EXPLICIT" | "INFERRED" | "NEEDS_INPUT";
 
 export interface NaturalLanguageBriefInput {
@@ -22,6 +25,11 @@ export interface BriefNormalizationReceipt {
   schema: "website-design-compiler/brief-normalization/v2";
   project: string;
   inputSha256: string;
+  structuredContractSha256: string | null;
+  normalizer: {
+    version: string;
+    config: string;
+  };
   state: "READY" | "NEEDS_INPUT";
   fields: {
     pageType: NormalizedField;
@@ -31,6 +39,7 @@ export interface BriefNormalizationReceipt {
   hardConstraints: string[];
   needsInput: string[];
   riskyContentRequests: string[];
+  validationErrors: string[];
   compilerInput: CompilerInput | null;
 }
 
@@ -104,6 +113,35 @@ function collectRiskyContentRequests(text: string): string[] {
   return RISKY_CONTENT_PATTERNS.filter(([pattern]) => pattern.test(positiveText)).map(([, label]) => label);
 }
 
+function normalizedConstraintSubject(value: string): { polarity: "ALLOW" | "DENY"; subject: string } | null {
+  const trimmed = value.trim().replace(/[.!]+$/, "");
+  const negative = trimmed.match(/^(?:must not|do not|never)\s+(?:use|include|enable|allow|require|show)?\s*(.+)$/i);
+  if (negative?.[1]?.trim()) {
+    return { polarity: "DENY", subject: negative[1].trim().toLowerCase().replace(/\s+/g, " ") };
+  }
+  const positive = trimmed.match(/^(?:must|requirement:?\s*must)\s+(?:use|include|enable|allow|require|show|preserve|support)?\s*(.+)$/i);
+  if (positive?.[1]?.trim()) {
+    return { polarity: "ALLOW", subject: positive[1].trim().toLowerCase().replace(/\s+/g, " ") };
+  }
+  return null;
+}
+
+function detectConstraintContradictions(constraints: string[]): string[] {
+  const directives = constraints
+    .map((constraint) => ({ constraint, directive: normalizedConstraintSubject(constraint) }))
+    .filter((entry): entry is { constraint: string; directive: { polarity: "ALLOW" | "DENY"; subject: string } } => Boolean(entry.directive));
+  const errors: string[] = [];
+  for (const entry of directives) {
+    const opposite = directives.find((candidate) =>
+      candidate.directive.subject === entry.directive.subject && candidate.directive.polarity !== entry.directive.polarity
+    );
+    if (opposite) {
+      errors.push(`Contradictory hard constraints for \"${entry.directive.subject}\": \"${entry.constraint}\" conflicts with \"${opposite.constraint}\".`);
+    }
+  }
+  return [...new Set(errors)].sort();
+}
+
 export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormalizationReceipt {
   if (!input.project.trim()) throw new Error("project is required");
   if (!input.briefText.trim()) throw new Error("briefText is required");
@@ -116,8 +154,11 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
     .filter(([, field]) => field.state === "NEEDS_INPUT")
     .map(([name]) => name);
   const riskyContentRequests = collectRiskyContentRequests(input.briefText);
+  const hardConstraints = collectConstraints(input);
+  const validationErrors = detectConstraintContradictions(hardConstraints);
 
   for (const risky of riskyContentRequests) needsInput.push(`evidence:${risky}`);
+  if (validationErrors.length > 0) needsInput.push("hardConstraints");
 
   const state = needsInput.length === 0 ? "READY" : "NEEDS_INPUT";
   const requestedStages = input.requestedStages ?? [
@@ -148,11 +189,17 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
     schema: "website-design-compiler/brief-normalization/v2",
     project: input.project,
     inputSha256: hash(input),
+    structuredContractSha256: compilerInput ? hash(compilerInput) : null,
+    normalizer: {
+      version: BRIEF_NORMALIZER_VERSION,
+      config: BRIEF_NORMALIZER_CONFIG
+    },
     state,
     fields,
-    hardConstraints: collectConstraints(input),
+    hardConstraints,
     needsInput: [...new Set(needsInput)],
     riskyContentRequests,
+    validationErrors,
     compilerInput
   };
 }
