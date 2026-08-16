@@ -31,7 +31,15 @@
     "layout": { "type": "object" },
     "spacingPx": { "type": "array", "minItems": 7, "items": { "type": "number", "minimum": 0 } },
     "radiiPx": { "type": "object" }, "border": { "type": "object" }, "elevation": { "type": "object" }, "motionMs": { "type": "object" }, "media": { "type": "object" },
-    "interaction": { "type": "object", "required": ["focusRingPx", "focusOffsetPx", "rawValueBypass"], "properties": { "rawValueBypass": { "const": false } } }
+    "interaction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["focusRingPx", "focusOffsetPx", "rawValueBypass"],
+      "properties": {
+        "focusRingPx": { "const": 3 },
+        "focusOffsetPx": { "const": 2 },
+        "rawValueBypass": { "const": false }
+      }
+    }
   },
   "$defs": { "oklch": { "type": "string", "pattern": "^oklch\\([0-9.]+ [0-9.]+ [0-9.]+\\)$" } }
 }
