@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    "declaration": false,
+    "rootDir": "."
+  },
+  "include": [
+    "src/arena.ts",
+    "scripts/arena-smoke.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
+}
