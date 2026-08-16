@@ -4,7 +4,7 @@
   "brief": {
     "pageType": "product-landing",
     "audience": "design engineering teams",
-    "objective": "prove deterministic compiler, reference evidence, design contracts, and governed frontend plans"
+    "objective": "prove deterministic compiler, evidence, governed UI, and bounded motion"
   },
   "references": [
     {
@@ -16,5 +16,5 @@
     "primary": ["repo-native"],
     "reviewers": ["anthropic-frontend-design"]
   },
-  "requestedStages": ["reference-intelligence", "art-direction", "frontend-builder", "release-receipt"]
+  "requestedStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "release-receipt"]
 }
