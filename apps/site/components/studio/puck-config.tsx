@@ -8,7 +8,7 @@ type StudioProps = {
   ButtonBlock: { label: string; intent: "primary" | "secondary" };
   StatusPanelBlock: { state: "loading" | "empty" | "error" | "success"; title: string; message: string };
   Section: { surfaceToken: "surface-default" | "surface-muted"; content: Slot };
-  RichSectionBlock: { kind:SectionKind; variant:string; fields:Record<string,unknown>; provenance:Record<string,string>; tokenRef:"semantic-design-tokens/v2" };
+  RichSectionBlock: { kind:SectionKind; variant:string; fields:Record<string,unknown>; provenance:Record<string,string>; tokenRef?:"semantic-design-tokens/v2" };
 };
 
 function fieldFor(contract:SectionFieldContract):Field {
