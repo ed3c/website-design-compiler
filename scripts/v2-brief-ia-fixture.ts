@@ -9,6 +9,7 @@ const outputDirectory = resolve("artifacts/v2/brief-ia");
 await mkdir(outputDirectory, { recursive: true });
 
 const raw = JSON.parse(await readFile(inputPath, "utf8")) as NaturalLanguageBriefInput;
+await validateAgainstSchema(raw, "brief-input-v2.schema.json");
 const normalization = normalizeBrief(raw);
 await validateAgainstSchema(normalization, "brief-normalization-v2.schema.json");
 await writeFile(resolve(outputDirectory, "brief-normalization.json"), `${JSON.stringify(normalization, null, 2)}\n`, "utf8");
