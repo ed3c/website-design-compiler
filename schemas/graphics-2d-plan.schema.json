@@ -13,7 +13,13 @@
       "required": ["preferred", "capabilityOrder", "progressiveEnhancement"],
       "properties": {
         "preferred": { "const": "webgl" },
-        "capabilityOrder": { "type": "array", "prefixItems": [{"const":"webgpu"},{"const":"webgl"},{"const":"canvas2d"}], "items": false },
+        "capabilityOrder": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [{"const":"webgpu"},{"const":"webgl"},{"const":"canvas2d"}],
+          "items": false
+        },
         "progressiveEnhancement": { "const": true }
       }
     },
