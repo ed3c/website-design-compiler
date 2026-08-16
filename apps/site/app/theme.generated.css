@@ -1,0 +1,24 @@
+:root {
+  --wdc-color-background: oklch(0.985 0.006 250);
+  --wdc-color-surface: oklch(0.955 0.012 250);
+  --wdc-color-text-primary: oklch(0.22 0.025 250);
+  --wdc-color-text-muted: oklch(0.43 0.025 250);
+  --wdc-color-accent: oklch(0.58 0.19 255);
+  --wdc-color-focus: oklch(0.50 0.20 255);
+  --wdc-font-display: "Georgia", system-ui, sans-serif;
+  --wdc-font-body: "Inter", system-ui, sans-serif;
+  --wdc-space-xs: 8px;
+  --wdc-space-sm: 16px;
+  --wdc-space-md: 28px;
+  --wdc-space-lg: 44px;
+  --wdc-space-xl: 72px;
+  --wdc-radius-md: 8px;
+  --wdc-radius-lg: 16px;
+  --wdc-motion-fast: 120ms;
+  --wdc-motion-base: 180ms;
+  --wdc-container-max: 1200px;
+  --wdc-grid-columns: 12;
+  --wdc-gutter: 40px;
+}
+@media (max-width: 1199px) { :root { --wdc-container-max: 880px; --wdc-grid-columns: 8; --wdc-gutter: 28px; } }
+@media (max-width: 767px) { :root { --wdc-container-max: 560px; --wdc-grid-columns: 4; --wdc-gutter: 16px; } }
