@@ -6,11 +6,27 @@ import { validateAgainstSchema } from "./validate.js";
 export const GOVERNED_COMPONENTS = ["button", "status-panel"] as const;
 export type GovernedComponentName = (typeof GOVERNED_COMPONENTS)[number];
 
-export interface ComponentNode {
+type ButtonNode = {
   id: string;
-  component: GovernedComponentName;
-  props: Record<string, string | boolean>;
-}
+  component: "button";
+  props: {
+    intent?: "primary" | "secondary";
+    children: string;
+    disabled?: boolean;
+  };
+};
+
+type StatusPanelNode = {
+  id: string;
+  component: "status-panel";
+  props: {
+    state: "loading" | "empty" | "error" | "success";
+    title: string;
+    message: string;
+  };
+};
+
+export type ComponentNode = ButtonNode | StatusPanelNode;
 
 export interface FrontendPlan {
   schema: "website-design-compiler/frontend-plan/v1";
@@ -30,12 +46,16 @@ export function buildFrontendPlan(input: CompilerInput): FrontendPlan {
       {
         id: "primary-action",
         component: "button",
-        props: { intent: "primary", label: "Open compiler contract" }
+        props: { intent: "primary", children: "Open compiler contract" }
       },
       {
         id: "runtime-status",
         component: "status-panel",
-        props: { state: "success", message: "Governed component plan emitted" }
+        props: {
+          state: "success",
+          title: "Runtime status",
+          message: "Governed component plan emitted"
+        }
       }
     ]
   };
