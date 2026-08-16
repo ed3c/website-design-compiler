@@ -7,6 +7,7 @@ export interface ReleaseGateInputs {
   storybook: ReleaseInputState;
   sharedBindings: ReleaseInputState;
   arena: ReleaseInputState;
+  showcase: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {
