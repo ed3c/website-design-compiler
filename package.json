@@ -14,6 +14,7 @@
     "v2:content-architecture": "tsx scripts/content-architecture-benchmark-receipt.ts",
     "v2:visual-directions": "tsx scripts/visual-direction-benchmark-receipt.ts",
     "v2:semantic-tokens": "tsx scripts/semantic-token-benchmark-receipt.ts && tsx scripts/semantic-token-projection-receipt.ts",
+    "v2:section-grammar": "tsx scripts/section-grammar-receipt.ts",
     "showcase:typecheck": "tsc --noEmit -p tsconfig.showcase.json",
     "showcase:compile": "tsx src/cli.ts fixtures/showcase/compiler-input.json artifacts/showcase/compiler",
     "showcase:compiler-receipt": "tsx scripts/showcase-compiler-receipt.ts",
