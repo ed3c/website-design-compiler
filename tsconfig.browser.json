@@ -11,7 +11,8 @@
     "playwright.config.ts",
     "tests/browser/**/*.ts",
     "scripts/browser-qa-receipt.ts",
-    "scripts/reference-media-fixture.ts"
+    "scripts/reference-media-fixture.ts",
+    "scripts/reference-browser-fixture.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }
