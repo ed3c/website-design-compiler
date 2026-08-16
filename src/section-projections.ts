@@ -9,6 +9,11 @@ function mapField(name:string, field:SectionFieldContract):ProjectionField {
   return { name, type, required:field.required, provenanceRequired:field.provenanceRequired, ...(field.maxLength === undefined ? {} : {maxLength:field.maxLength}) };
 }
 
+function storyIdFor(kind:SectionKind):string {
+  const exportId = kind === "graphics-2d-stage" ? "graphics-2-d-stage" : kind === "graphics-3d-stage" ? "graphics-3-d-stage" : kind;
+  return `governed-sections-section--${exportId}`;
+}
+
 export function projectSectionContracts():GovernedSectionProjection[] {
   return SECTION_KINDS.map((kind) => {
     const contract=SECTION_CONTRACTS[kind];
@@ -16,7 +21,7 @@ export function projectSectionContracts():GovernedSectionProjection[] {
       kind,
       authoringType:`Section:${kind}`,
       payloadSlug:`section-${kind}`,
-      storyId:`governed-section--${kind}`,
+      storyId:storyIdFor(kind),
       variants:[...contract.variants],
       fields:Object.entries(contract.fields).map(([name,field])=>mapField(name,field)),
       claimPolicy:contract.claimPolicy
@@ -36,6 +41,7 @@ export function projectionDriftErrors(projections=projectSectionContracts()):str
     const projectedFields=projection.fields.map((field)=>field.name).sort().join("|");
     if(canonicalFields!==projectedFields) errors.push(`field drift for ${kind}`);
     if(projection.claimPolicy!==canonical.claimPolicy) errors.push(`claim policy drift for ${kind}`);
+    if(projection.storyId!==storyIdFor(kind)) errors.push(`storybook identity drift for ${kind}`);
   }
   for(const projection of projections) if(!SECTION_KINDS.includes(projection.kind)) errors.push(`unknown projected section ${projection.kind}`);
   return errors;
