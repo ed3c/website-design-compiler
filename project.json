@@ -6,7 +6,7 @@
     "packageManager": "pnpm",
     "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-graphics3d-provenance-accessibility-performance-release-evidence",
+    "scope": "compiler-core-reference-intelligence-design-system-page-architecture-governed-ui-browser-motion-graphics2d-graphics3d-provenance-accessibility-performance-arena-showcase-release-evidence",
     "applicationStatus": "PASS"
   },
   "pipeline": [
@@ -25,7 +25,20 @@
     "license-provenance",
     "release-receipt"
   ],
-  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "accessibility-performance", "release-receipt"],
+  "implementedCoreStages": [
+    "reference-intelligence",
+    "art-direction",
+    "design-system-compiler",
+    "page-architect",
+    "frontend-builder",
+    "motion-director",
+    "graphics-2d",
+    "graphics-3d",
+    "accessibility-performance",
+    "release-receipt"
+  ],
+  "knownUnimplementedStages": ["media-generator", "browser-visual-qa", "originality-gate", "license-provenance"],
+  "knownUnimplementedStagesNote": "These names remain explicit compiler pipeline contracts. Their capabilities may be exercised by external hard gates, but they are not promoted to executable compiler stages until a stage-owned adapter and artifact contract exist.",
   "sharedSkillBindings": {
     "config": ".skill-bindings/skills-shared.json",
     "resolver": "PASS",
@@ -37,10 +50,25 @@
   "referenceIntelligence": {
     "contractCompiler": "PASS",
     "htmlCapture": "PASS",
-    "remoteCapture": "NOT_EXERCISED",
-    "imageCapture": "NOT_EXERCISED",
-    "videoCapture": "NOT_EXERCISED",
-    "originalityPlan": "PASS"
+    "remoteAdapterCapability": "PASS",
+    "liveThirdPartyRemoteCapture": "NOT_EXERCISED",
+    "ssrfPolicy": "PASS",
+    "redirectRevalidation": "PASS",
+    "remoteResponseSha256": "PASS",
+    "imageDecodedMediaEvidence": "PASS",
+    "videoDecodedMediaEvidence": "PASS",
+    "videoFrameSamplingSha256": "PASS",
+    "browserLayoutObservation": "PASS",
+    "browserTypographyObservation": "PASS",
+    "browserHierarchyObservation": "PASS",
+    "browserMotionObservation": "PASS",
+    "browserAssetObservation": "PASS",
+    "browserResponsiveObservation": "PASS",
+    "semanticMediaUnderstanding": "NOT_EXERCISED",
+    "originalityPlan": "PASS",
+    "implementationDetails": "UNKNOWN_BY_POLICY",
+    "implementationEvidenceHead": "fc2fa2b79cc3847452fe645328a3b97982cb97a1",
+    "workflowRun": 31947264807
   },
   "artDirection": {
     "singlePrimaryRouter": "PASS",
@@ -50,6 +78,27 @@
     "lastVerifiedHead": "ceb90a8879685a64bc37b1ee36b96c52f26786cf",
     "workflowRun": 31938653298
   },
+  "designSystemCompiler": {
+    "runtimeStage": "PASS",
+    "machineReadablePlan": "PASS",
+    "schemaValidation": "PASS",
+    "originalValuesOnlyContract": "PASS",
+    "governedComponentContract": "PASS",
+    "artifact": "design-system-compiler/design-system-plan.json",
+    "implementationEvidenceHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
+  },
+  "pageArchitect": {
+    "runtimeStage": "PASS",
+    "machineReadablePlan": "PASS",
+    "schemaValidation": "PASS",
+    "semanticRequiredOptionalSections": "PASS",
+    "governedComponentSlots": "PASS",
+    "nonBlockingEnhancementFallbacks": "PASS",
+    "artifact": "page-architect/page-architecture-plan.json",
+    "implementationEvidenceHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
+  },
   "frontendRuntime": {
     "nextjsBuild": "PASS",
     "strictTypecheck": "PASS",
@@ -57,8 +106,8 @@
     "shadcnConvention": "PASS",
     "arbitraryMarkup": "SKIPPED_BY_POLICY",
     "componentPropSchema": "PASS",
-    "lastVerifiedHead": "a1408cc3c2b981965d99eb3f0148a15716094695",
-    "workflowRun": 31940138304
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
   },
   "motionDirector": {
     "motionRuntime": "PASS",
@@ -84,12 +133,13 @@
     "semanticDomFallback": "PASS",
     "staticPosterFallback": "PASS",
     "forcedGpuOffFallback": "PASS",
+    "showcaseForcedGpuOffFallback": "PASS",
     "decorativeAccessibilityOwnership": "DOM",
     "pixiMobileAccessibilityHookSuppressed": "PASS",
     "externalAssetBytes": 0,
     "textureAssetBytes": 0,
-    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
-    "workflowRun": 31942773003
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
   },
   "graphics3d": {
     "engine": "@react-three/fiber@9.6.1 + three@0.184.0",
@@ -111,12 +161,13 @@
     "semanticDomFallback": "PASS",
     "staticPosterFallback": "PASS",
     "forcedFailedWebglFallback": "PASS",
+    "showcaseForcedGpuOffFallback": "PASS",
     "primaryActionDependency": "ABSENT",
     "externalAssetBytes": 0,
     "textureAssetBytes": 0,
     "webgpuTsl": "NOT_EXERCISED",
-    "lastVerifiedHead": "be8142197608c8f7e47f2339a49cf8c86f07214b",
-    "workflowRun": 31941566413
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
   },
   "licenseProvenance": {
     "scannerAdapter": "PASS",
@@ -135,10 +186,12 @@
     "productCoreDeniedLicenseFailClosed": "PASS",
     "machineReadableReceipt": "PASS",
     "graphics3dProceduralFixtureGate": "PASS",
+    "benchmarkProvenanceCompleteness": "PASS",
+    "benchmarkLicenseCompliance": "PASS",
     "repositoryWideRightsClearance": "NOT_EXERCISED",
     "repositoryWideRightsClearanceReason": "The repository does not yet provide a complete committed lockfile plus rights-evidence manifest for every real dependency, model, font, asset, generated output, and hosted service. Scanner capability PASS does not imply legal clearance.",
-    "lastVerifiedHead": "be8142197608c8f7e47f2339a49cf8c86f07214b",
-    "workflowRun": 31941566413
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
   },
   "browserVisualQa": {
     "playwrightMatrix": "PASS",
@@ -157,8 +210,14 @@
     "graphics3dNormalPath": "PASS",
     "graphics3dTeardown": "PASS",
     "graphics3dForcedFallback": "PASS",
-    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
-    "workflowRun": 31942773003
+    "showcaseGovernedProjection": "PASS",
+    "showcaseGraphicsOffDesktop": "PASS",
+    "showcaseGraphicsOffTablet": "PASS",
+    "showcaseGraphicsOffMobile": "PASS",
+    "showcaseGraphicsOffReducedMotion": "PASS",
+    "showcaseStaticPosterFallbacks": "PASS",
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
   },
   "accessibilityPerformance": {
     "budgetContract": "website-design-compiler/release-budgets/v1",
@@ -188,18 +247,73 @@
     "graphics3dAssetBudget": "PASS",
     "graphics3dComplexity": "PASS",
     "releaseFailClosedUnitFixtures": "PASS",
-    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
-    "workflowRun": 31942773003
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
+  },
+  "arena": {
+    "runtime": "PASS",
+    "categoryCoverage": "PASS",
+    "benchmarkScore": 100,
+    "categoryCount": 6,
+    "namedGlobalMetricCount": 14,
+    "allNamedGlobalMetrics": "PASS",
+    "missingGlobalEvidence": [],
+    "nonPassGlobalEvidence": [],
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
+  },
+  "showcase": {
+    "runtime": "PASS",
+    "checkedInFixture": "fixtures/showcase/compiler-input.json",
+    "compilerRequiredStageCount": 9,
+    "compilerRequiredStages": {
+      "reference-intelligence": "PASS",
+      "art-direction": "PASS",
+      "design-system-compiler": "PASS",
+      "page-architect": "PASS",
+      "frontend-builder": "PASS",
+      "motion-director": "PASS",
+      "graphics-2d": "PASS",
+      "graphics-3d": "PASS",
+      "release-receipt": "PASS"
+    },
+    "compilerArtifactCompleteness": "PASS",
+    "frontendProjectionMatchesCompiler": "PASS",
+    "productionRoute": "/showcase",
+    "nextjsStaticBuild": "PASS",
+    "governedRegistryRendering": "PASS",
+    "graphicsOffPrimaryUi": "PASS",
+    "graphics2dStaticFallback": "PASS",
+    "graphics3dStaticFallback": "PASS",
+    "desktop": "PASS",
+    "tablet": "PASS",
+    "mobile": "PASS",
+    "reducedMotion": "PASS",
+    "consoleErrors": "ABSENT",
+    "pageErrors": "ABSENT",
+    "releaseHardGate": "PASS",
+    "implementationEvidenceHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969,
+    "artifactId": 9264027917
   },
   "releaseGate": {
     "runtime": "PASS",
     "browser": "PASS",
     "accessibilityPerformance": "PASS",
+    "storybook": "PASS",
+    "sharedBindings": "PASS",
+    "arena": "PASS",
+    "showcase": "PASS",
     "aggregateReceipt": "PASS",
     "failWithReceiptWorkflow": "PASS",
     "exactHeadBinding": "PASS",
-    "lastVerifiedHead": "06eb8e06a97ecf6c4b033503324bfac13484d7ac",
-    "workflowRun": 31942773003
+    "unresolvedRisks": [
+      "live third-party URL availability remains opt-in and NOT_EXERCISED",
+      "WebGPU/TSL remains optional and NOT_EXERCISED",
+      "repository-wide rights clearance remains NOT_EXERCISED"
+    ],
+    "lastVerifiedHead": "137b205e131b4710a36a36a053b1fa8fdec89ad8",
+    "workflowRun": 31948589969
   },
   "evidenceStates": [
     "PASS",
