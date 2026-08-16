@@ -47,13 +47,21 @@ test("core runtime is keyboard reachable, motion-bounded, graphics-degradable, c
     await expect(gsapEffect).toHaveAttribute("data-gsap-active", "true");
   }
 
-  const graphics = page.locator("[data-graphics-state]");
-  await expect(graphics).toHaveAttribute("data-graphics-state", "ready", { timeout: 10_000 });
+  const graphics2d = page.locator("[data-graphics-state]");
+  await expect(graphics2d).toHaveAttribute("data-graphics-state", "ready", { timeout: 10_000 });
   await expect(page.locator("[data-pixi-canvas='true']")).toHaveCount(1);
   await expect(page.locator("[data-semantic-fallback='true']")).toHaveCount(1);
-  const graphicsResolution = Number(await graphics.getAttribute("data-resolution"));
-  expect(graphicsResolution).toBeGreaterThanOrEqual(1);
-  expect(graphicsResolution).toBeLessThanOrEqual(testInfo.project.name === "mobile-chromium" ? 1.5 : 2);
+  const graphics2dResolution = Number(await graphics2d.getAttribute("data-resolution"));
+  expect(graphics2dResolution).toBeGreaterThanOrEqual(1);
+  expect(graphics2dResolution).toBeLessThanOrEqual(testInfo.project.name === "mobile-chromium" ? 1.5 : 2);
+
+  const graphics3d = page.locator("[data-graphics3d-state]");
+  await expect(graphics3d).toHaveAttribute("data-graphics3d-state", "ready", { timeout: 15_000 });
+  await expect(page.locator("[data-r3f-canvas='true']")).toHaveCount(1);
+  await expect(page.locator("[data-graphics3d-semantic-fallback='true']")).toHaveCount(1);
+  const graphics3dDpr = Number(await graphics3d.getAttribute("data-graphics3d-dpr"));
+  expect(graphics3dDpr).toBeGreaterThanOrEqual(1);
+  expect(graphics3dDpr).toBeLessThanOrEqual(testInfo.project.name === "mobile-chromium" ? 1.25 : 1.75);
 
   const screenshotDirectory = join(process.cwd(), "artifacts", "browser-qa", "screenshots");
   await mkdir(screenshotDirectory, { recursive: true });
@@ -62,14 +70,29 @@ test("core runtime is keyboard reachable, motion-bounded, graphics-degradable, c
   await testInfo.attach("full-page", { path: screenshotPath, contentType: "image/png" });
 
   if (testInfo.project.name === "desktop-chromium") {
-    const fallbackResponse = await page.goto("/?graphics=off", { waitUntil: "networkidle" });
+    await page.evaluate(() => window.dispatchEvent(new Event("wdc:graphics3d:dispose")));
+    await expect(graphics3d).toHaveAttribute("data-graphics3d-disposed", "true");
+    await expect(page.locator("[data-r3f-canvas='true']")).toHaveCount(0);
+    await expect(page.locator("[data-graphics3d-static-poster='true']")).toHaveCount(1);
+    await expect(firstButton).toBeEnabled();
+
+    const fallbackResponse = await page.goto("/?graphics=off&graphics3d=off", { waitUntil: "networkidle" });
     expect(fallbackResponse?.ok()).toBeTruthy();
-    const fallbackGraphics = page.locator("[data-graphics-state]");
-    await expect(fallbackGraphics).toHaveAttribute("data-graphics-state", "fallback");
+
+    const fallback2d = page.locator("[data-graphics-state]");
+    await expect(fallback2d).toHaveAttribute("data-graphics-state", "fallback");
     await expect(page.locator("[data-pixi-host='true']")).toHaveAttribute("data-forced-fallback", "true");
     await expect(page.locator("[data-pixi-canvas='true']")).toHaveCount(0);
     await expect(page.locator("[data-static-poster='true']")).toHaveCount(1);
     await expect(page.locator("[data-semantic-fallback='true']")).toHaveCount(1);
+
+    const fallback3d = page.locator("[data-graphics3d-state]");
+    await expect(fallback3d).toHaveAttribute("data-graphics3d-state", "fallback");
+    await expect(fallback3d).toHaveAttribute("data-graphics3d-enabled", "false");
+    await expect(page.locator("[data-r3f-canvas='true']")).toHaveCount(0);
+    await expect(page.locator("[data-graphics3d-static-poster='true']")).toHaveCount(1);
+    await expect(page.locator("[data-graphics3d-semantic-fallback='true']")).toHaveCount(1);
+    await expect(page.getByRole("button").first()).toBeEnabled();
   }
 
   expect(consoleErrors, `console/page errors: ${consoleErrors.join(" | ")}`).toEqual([]);
