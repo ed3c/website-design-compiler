@@ -15,10 +15,13 @@ export class ContractValidationError extends Error {
   }
 }
 
-export async function validateCompilerInput(value: unknown): Promise<CompilerInput> {
-  const schemaPath = resolve(process.cwd(), "schemas/compiler-input.schema.json");
-  const schema = JSON.parse(await readFile(schemaPath, "utf8")) as object;
+async function loadSchema(schemaFile: string): Promise<object> {
+  const schemaPath = resolve(process.cwd(), "schemas", schemaFile);
+  return JSON.parse(await readFile(schemaPath, "utf8")) as object;
+}
 
+export async function validateAgainstSchema<T>(value: unknown, schemaFile: string): Promise<T> {
+  const schema = await loadSchema(schemaFile);
   const ajv = new Ajv2020({ allErrors: true, strict: true, useDefaults: true });
   addFormats(ajv);
   const validate = ajv.compile(schema);
@@ -27,5 +30,9 @@ export async function validateCompilerInput(value: unknown): Promise<CompilerInp
     throw new ContractValidationError(validate.errors ?? []);
   }
 
-  return value as CompilerInput;
+  return value as T;
+}
+
+export async function validateCompilerInput(value: unknown): Promise<CompilerInput> {
+  return validateAgainstSchema<CompilerInput>(value, "compiler-input.schema.json");
 }
