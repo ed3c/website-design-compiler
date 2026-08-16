@@ -41,6 +41,9 @@
   "requiredCompilerStages": [
     "reference-intelligence",
     "art-direction",
+    "information-architecture",
+    "design-system-compiler",
+    "page-architect",
     "frontend-builder",
     "motion-director",
     "graphics-2d",
