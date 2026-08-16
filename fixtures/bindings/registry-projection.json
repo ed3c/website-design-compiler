@@ -1,16 +1,21 @@
 {
   "schema": "website-design-compiler/shared-registry-projection/v1",
   "sourceRepository": "ed3c/skills-shared",
-  "sourceIdentity": "synthetic-fixture-only",
+  "sourceIdentity": "git:4c15d261e63f3f10c195951f636e89cd66939550",
+  "sourceRegistry": {
+    "path": "registry.json",
+    "blobSha": "a71081a987bcd0bfabbd03f67b48617995f45b87",
+    "schema": "shared-skills-registry/v2"
+  },
   "skills": [
-    {"name": "repo-agent-native", "identity": "fixture:repo-agent-native"},
-    {"name": "sdlc-plan-composer", "identity": "fixture:sdlc-plan-composer"},
-    {"name": "unknown-discovery-composer", "identity": "fixture:unknown-discovery-composer"},
-    {"name": "truth-verify-loop", "identity": "fixture:truth-verify-loop"},
-    {"name": "external-verify", "identity": "fixture:external-verify"},
-    {"name": "knowledge-continuity", "identity": "fixture:knowledge-continuity"},
-    {"name": "git-town-stacked-pr-worker", "identity": "fixture:git-town-stacked-pr-worker"},
-    {"name": "github-delivery-loop", "identity": "fixture:github-delivery-loop"},
-    {"name": "dual-forge-repository-loop", "identity": "fixture:dual-forge-repository-loop"}
+    {"name": "repo-agent-native", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/repo-agent-native"},
+    {"name": "sdlc-plan-composer", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/sdlc-plan-composer"},
+    {"name": "unknown-discovery-composer", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/unknown-discovery-composer"},
+    {"name": "truth-verify-loop", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/truth-verify-loop"},
+    {"name": "external-verify", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/external-verify"},
+    {"name": "knowledge-continuity", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/knowledge-continuity"},
+    {"name": "git-town-stacked-pr-worker", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/git-town-stacked-pr-worker"},
+    {"name": "github-delivery-loop", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/github-delivery-loop"},
+    {"name": "dual-forge-repository-loop", "identity": "git:4c15d261e63f3f10c195951f636e89cd66939550:skills/dual-forge-repository-loop"}
   ]
 }
