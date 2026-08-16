@@ -6,6 +6,7 @@ import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js
 import { writeDesignContracts } from "./design-contracts.js";
 import { writeFrontendPlan } from "./frontend-builder.js";
 import { writeMotionDirectorPlan } from "./motion-director.js";
+import { writeGraphics2DPlan } from "./graphics-2d.js";
 import { ContractValidationError, validateCompilerInput } from "./validate.js";
 
 async function main(): Promise<void> {
@@ -21,18 +22,11 @@ async function main(): Promise<void> {
     const input = await validateCompilerInput(raw);
     const resolvedOutputDirectory = resolve(outputDirectory);
 
-    if (input.requestedStages.includes("reference-intelligence")) {
-      await writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory);
-    }
-    if (input.requestedStages.includes("art-direction")) {
-      await writeDesignContracts(input, resolvedOutputDirectory);
-    }
-    if (input.requestedStages.includes("frontend-builder")) {
-      await writeFrontendPlan(input, resolvedOutputDirectory);
-    }
-    if (input.requestedStages.includes("motion-director")) {
-      await writeMotionDirectorPlan(input, resolvedOutputDirectory);
-    }
+    if (input.requestedStages.includes("reference-intelligence")) await writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("art-direction")) await writeDesignContracts(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("frontend-builder")) await writeFrontendPlan(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("motion-director")) await writeMotionDirectorPlan(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("graphics-2d")) await writeGraphics2DPlan(resolvedOutputDirectory);
 
     const receipt = compile(input);
     const receiptPath = await writeRuntimeReceipt(receipt, resolvedOutputDirectory);
