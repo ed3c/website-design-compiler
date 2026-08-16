@@ -7,13 +7,15 @@ function input(pageType: string): CompilerInput {
   return { schema: "website-design-compiler/input/v1", project: `tokens-${pageType}`, brief: { pageType, audience: "design teams", objective: "compile a governed premium website" }, requestedStages: ["visual-direction-search", "semantic-design-tokens"] };
 }
 
-test("semantic tokens emit concrete OKLCH values with executable contrast evidence", () => {
+test("semantic tokens emit concrete OKLCH values with executable component contrast evidence", () => {
   const tokens = compileSemanticDesignTokens(input("b2b-product"));
   assert.match(tokens.color.background, /^oklch\(/);
   assert.ok(tokens.color.contrastEvidence.textOnBackground >= 4.5);
   assert.ok(tokens.color.contrastEvidence.mutedTextOnBackground >= 4.5);
+  assert.ok(tokens.color.contrastEvidence.onAccentOnAccent >= 4.5);
   assert.ok(tokens.color.contrastEvidence.focusOnBackground >= 3);
   assert.equal(tokens.color.contrastEvidence.textOnBackground, contrastRatio(tokens.color.text, tokens.color.background));
+  assert.equal(tokens.color.contrastEvidence.onAccentOnAccent, contrastRatio(tokens.color.onAccent, tokens.color.accent));
 });
 
 test("typography and layout contain real responsive values", () => {
