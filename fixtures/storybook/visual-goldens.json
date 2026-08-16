@@ -1,26 +1,26 @@
 {
   "schema": "website-design-compiler/storybook-visual-goldens/v1",
   "source": {
-    "gitSha": "6ad907033c8aeb0b01a684ff5acaac4dd8ac3dcb",
-    "workflowRun": 31943386298,
-    "artifactId": 9262643976,
+    "gitSha": "26b32df85b79173a6259ec6fd378f930c09ed621",
+    "workflowRun": 31959513902,
+    "artifactId": 9266893059,
     "browser": "Playwright Chromium",
     "projects": ["storybook-desktop", "storybook-mobile"]
   },
   "screenshots": {
-    "storybook-desktop--governed-ui-button--disabled.png": "d4f7aee094772b81eee112ad96495ea71c1ca3461aa433fb962e0673b4bad5ca",
-    "storybook-desktop--governed-ui-button--primary.png": "04d1d0da9dba253d8e3582f7db75c1ea92d96d8f86e5db12f711028d5be4c0e7",
-    "storybook-desktop--governed-ui-button--secondary.png": "968d64e3abd1dc746d1120e14585d0f6b03507b9032636fcd4ae0bd9a0fbb4f8",
-    "storybook-desktop--governed-ui-statuspanel--empty.png": "2cdd97e8d2c5177f7a923eb73e48876eff5fac80d3aae80e1b71fc4cd426d543",
-    "storybook-desktop--governed-ui-statuspanel--error.png": "caeef6e6aae1137eb8f2ce078b4e5be0a3bab95dca42aa10d84bc6be7992c509",
-    "storybook-desktop--governed-ui-statuspanel--loading.png": "6df035f0df27df71637432a9eb38232e457d6b16a88451647c6417af073745ce",
-    "storybook-desktop--governed-ui-statuspanel--success.png": "141f1e72499cb7c8c4e1669871657fcef2d1d914ea3ddacf2a1be18bb9e178b9",
-    "storybook-mobile--governed-ui-button--disabled.png": "fd50dcdfd9d37fbcd687b4603019bb5d33050c7dba1422c001e1aef3d1eb4960",
-    "storybook-mobile--governed-ui-button--primary.png": "3ee00a0fc4033d71e393eeb241895b56c1798d4883a00568b7592668fce90fd3",
-    "storybook-mobile--governed-ui-button--secondary.png": "37a8a18665b84e1c46447dc1405f284353c035377fc03f64e77bb3f3a095f8ab",
-    "storybook-mobile--governed-ui-statuspanel--empty.png": "2d2febdc8ffefab1f805db4931e290cddca64f943a5c4b6d18aa21c21ffabd0b",
-    "storybook-mobile--governed-ui-statuspanel--error.png": "381ec6cd8da2291ec502ac6cfe25ae71efcd34c45a5a374994d17182cf292e28",
-    "storybook-mobile--governed-ui-statuspanel--loading.png": "28cd5dac715abb538fea74a7fb37bf00fe3019940a040e4927fcf15fdcc602af",
-    "storybook-mobile--governed-ui-statuspanel--success.png": "e12c29f3b31a97e7fb5d4deeaf775e7ce80c10637985253cb677d20fbd5a69d0"
+    "storybook-desktop--governed-ui-button--disabled.png": "cdecaddf641b03bb61a7c1ea7191e44a8e4a8a319f7495445a78ab2624ef3e91",
+    "storybook-desktop--governed-ui-button--primary.png": "3cb89011f672beb5cbf8374a3b6a16350292720915c8e2b31cbb43107e487c0f",
+    "storybook-desktop--governed-ui-button--secondary.png": "5c87d4b47cdf7ea0ef1526c1bf24f72c17e480677bfd13ba6cd17f43fa4af9c5",
+    "storybook-desktop--governed-ui-statuspanel--empty.png": "8636fd6f48bb96bde6644612cbf693f1d8d68c74e59631178c5089bc007a9a4e",
+    "storybook-desktop--governed-ui-statuspanel--error.png": "792820257087519762180abe8a9f929e18ac981dd0814b835588e70449f7c534",
+    "storybook-desktop--governed-ui-statuspanel--loading.png": "4d861782b7925cc4c046d8a0194ed091a2265b23be1a4f1a214e24190c6616c6",
+    "storybook-desktop--governed-ui-statuspanel--success.png": "e39ad0d8aeb72da1dd268dc93b19161483afef890f7c17a03c384d19525bef71",
+    "storybook-mobile--governed-ui-button--disabled.png": "35f8178fa44dc1299a4a7a59456c01df87c19d99028b1381cc6a572ce6b5f19b",
+    "storybook-mobile--governed-ui-button--primary.png": "fac67c17fd64ca6e07d8feeb4cbddef0a861980329ca8cd14186a00e4e6f3ba8",
+    "storybook-mobile--governed-ui-button--secondary.png": "cbb49070ea9fcbee19b3a3dcb17ee819b8181335eaf5ba740057084650313c9f",
+    "storybook-mobile--governed-ui-statuspanel--empty.png": "6e9027362356def6d573d29ba3db0f88dfcf6717f821472d603092502c633899",
+    "storybook-mobile--governed-ui-statuspanel--error.png": "4b93381e2604c323fcafc04b55de9b4b6318ce2e07b6b29a7892339e2b3bc134",
+    "storybook-mobile--governed-ui-statuspanel--loading.png": "8f5bfa263fc42e1793063cef143b5887a100b34bf82e2c355379c538c066fdc6",
+    "storybook-mobile--governed-ui-statuspanel--success.png": "c5b28375cde0dfbd7821b70cb508df864431a53406ccb016cdb9b280d4a8f311"
   }
 }
