@@ -3,11 +3,21 @@
   "$id": "website-design-compiler/brief-normalization/v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "inputSha256", "state", "fields", "hardConstraints", "needsInput", "riskyContentRequests", "compilerInput"],
+  "required": ["schema", "project", "inputSha256", "structuredContractSha256", "normalizer", "state", "fields", "hardConstraints", "needsInput", "riskyContentRequests", "validationErrors", "compilerInput"],
   "properties": {
     "schema": { "const": "website-design-compiler/brief-normalization/v2" },
     "project": { "type": "string", "minLength": 1 },
     "inputSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "structuredContractSha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "normalizer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "config"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "config": { "type": "string", "minLength": 1 }
+      }
+    },
     "state": { "enum": ["READY", "NEEDS_INPUT"] },
     "fields": {
       "type": "object",
@@ -22,6 +32,7 @@
     "hardConstraints": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "needsInput": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "riskyContentRequests": { "type": "array", "items": { "enum": ["testimonials", "customer-logos", "metrics", "pricing"] }, "uniqueItems": true },
+    "validationErrors": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "compilerInput": { "type": ["object", "null"] }
   },
   "$defs": {
