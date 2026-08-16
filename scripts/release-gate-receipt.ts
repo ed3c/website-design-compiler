@@ -39,6 +39,7 @@ const storybookPath = join(root, "artifacts", "storybook", "storybook-workshop.j
 const sharedBindingPath = join(root, "artifacts", "runtime", "shared-binding-receipt.json");
 const arenaPath = join(root, "artifacts", "arena", "arena-score.json");
 const showcasePath = join(root, "artifacts", "showcase", "showcase-compiler-receipt.json");
+const externalSkillsPath = join(root, "artifacts", "external-skills", "registry-receipt.json");
 const projectPath = join(root, "project.json");
 const outputDirectory = join(root, "artifacts", "release");
 const outputPath = join(outputDirectory, "release-gate-receipt.json");
@@ -53,18 +54,19 @@ const evaluation = evaluateReleaseGate({
   storybook: await readOverall(storybookPath),
   sharedBindings: await readOverall(sharedBindingPath),
   arena: await readOverall(arenaPath),
-  showcase: await readOverall(showcasePath)
+  showcase: await readOverall(showcasePath),
+  externalSkills: await readOverall(externalSkillsPath)
 });
 
 const unresolvedRisks = [
-  { id: "reference-live-remote-capture", state: project?.referenceIntelligence?.remoteCapture ?? "NOT_EXERCISED", reason: "live third-party URL availability remains opt-in; deterministic SSRF-safe adapter tests are separate from external-site uptime" },
+  { id: "reference-live-remote-capture", state: project?.referenceIntelligence?.liveThirdPartyRemoteCapture ?? "NOT_EXERCISED", reason: "live third-party URL availability remains opt-in; deterministic SSRF-safe adapter tests are separate from external-site uptime" },
   { id: "webgpu-tsl", state: project?.graphics3d?.webgpuTsl ?? "ABSENT", reason: "WebGPU/TSL remains an optional unexercised graphics path" },
   { id: "repository-wide-rights-clearance", state: project?.licenseProvenance?.repositoryWideRightsClearance ?? "ABSENT", reason: project?.licenseProvenance?.repositoryWideRightsClearanceReason ?? "repository-wide rights clearance is not established" }
 ].filter((risk) => risk.state !== "PASS");
 
 const commands = [
   "pnpm install --no-frozen-lockfile", "pnpm typecheck", "pnpm build", "pnpm test", "pnpm provenance:fixture", "pnpm compile:fixture",
-  "pnpm showcase:compile", "pnpm showcase:compiler-receipt", "pnpm ui:typecheck", "pnpm ui:build", "pnpm browser:typecheck", "pnpm storybook:typecheck", "pnpm arena:typecheck",
+  "pnpm showcase:compile", "pnpm showcase:compiler-receipt", "pnpm external-skills:receipt", "pnpm ui:typecheck", "pnpm ui:build", "pnpm browser:typecheck", "pnpm storybook:typecheck", "pnpm arena:typecheck",
   "pnpm exec playwright install --with-deps chromium", "pnpm reference:media-fixture", "pnpm reference:browser-fixture",
   "pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json",
   "pnpm storybook:build", "pnpm storybook:qa", "pnpm storybook:receipt", "pnpm browser:qa", "pnpm browser:receipt", "pnpm quality:receipt", "pnpm arena:smoke", "pnpm release:receipt"
@@ -88,7 +90,8 @@ const receipt = {
     storybook: "artifacts/storybook/storybook-workshop.json",
     sharedBindings: "artifacts/runtime/shared-binding-receipt.json",
     arena: "artifacts/arena/arena-score.json",
-    showcase: "artifacts/showcase/showcase-compiler-receipt.json"
+    showcase: "artifacts/showcase/showcase-compiler-receipt.json",
+    externalSkills: "artifacts/external-skills/registry-receipt.json"
   },
   unresolvedRisks
 };
