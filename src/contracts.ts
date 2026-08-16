@@ -14,6 +14,7 @@ export const PIPELINE_STAGES = [
   "art-direction",
   "information-architecture",
   "content-architecture",
+  "visual-direction-search",
   "design-system-compiler",
   "page-architect",
   "frontend-builder",
