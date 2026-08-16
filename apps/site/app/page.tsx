@@ -24,6 +24,7 @@ export default function HomePage() {
         <div className="wdc-grid">
           <StatusPanel state="loading" title="Loading" message="State is visible without animation dependency." />
           <StatusPanel state="empty" title="Empty" message="No content is represented explicitly rather than silently collapsing." />
+          <StatusPanel state="error" title="Error" message="Failure state is announced and does not erase recovery context." />
           <StatusPanel state="success" title="Success" message="Core content works without motion or WebGL decoration." />
         </div>
       </section>
