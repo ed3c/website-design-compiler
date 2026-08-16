@@ -9,7 +9,7 @@ import {
   type StageEvidence
 } from "./contracts.js";
 
-const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "frontend-builder", "release-receipt"]);
+const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "release-receipt"]);
 
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -56,6 +56,15 @@ function stageEvidence(stage: string): StageEvidence {
       state: "PASS",
       reason: "Frontend Builder emits a schema-validated component graph restricted to the repository-owned registry; arbitrary markup is forbidden.",
       artifacts: ["frontend-builder/frontend-plan.json"]
+    };
+  }
+
+  if (stage === "motion-director") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Motion Director emits schema-validated Motion/GSAP effects with purpose, interruption, mobile/coarse-pointer, reduced-motion, and non-blocking policies.",
+      artifacts: ["motion-director/motion-plan.json"]
     };
   }
 
