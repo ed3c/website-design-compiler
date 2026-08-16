@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/reference-media-receipt.schema.json",
+  "title": "Reference Media Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "browser", "image", "video"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/reference-media-receipt/v1" },
+    "overall": { "const": "PASS" },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "version"],
+      "properties": {
+        "engine": { "const": "chromium" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "mimeType", "sourceSha256", "decodedWidth", "decodedHeight", "aspectRatio", "observableFacts", "unknownSemanticContent"],
+      "properties": {
+        "state": { "const": "PASS" },
+        "mimeType": { "const": "image/png" },
+        "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "decodedWidth": { "type": "integer", "minimum": 1 },
+        "decodedHeight": { "type": "integer", "minimum": 1 },
+        "aspectRatio": { "type": "number", "exclusiveMinimum": 0 },
+        "observableFacts": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
+        "unknownSemanticContent": { "const": true }
+      }
+    },
+    "video": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "mimeType", "sourceSha256", "decodedWidth", "decodedHeight", "durationSeconds", "aspectRatio", "samples", "observableFacts", "unknownSemanticContent", "unknownCameraAndImplementationDetails"],
+      "properties": {
+        "state": { "const": "PASS" },
+        "mimeType": { "const": "video/webm" },
+        "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "decodedWidth": { "type": "integer", "minimum": 1 },
+        "decodedHeight": { "type": "integer", "minimum": 1 },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "aspectRatio": { "type": "number", "exclusiveMinimum": 0 },
+        "samples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["timeSeconds", "frameSha256", "frameMimeType"],
+            "properties": {
+              "timeSeconds": { "type": "number", "minimum": 0 },
+              "frameSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "frameMimeType": { "const": "image/png" }
+            }
+          }
+        },
+        "observableFacts": { "type": "array", "minItems": 4, "items": { "type": "string", "minLength": 1 } },
+        "unknownSemanticContent": { "const": true },
+        "unknownCameraAndImplementationDetails": { "const": true }
+      }
+    }
+  }
+}
