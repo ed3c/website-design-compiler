@@ -21,6 +21,7 @@
     "browser:typecheck": "tsc --noEmit -p tsconfig.browser.json",
     "browser:qa": "playwright test",
     "browser:receipt": "tsx scripts/browser-qa-receipt.ts",
+    "reference:media-fixture": "tsx scripts/reference-media-fixture.ts",
     "quality:receipt": "tsx scripts/accessibility-performance-receipt.ts",
     "arena:typecheck": "tsc --noEmit -p tsconfig.arena.json",
     "arena:smoke": "tsx scripts/arena-smoke.ts",
