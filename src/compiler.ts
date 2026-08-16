@@ -9,7 +9,7 @@ import {
   type StageEvidence
 } from "./contracts.js";
 
-const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "release-receipt"]);
+const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "frontend-builder", "release-receipt"]);
 
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -47,6 +47,15 @@ function stageEvidence(stage: string): StageEvidence {
         "art-direction/motion-spec.json",
         "art-direction/scene-spec.json"
       ]
+    };
+  }
+
+  if (stage === "frontend-builder") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Frontend Builder emits a schema-validated component graph restricted to the repository-owned registry; arbitrary markup is forbidden.",
+      artifacts: ["frontend-builder/frontend-plan.json"]
     };
   }
 
