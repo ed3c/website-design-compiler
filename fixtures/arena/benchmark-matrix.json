@@ -1,48 +1,19 @@
 {
   "schema": "website-design-compiler/arena-benchmark-matrix/v1",
   "categories": [
-    {
-      "id": "b2b-product",
-      "pageType": "product-landing",
-      "audience": "enterprise software buyers and technical evaluators",
-      "objective": "communicate product value, trust, evidence, and a clear primary action without decorative dependency"
-    },
-    {
-      "id": "editorial",
-      "pageType": "editorial-feature",
-      "audience": "long-form readers",
-      "objective": "prioritize hierarchy, reading flow, semantic landmarks, and restrained motion"
-    },
-    {
-      "id": "premium-consumer-brand",
-      "pageType": "premium-consumer",
-      "audience": "high-intent consumer buyers",
-      "objective": "create distinctive art direction while preserving originality, performance, and accessible commerce actions"
-    },
-    {
-      "id": "motion-heavy-creative",
-      "pageType": "creative-showcase",
-      "audience": "creative technology audiences",
-      "objective": "exercise purposeful motion with reduced-motion and coarse-pointer degradation while keeping primary interaction non-blocking"
-    },
-    {
-      "id": "interactive-2d",
-      "pageType": "interactive-2d",
-      "audience": "interactive product visitors",
-      "objective": "exercise PixiJS progressive enhancement, deterministic asset budgets, DOM semantics, and graphics-off fallback"
-    },
-    {
-      "id": "interactive-3d",
-      "pageType": "interactive-3d",
-      "audience": "3D product and spatial-interface visitors",
-      "objective": "exercise governed R3F/Three rendering, complexity budgets, disposal, provenance, and WebGL fallback"
-    }
+    {"id":"b2b-product","pageType":"product-landing","audience":"enterprise software buyers and technical evaluators","objective":"communicate product value, trust, evidence, and a clear primary action without decorative dependency"},
+    {"id":"editorial","pageType":"editorial-feature","audience":"long-form readers","objective":"prioritize hierarchy, reading flow, semantic landmarks, and restrained motion"},
+    {"id":"premium-consumer-brand","pageType":"premium-consumer","audience":"high-intent consumer buyers","objective":"create distinctive art direction while preserving originality, performance, and accessible commerce actions"},
+    {"id":"motion-heavy-creative","pageType":"creative-showcase","audience":"creative technology audiences","objective":"exercise purposeful motion with reduced-motion and coarse-pointer degradation while keeping primary interaction non-blocking"},
+    {"id":"interactive-2d","pageType":"interactive-2d","audience":"interactive product visitors","objective":"exercise PixiJS progressive enhancement, deterministic asset budgets, DOM semantics, and graphics-off fallback"},
+    {"id":"interactive-3d","pageType":"interactive-3d","audience":"3D product and spatial-interface visitors","objective":"exercise governed R3F/Three rendering, complexity budgets, disposal, provenance, and WebGL fallback"}
   ],
   "requiredCompilerStages": [
     "reference-intelligence",
     "art-direction",
     "information-architecture",
     "content-architecture",
+    "visual-direction-search",
     "design-system-compiler",
     "page-architect",
     "frontend-builder",
@@ -51,20 +22,5 @@
     "graphics-3d",
     "release-receipt"
   ],
-  "requiredGlobalEvidence": [
-    "browserMatrix",
-    "responsiveBehavior",
-    "keyboardCompletion",
-    "reducedMotion",
-    "coarsePointer",
-    "graphics2dFallback",
-    "graphics3dFallback",
-    "accessibilityPerformance",
-    "visualRegression",
-    "interactionTraces",
-    "buildReliability",
-    "benchmarkProvenanceCompleteness",
-    "benchmarkLicenseCompliance",
-    "sharedBindings"
-  ]
+  "requiredGlobalEvidence": ["browserMatrix","responsiveBehavior","keyboardCompletion","reducedMotion","coarsePointer","graphics2dFallback","graphics3dFallback","accessibilityPerformance","visualRegression","interactionTraces","buildReliability","benchmarkProvenanceCompleteness","benchmarkLicenseCompliance","sharedBindings"]
 }
