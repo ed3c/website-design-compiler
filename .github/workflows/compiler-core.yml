@@ -33,6 +33,8 @@ jobs:
       - run: pnpm showcase:compiler-receipt
       - name: Verify pinned external design skill registry
         run: pnpm external-skills:receipt
+      - name: Verify deterministic authenticated media worker
+        run: pnpm media:fixture
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
       - run: pnpm browser:typecheck
@@ -95,6 +97,7 @@ jobs:
             artifacts/runtime/minimal/graphics-3d/procedural-provenance.json
             artifacts/showcase/
             artifacts/external-skills/registry-receipt.json
+            artifacts/media-generator/
             artifacts/provenance/license-receipt.json
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
