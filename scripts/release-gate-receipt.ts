@@ -42,6 +42,7 @@ const showcasePath = join(root, "artifacts", "showcase", "showcase-compiler-rece
 const externalSkillsPath = join(root, "artifacts", "external-skills", "registry-receipt.json");
 const mediaGeneratorPath = join(root, "artifacts", "media-generator", "media-generation-receipt.json");
 const authoringStudioPath = join(root, "artifacts", "authoring", "authoring-receipt.json");
+const payloadCmsPath = join(root, "artifacts", "cms", "payload-cms-receipt.json");
 const projectPath = join(root, "project.json");
 const outputDirectory = join(root, "artifacts", "release");
 const outputPath = join(outputDirectory, "release-gate-receipt.json");
@@ -59,20 +60,20 @@ const evaluation = evaluateReleaseGate({
   showcase: await readOverall(showcasePath),
   externalSkills: await readOverall(externalSkillsPath),
   mediaGenerator: await readOverall(mediaGeneratorPath),
-  authoringStudio: await readOverall(authoringStudioPath)
+  authoringStudio: await readOverall(authoringStudioPath),
+  payloadCms: await readOverall(payloadCmsPath)
 });
 
 const unresolvedRisks = [
   { id: "reference-live-remote-capture", state: project?.referenceIntelligence?.liveThirdPartyRemoteCapture ?? "NOT_EXERCISED", reason: "live third-party URL availability remains opt-in; deterministic SSRF-safe adapter tests are separate from external-site uptime" },
   { id: "webgpu-tsl", state: project?.graphics3d?.webgpuTsl ?? "ABSENT", reason: "WebGPU/TSL remains an optional unexercised graphics path" },
   { id: "repository-wide-rights-clearance", state: project?.licenseProvenance?.repositoryWideRightsClearance ?? "ABSENT", reason: project?.licenseProvenance?.repositoryWideRightsClearanceReason ?? "repository-wide rights clearance is not established" },
-  { id: "production-generative-model-rights", state: "NOT_EXERCISED", reason: "only the deterministic internal mock model is admitted; real image/video/3D model weights and output terms remain review-required until exact rights evidence passes license-provenance" },
-  { id: "cms-authoring-persistence", state: "NOT_IMPLEMENTED", reason: "Puck publish is currently a validated local fixture boundary; durable draft/published persistence belongs to the separate Payload CMS issue" }
+  { id: "production-generative-model-rights", state: "NOT_EXERCISED", reason: "only the deterministic internal mock model is admitted; real image/video/3D model weights and output terms remain review-required until exact rights evidence passes license-provenance" }
 ].filter((risk) => risk.state !== "PASS");
 
 const commands = [
   "pnpm install --no-frozen-lockfile", "pnpm typecheck", "pnpm build", "pnpm test", "pnpm provenance:fixture", "pnpm compile:fixture",
-  "pnpm showcase:compile", "pnpm showcase:compiler-receipt", "pnpm external-skills:receipt", "pnpm media:fixture", "pnpm authoring:receipt", "pnpm ui:typecheck", "pnpm ui:build", "pnpm browser:typecheck", "pnpm storybook:typecheck", "pnpm arena:typecheck",
+  "pnpm showcase:compile", "pnpm showcase:compiler-receipt", "pnpm external-skills:receipt", "pnpm media:fixture", "pnpm authoring:receipt", "pnpm cms:fixture", "pnpm ui:typecheck", "pnpm ui:build", "pnpm browser:typecheck", "pnpm storybook:typecheck", "pnpm arena:typecheck",
   "pnpm exec playwright install --with-deps chromium", "pnpm reference:media-fixture", "pnpm reference:browser-fixture",
   "pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json",
   "pnpm storybook:build", "pnpm storybook:qa", "pnpm storybook:receipt", "pnpm browser:qa", "pnpm browser:receipt", "pnpm quality:receipt", "pnpm arena:smoke", "pnpm release:receipt"
@@ -99,7 +100,8 @@ const receipt = {
     showcase: "artifacts/showcase/showcase-compiler-receipt.json",
     externalSkills: "artifacts/external-skills/registry-receipt.json",
     mediaGenerator: "artifacts/media-generator/media-generation-receipt.json",
-    authoringStudio: "artifacts/authoring/authoring-receipt.json"
+    authoringStudio: "artifacts/authoring/authoring-receipt.json",
+    payloadCms: "artifacts/cms/payload-cms-receipt.json"
   },
   unresolvedRisks
 };
