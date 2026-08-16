@@ -46,7 +46,9 @@
     "singlePrimaryRouter": "PASS",
     "designRead": "PASS",
     "semanticContractBundle": "PASS",
-    "runtimeStage": "PASS"
+    "runtimeStage": "PASS",
+    "lastVerifiedHead": "ceb90a8879685a64bc37b1ee36b96c52f26786cf",
+    "workflowRun": 31938653298
   },
   "evidenceStates": [
     "PASS",
