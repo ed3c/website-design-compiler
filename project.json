@@ -6,7 +6,7 @@
     "packageManager": "pnpm",
     "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core-governed-ui-browser-evidence",
+    "scope": "compiler-core-governed-ui-browser-motion-graphics2d-evidence",
     "applicationStatus": "PASS"
   },
   "pipeline": [
@@ -25,7 +25,7 @@
     "license-provenance",
     "release-receipt"
   ],
-  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "release-receipt"],
+  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "release-receipt"],
   "sharedSkillBindings": {
     "config": ".skill-bindings/skills-shared.json",
     "resolver": "PASS",
@@ -57,9 +57,37 @@
     "shadcnConvention": "PASS",
     "arbitraryMarkup": "SKIPPED_BY_POLICY",
     "componentPropSchema": "PASS",
-    "motionOrWebglDependency": "ABSENT",
     "lastVerifiedHead": "a1408cc3c2b981965d99eb3f0148a15716094695",
     "workflowRun": 31940138304
+  },
+  "motionDirector": {
+    "motionRuntime": "PASS",
+    "gsapRuntime": "PASS",
+    "machineReadableContract": "PASS",
+    "reducedMotion": "PASS",
+    "coarsePointer": "PASS",
+    "lifecycleCleanup": "PASS",
+    "primaryInteractionBlocking": "ABSENT",
+    "lastVerifiedHead": "34881e3ec494a2a0f2ecab24cc83fa8d575f7408",
+    "workflowRun": 31940532989
+  },
+  "graphics2d": {
+    "engine": "pixi.js",
+    "runtime": "PASS",
+    "machineReadableContract": "PASS",
+    "rendererCapabilityDetection": "PASS",
+    "webglRuntime": "PASS",
+    "dprCaps": "PASS",
+    "lazyImport": "PASS",
+    "privateTicker": "PASS",
+    "resourceDisposalContract": "PASS",
+    "semanticDomFallback": "PASS",
+    "staticPosterFallback": "PASS",
+    "forcedGpuOffFallback": "PASS",
+    "externalAssetBytes": 0,
+    "textureAssetBytes": 0,
+    "lastVerifiedHead": "c1557684699120e8751b7fe3217a2088a3176a64",
+    "workflowRun": 31940897229
   },
   "browserVisualQa": {
     "playwrightMatrix": "PASS",
@@ -73,10 +101,11 @@
     "screenshots": "PASS",
     "traces": "PASS",
     "runtimeReceipt": "PASS",
-    "webglFallback": "SKIPPED_BY_POLICY",
-    "webglFallbackReason": "Core governed UI has no WebGL dependency; fallback hook becomes required when graphics-3d lands.",
-    "lastVerifiedHead": "a1408cc3c2b981965d99eb3f0148a15716094695",
-    "workflowRun": 31940138304
+    "graphics2dNormalPath": "PASS",
+    "graphics2dForcedFallback": "PASS",
+    "graphics3dFallback": "NOT_IMPLEMENTED",
+    "lastVerifiedHead": "c1557684699120e8751b7fe3217a2088a3176a64",
+    "workflowRun": 31940897229
   },
   "evidenceStates": [
     "PASS",
