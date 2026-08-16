@@ -24,6 +24,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
@@ -63,6 +64,7 @@ jobs:
             artifacts/runtime/minimal/frontend-builder/frontend-plan.json
             artifacts/runtime/minimal/motion-director/motion-plan.json
             artifacts/runtime/minimal/graphics-2d/graphics-2d-plan.json
+            artifacts/provenance/license-receipt.json
             artifacts/browser-qa/browser-qa.json
             artifacts/browser-qa/playwright-report.json
             artifacts/browser-qa/screenshots/
