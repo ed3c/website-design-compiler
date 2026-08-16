@@ -1,0 +1,22 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
+import { compileCompletePageGraph } from "../src/complete-page-graph.js";
+import { evaluateDesignQuality } from "../src/design-quality-eval.js";
+import { decidePremiumQuality } from "../src/design-quality-evidence.js";
+
+const outputDirectory=join(process.cwd(),"artifacts","v2","design-quality");
+await mkdir(outputDirectory,{recursive:true});
+const gitSha=process.env.GITHUB_SHA??"UNBOUND";
+const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
+const scorecards=graphs.flatMap((graph)=>[evaluateDesignQuality(graph,"mobile"),evaluateDesignQuality(graph,"desktop")]);
+const premiumDecisions=scorecards.map((card)=>decidePremiumQuality(card,null,gitSha));
+const categories=new Set(scorecards.map((card)=>card.category));
+const viewportCoverage={mobile:scorecards.filter((card)=>card.viewport==="mobile").length,desktop:scorecards.filter((card)=>card.viewport==="desktop").length};
+const structuralEvaluatorPass=categories.size===6&&viewportCoverage.mobile===6&&viewportCoverage.desktop===6&&scorecards.every((card)=>card.evidence.screenshot==="NOT_EXERCISED");
+const premiumEligibility=premiumDecisions.some((decision)=>decision.overall==="PREMIUM_PASS")?"PASS":"NOT_EXERCISED";
+const receipt={schema:"website-design-compiler/design-quality-eval-receipt/v2",overall:structuralEvaluatorPass?"PASS":"FAIL",git:{sha:gitSha,ref:process.env.GITHUB_REF??"UNBOUND"},categoryCount:categories.size,viewportCoverage,scorecards,premium:{state:premiumEligibility,reason:premiumEligibility==="NOT_EXERCISED"?"complete generated-page desktop/mobile screenshots are not yet bound; structural PASS is not premium evidence":null,decisions:premiumDecisions}};
+const path=join(outputDirectory,"design-quality-eval-receipt.json");
+await writeFile(path,`${JSON.stringify(receipt,null,2)}\n`,`utf8`);
+console.log(JSON.stringify({path,overall:receipt.overall,categoryCount:receipt.categoryCount,viewportCoverage,premiumEligibility}));
+if(receipt.overall!=="PASS")process.exitCode=1;
