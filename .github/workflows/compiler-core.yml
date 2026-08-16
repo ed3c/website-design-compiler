@@ -31,6 +31,8 @@ jobs:
         run: pnpm v2:brief-ia
       - name: Verify six natural-language v2 benchmark briefs
         run: pnpm v2:brief-benchmarks
+      - name: Verify six-category claim-safe content architecture
+        run: pnpm v2:content-architecture
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
