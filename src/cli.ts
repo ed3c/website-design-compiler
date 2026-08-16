@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 import { compile, writeRuntimeReceipt } from "./compiler.js";
 import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js";
 import { writeDesignContracts } from "./design-contracts.js";
+import { writeDesignSystemPlan } from "./design-system-compiler.js";
+import { writePageArchitecturePlan } from "./page-architect.js";
 import { writeFrontendPlan } from "./frontend-builder.js";
 import { writeMotionDirectorPlan } from "./motion-director.js";
 import { writeGraphics2DPlan } from "./graphics-2d.js";
@@ -25,6 +27,8 @@ async function main(): Promise<void> {
 
     if (input.requestedStages.includes("reference-intelligence")) await writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("art-direction")) await writeDesignContracts(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("design-system-compiler")) await writeDesignSystemPlan(input, resolvedOutputDirectory);
+    if (input.requestedStages.includes("page-architect")) await writePageArchitecturePlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("frontend-builder")) await writeFrontendPlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("motion-director")) await writeMotionDirectorPlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("graphics-2d")) await writeGraphics2DPlan(resolvedOutputDirectory);
