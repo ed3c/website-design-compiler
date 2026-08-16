@@ -34,6 +34,8 @@ jobs:
       - run: pnpm storybook:typecheck
       - run: pnpm arena:typecheck
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify deterministic reference image/video decode evidence
+        run: pnpm reference:media-fixture
       - name: Bind exact head runtime receipt
         run: |
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
@@ -71,6 +73,7 @@ jobs:
             artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
             artifacts/runtime/minimal/reference-intelligence/originality-plan.json
             artifacts/runtime/minimal/reference-intelligence/originality-plan.md
+            artifacts/reference-media/reference-media-receipt.json
             artifacts/runtime/minimal/art-direction/design-read.json
             artifacts/runtime/minimal/art-direction/DESIGN.md
             artifacts/runtime/minimal/art-direction/semantic-tokens.json
