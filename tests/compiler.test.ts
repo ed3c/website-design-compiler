@@ -4,7 +4,7 @@ import test from "node:test";
 import { compile } from "../src/compiler.js";
 import { validateCompilerInput } from "../src/validate.js";
 
-test("minimal fixture validates and produces PASS for implemented reference, art direction, and release stages", async () => {
+test("minimal fixture validates and produces PASS for implemented reference, art direction, frontend, and release stages", async () => {
   const fixtureUrl = new URL("../fixtures/minimal/compiler-input.json", import.meta.url);
   const raw = JSON.parse(await readFile(fixtureUrl, "utf8")) as unknown;
   const input = await validateCompilerInput(raw);
@@ -16,6 +16,7 @@ test("minimal fixture validates and produces PASS for implemented reference, art
   assert.deepEqual(receipt.stages.map((stage) => [stage.stage, stage.state]), [
     ["reference-intelligence", "PASS"],
     ["art-direction", "PASS"],
+    ["frontend-builder", "PASS"],
     ["release-receipt", "PASS"]
   ]);
   assert.match(receipt.inputSha256, /^[a-f0-9]{64}$/);
@@ -26,7 +27,7 @@ test("known but unavailable stage is NOT_IMPLEMENTED, never PASS", async () => {
     schema: "website-design-compiler/input/v1",
     project: "unimplemented-stage",
     brief: { pageType: "landing", audience: "teams", objective: "test evidence" },
-    requestedStages: ["frontend-builder"]
+    requestedStages: ["page-architect"]
   });
   const receipt = compile(input, new Date("2026-08-16T00:00:00.000Z"));
 
