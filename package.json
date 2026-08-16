@@ -10,7 +10,9 @@
     "test": "tsx --test tests/**/*.test.ts",
     "compile:fixture": "tsx src/cli.ts fixtures/minimal/compiler-input.json artifacts/runtime/minimal",
     "verify:bindings": "tsx src/bindings-cli.ts .skill-bindings/skills-shared.json",
-    "project:shared-registry": "tsx src/project-shared-registry.ts"
+    "project:shared-registry": "tsx src/project-shared-registry.ts",
+    "ui:typecheck": "pnpm --filter @website-design-compiler/site typecheck",
+    "ui:build": "pnpm --filter @website-design-compiler/site build"
   },
   "dependencies": {
     "ajv": "^8.17.1",
