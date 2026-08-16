@@ -34,6 +34,11 @@
     "sourceRepository": "ed3c/skills-shared",
     "sourceIdentity": "git:4c15d261e63f3f10c195951f636e89cd66939550"
   },
+  "referenceIntelligence": {
+    "contractCompiler": "PASS",
+    "remoteCapture": "NOT_EXERCISED",
+    "originalityPlan": "PASS"
+  },
   "evidenceStates": [
     "PASS",
     "FAIL",
