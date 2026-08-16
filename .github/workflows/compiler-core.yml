@@ -28,6 +28,8 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm provenance:fixture
+      - name: Verify repository-wide rights clearance
+        run: pnpm rights:clearance
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
       - run: pnpm showcase:compile
@@ -84,6 +86,7 @@ jobs:
         with:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
+            artifacts/rights-clearance/
             artifacts/runtime/minimal/runtime-receipt.json
             artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
             artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
