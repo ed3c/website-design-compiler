@@ -17,7 +17,7 @@ for (const benchmark of matrix.categories) {
     brief: { pageType: benchmark.pageType, audience: benchmark.audience, objective: benchmark.objective },
     requestedStages: [...matrix.requiredCompilerStages]
   };
-  const search = searchVisualDirections(input, "arena-v2");
+  const search = searchVisualDirections(input);
   await validateAgainstSchema(search, "visual-direction-search-v2.schema.json");
   const designSystem = buildDesignSystemPlan(input);
   await validateAgainstSchema(designSystem, "design-system-plan.schema.json");
@@ -25,8 +25,9 @@ for (const benchmark of matrix.categories) {
   const selectedCount = search.candidates.filter((candidate) => candidate.state === "SELECTED").length;
   const rejectedHaveReasons = search.candidates.filter((candidate) => candidate.state === "REJECTED").every((candidate) => candidate.rejectionReasons.length > 0);
   const downstreamWinnerMatch = designSystem.selectedVisualDirection.candidateId === search.selectedCandidateId && JSON.stringify(designSystem.selectedVisualDirection.dimensions) === JSON.stringify(search.selectedDirection);
-  const deterministic = JSON.stringify(search) === JSON.stringify(searchVisualDirections(input, "arena-v2"));
-  const state = search.candidateCount >= 3 && uniqueSignatures >= 3 && selectedCount === 1 && rejectedHaveReasons && downstreamWinnerMatch && deterministic ? "PASS" : "FAIL";
+  const deterministic = JSON.stringify(search) === JSON.stringify(searchVisualDirections(input));
+  const seededDeterministic = JSON.stringify(searchVisualDirections(input, "arena-v2")) === JSON.stringify(searchVisualDirections(input, "arena-v2"));
+  const state = search.candidateCount >= 3 && uniqueSignatures >= 3 && selectedCount === 1 && rejectedHaveReasons && downstreamWinnerMatch && deterministic && seededDeterministic ? "PASS" : "FAIL";
   categories.push({
     id: benchmark.id,
     state,
@@ -36,7 +37,8 @@ for (const benchmark of matrix.categories) {
     selectedTotalScore: search.candidates.find((candidate) => candidate.id === search.selectedCandidateId)?.score.total ?? null,
     rejectedHaveReasons,
     downstreamWinnerMatch,
-    deterministic
+    deterministic,
+    seededDeterministic
   });
   await writeFile(resolve(outputDirectory, `${benchmark.id}.json`), `${JSON.stringify(search, null, 2)}\n`, "utf8");
 }
