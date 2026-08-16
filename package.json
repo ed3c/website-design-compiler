@@ -11,6 +11,7 @@
     "compile:fixture": "tsx src/cli.ts fixtures/minimal/compiler-input.json artifacts/runtime/minimal",
     "verify:bindings": "tsx src/bindings-cli.ts .skill-bindings/skills-shared.json",
     "project:shared-registry": "tsx src/project-shared-registry.ts",
+    "provenance:fixture": "tsx src/license-provenance-cli.ts fixtures/provenance/workspace/package.json fixtures/provenance/workspace/pnpm-lock.yaml fixtures/provenance/workspace/rights-evidence.json artifacts/provenance/license-receipt.json",
     "ui:typecheck": "pnpm --filter @website-design-compiler/site typecheck",
     "ui:build": "pnpm --filter @website-design-compiler/site build",
     "browser:typecheck": "tsc --noEmit -p tsconfig.browser.json",
@@ -19,7 +20,8 @@
   },
   "dependencies": {
     "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1"
+    "ajv-formats": "^3.0.1",
+    "yaml": "2.9.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.0",
