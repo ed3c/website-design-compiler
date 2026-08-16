@@ -17,8 +17,15 @@ test("showcase renders governed compiler projection with graphics disabled", asy
   await action.focus();
   await expect(action).toBeFocused();
   await expect(page.getByText("Governed component plan emitted")).toBeVisible();
-  await expect(page.locator("[data-pixi-state='fallback']")).toBeVisible();
-  await expect(page.locator("[data-three-state='fallback']")).toBeVisible();
+
+  const graphics2d = page.locator("section[data-graphics-state='fallback']");
+  await expect(graphics2d).toBeVisible();
+  await expect(graphics2d.locator("[data-static-poster='true']")).toBeVisible();
+
+  const graphics3d = page.locator("section[data-graphics3d-state='fallback'][data-graphics3d-enabled='false']");
+  await expect(graphics3d).toBeVisible();
+  await expect(graphics3d.locator("[data-graphics3d-static-poster='true']")).toBeVisible();
+
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });
