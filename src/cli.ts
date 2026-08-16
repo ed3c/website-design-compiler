@@ -5,6 +5,7 @@ import { compile, writeRuntimeReceipt } from "./compiler.js";
 import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js";
 import { writeDesignContracts } from "./design-contracts.js";
 import { writeFrontendPlan } from "./frontend-builder.js";
+import { writeMotionDirectorPlan } from "./motion-director.js";
 import { ContractValidationError, validateCompilerInput } from "./validate.js";
 
 async function main(): Promise<void> {
@@ -28,6 +29,9 @@ async function main(): Promise<void> {
     }
     if (input.requestedStages.includes("frontend-builder")) {
       await writeFrontendPlan(input, resolvedOutputDirectory);
+    }
+    if (input.requestedStages.includes("motion-director")) {
+      await writeMotionDirectorPlan(input, resolvedOutputDirectory);
     }
 
     const receipt = compile(input);
