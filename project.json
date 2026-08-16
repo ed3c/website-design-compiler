@@ -4,8 +4,8 @@
   "runtime": {
     "language": "TypeScript",
     "packageManager": "pnpm",
-    "applicationTarget": "Next.js",
-    "status": "NOT_IMPLEMENTED"
+    "applicationTarget": "CLI core first; Next.js governed UI follows in issue #7",
+    "status": "NOT_EXERCISED"
   },
   "pipeline": [
     "reference-intelligence",
@@ -23,6 +23,7 @@
     "license-provenance",
     "release-receipt"
   ],
+  "implementedCoreStages": ["release-receipt"],
   "sharedSkillBindings": ".skill-bindings/skills-shared.json",
   "evidenceStates": [
     "PASS",
