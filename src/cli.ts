@@ -10,6 +10,7 @@ import { writeFrontendPlan } from "./frontend-builder.js";
 import { writeMotionDirectorPlan } from "./motion-director.js";
 import { writeGraphics2DPlan } from "./graphics-2d.js";
 import { writeGraphics3DArtifacts } from "./graphics-3d.js";
+import { writeMediaGeneratorPlan } from "./media-generator.js";
 import { ContractValidationError, validateCompilerInput } from "./validate.js";
 
 async function main(): Promise<void> {
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
     if (input.requestedStages.includes("motion-director")) await writeMotionDirectorPlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("graphics-2d")) await writeGraphics2DPlan(resolvedOutputDirectory);
     if (input.requestedStages.includes("graphics-3d")) await writeGraphics3DArtifacts(resolvedOutputDirectory);
+    if (input.requestedStages.includes("media-generator")) await writeMediaGeneratorPlan(resolvedOutputDirectory);
 
     const receipt = compile(input);
     const receiptPath = await writeRuntimeReceipt(receipt, resolvedOutputDirectory);
