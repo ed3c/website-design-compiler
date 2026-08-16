@@ -193,6 +193,7 @@ export function payloadLayoutToAuthoring(layout: unknown, pageTitle: string, sur
 
 export function createPayloadConfig(options: { databaseUrl: string; secret: string }) {
   if (!options.secret || options.secret.length < 16) throw new Error("Payload secret must be supplied by private runtime state");
+  const developmentPush = process.env.NODE_ENV !== "production";
   return buildConfig({
     secret: options.secret,
     admin: { user: Users.slug },
@@ -200,7 +201,7 @@ export function createPayloadConfig(options: { databaseUrl: string; secret: stri
     localization: { locales: [...CMS_LOCALES], defaultLocale: "en", fallback: true },
     db: sqliteAdapter({
       client: { url: options.databaseUrl },
-      push: true,
+      push: developmentPush,
       blocksAsJSON: true,
       wal: true
     }),
