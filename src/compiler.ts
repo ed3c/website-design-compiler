@@ -9,7 +9,7 @@ import {
   type StageEvidence
 } from "./contracts.js";
 
-const IMPLEMENTED_CORE_STAGES = new Set(["release-receipt"]);
+const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "release-receipt"]);
 
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -22,6 +22,19 @@ function stageEvidence(stage: string): StageEvidence {
       state: "FAIL",
       reason: "Unknown pipeline stage requested.",
       artifacts: []
+    };
+  }
+
+  if (stage === "reference-intelligence") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Reference Intelligence emits evidence-bounded manifest, analysis, and originality-plan artifacts; unsupported capture modes remain NOT_EXERCISED per entry.",
+      artifacts: [
+        "reference-intelligence/reference-manifest.json",
+        "reference-intelligence/reference-analysis.md",
+        "reference-intelligence/originality-plan.json"
+      ]
     };
   }
 
