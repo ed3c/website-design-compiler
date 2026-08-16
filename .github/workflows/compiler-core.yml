@@ -25,6 +25,8 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm compile:fixture
+      - run: pnpm ui:typecheck
+      - run: pnpm ui:build
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Bind exact head receipt
