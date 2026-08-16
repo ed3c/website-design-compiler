@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/graphics-3d-plan/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "engine", "scene", "camera", "lights", "materials", "interaction", "lod", "dprPolicy", "fallback", "lifecycle", "assetBudget", "proceduralAdapter", "experimental"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/graphics-3d-plan/v1" },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["renderer", "three", "reactThreeFiber"],
+      "properties": {
+        "renderer": { "const": "webgl" },
+        "three": { "const": "0.184.0" },
+        "reactThreeFiber": { "const": "9.6.1" }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "purpose", "criticalContent", "frameloop"],
+      "properties": {
+        "id": { "const": "procedural-proof" },
+        "purpose": { "const": "illustration" },
+        "criticalContent": { "const": false },
+        "frameloop": { "const": "demand" }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "position", "fov", "near", "far"],
+      "properties": {
+        "type": { "const": "perspective" },
+        "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+        "fov": { "type": "number", "minimum": 20, "maximum": 75 },
+        "near": { "type": "number", "exclusiveMinimum": 0 },
+        "far": { "type": "number", "minimum": 10, "maximum": 1000 }
+      }
+    },
+    "lights": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "intensity"],
+        "properties": {
+          "type": { "enum": ["ambient", "directional", "hemisphere"] },
+          "intensity": { "type": "number", "minimum": 0, "maximum": 5 }
+        }
+      }
+    },
+    "materials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "maxMaterials"],
+      "properties": {
+        "policy": { "const": "standard-only-fixture" },
+        "maxMaterials": { "type": "integer", "minimum": 1, "maximum": 8 }
+      }
+    },
+    "interaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointerRequired", "primaryActionDependency"],
+      "properties": {
+        "pointerRequired": { "const": false },
+        "primaryActionDependency": { "const": false }
+      }
+    },
+    "lod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "mobileSimplification"],
+      "properties": {
+        "policy": { "const": "procedural-complexity-cap" },
+        "mobileSimplification": { "const": true }
+      }
+    },
+    "dprPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desktopMax", "coarsePointerMax"],
+      "properties": {
+        "desktopMax": { "const": 1.75 },
+        "coarsePointerMax": { "const": 1.25 }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semanticDom", "staticPoster", "failedWebglHook"],
+      "properties": {
+        "semanticDom": { "const": "REQUIRED" },
+        "staticPoster": { "const": "REQUIRED" },
+        "failedWebglHook": { "const": "graphics3d=off" }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lazyChunk", "frameloopDemand", "disposeGeneratedGeometry", "disposeGeneratedMaterial"],
+      "properties": {
+        "lazyChunk": { "const": true },
+        "frameloopDemand": { "const": true },
+        "disposeGeneratedGeometry": { "const": true },
+        "disposeGeneratedMaterial": { "const": true }
+      }
+    },
+    "assetBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalBytes", "textureBytes", "maxTriangles", "maxDrawCalls"],
+      "properties": {
+        "externalBytes": { "const": 0 },
+        "textureBytes": { "const": 0 },
+        "maxTriangles": { "type": "integer", "minimum": 100, "maximum": 10000 },
+        "maxDrawCalls": { "type": "integer", "minimum": 1, "maximum": 20 }
+      }
+    },
+    "proceduralAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sourceRepository", "sourceCommit", "sourceLicense", "factoryContract", "semantics", "provenanceRequired"],
+      "properties": {
+        "name": { "const": "img2threejs" },
+        "sourceRepository": { "const": "img2threejs/img2threejs" },
+        "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "sourceLicense": { "const": "Apache-2.0" },
+        "factoryContract": { "const": "THREE.Group" },
+        "semantics": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [{ "const": "pivots" }, { "const": "sockets" }, { "const": "colliders" }],
+          "items": false
+        },
+        "provenanceRequired": { "const": true }
+      }
+    },
+    "experimental": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["webgpuTsl"],
+      "properties": {
+        "webgpuTsl": { "const": "NOT_EXERCISED" }
+      }
+    }
+  }
+}
