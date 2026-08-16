@@ -18,6 +18,7 @@ const IMPLEMENTED_CORE_STAGES = new Set([
   "motion-director",
   "graphics-2d",
   "graphics-3d",
+  "media-generator",
   "release-receipt"
 ]);
 
@@ -111,6 +112,15 @@ function stageEvidence(stage: string): StageEvidence {
       state: "PASS",
       reason: "Graphics 3D emits a schema-validated R3F/Three scene contract and a fail-closed procedural fixture provenance receipt before runtime use.",
       artifacts: ["graphics-3d/graphics-3d-plan.json", "graphics-3d/procedural-provenance.json"]
+    };
+  }
+
+  if (stage === "media-generator") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Media Generator emits an isolated-worker execution plan and is runtime-proven by an authenticated deterministic mock request with hashed asset provenance; real model adapters remain fail-closed until rights admission.",
+      artifacts: ["media-generator/media-generator-plan.json"]
     };
   }
 
