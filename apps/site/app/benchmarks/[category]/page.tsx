@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
-import { GeneratedPage } from "@/components/sections/generated-page";
-import { SECTION_PAGE_CATEGORIES, compileSectionPageFixture, type SectionPageCategory } from "../../../../../src/section-page-fixtures";
-import { compileCompletePageGraph } from "../../../../../src/complete-page-graph";
+import { GeneratedPage, type ProjectedPageGraph } from "@/components/sections/generated-page";
+import projection from "@/generated/benchmark-page-graphs.json";
 
-export function generateStaticParams(){return SECTION_PAGE_CATEGORIES.map((category)=>({category}));}
+const graphs=projection.graphs as Record<string,ProjectedPageGraph>;
+export function generateStaticParams(){return Object.keys(graphs).map((category)=>({category}));}
 
 export default async function BenchmarkPage({params}:{params:Promise<{category:string}>}){
   const {category}=await params;
-  if(!SECTION_PAGE_CATEGORIES.includes(category as SectionPageCategory))notFound();
-  const graph=compileCompletePageGraph(compileSectionPageFixture(category as SectionPageCategory));
+  const graph=graphs[category];
+  if(!graph)notFound();
   return <GeneratedPage graph={graph}/>;
 }
