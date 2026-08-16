@@ -37,6 +37,8 @@ jobs:
         run: pnpm v2:visual-directions
       - name: Verify concrete semantic tokens and production projection drift
         run: pnpm v2:semantic-tokens
+      - name: Verify governed rich section grammar
+        run: pnpm v2:section-grammar
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
