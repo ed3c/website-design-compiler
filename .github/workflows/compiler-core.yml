@@ -39,6 +39,8 @@ jobs:
         run: pnpm v2:semantic-tokens
       - name: Verify governed rich section grammar
         run: pnpm v2:section-grammar
+      - name: Verify responsive composition policies and six page graphs
+        run: pnpm v2:responsive-composition
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
