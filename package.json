@@ -12,6 +12,7 @@
     "v2:brief-ia": "tsx scripts/v2-brief-ia-fixture.ts",
     "v2:brief-benchmarks": "tsx scripts/v2-brief-benchmark-receipt.ts",
     "v2:content-architecture": "tsx scripts/content-architecture-benchmark-receipt.ts",
+    "v2:visual-directions": "tsx scripts/visual-direction-benchmark-receipt.ts",
     "showcase:typecheck": "tsc --noEmit -p tsconfig.showcase.json",
     "showcase:compile": "tsx src/cli.ts fixtures/showcase/compiler-input.json artifacts/showcase/compiler",
     "showcase:compiler-receipt": "tsx scripts/showcase-compiler-receipt.ts",
