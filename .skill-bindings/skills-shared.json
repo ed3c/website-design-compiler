@@ -1,0 +1,26 @@
+{
+  "schema": "website-design-compiler/skill-bindings/v1",
+  "source": {
+    "repository": "ed3c/skills-shared",
+    "visibility": "private",
+    "registry": "registry.json",
+    "mode": "reference-only-no-vendoring"
+  },
+  "bindings": [
+    {"name": "repo-agent-native", "purpose": "agent-native repository operating contract"},
+    {"name": "sdlc-plan-composer", "purpose": "plan composition and task admission"},
+    {"name": "unknown-discovery-composer", "purpose": "bounded discovery before implementation"},
+    {"name": "truth-verify-loop", "purpose": "falsifiable verification and evidence state promotion"},
+    {"name": "external-verify", "purpose": "external evidence verification"},
+    {"name": "knowledge-continuity", "purpose": "cross-session and cross-artifact continuity"},
+    {"name": "git-town-stacked-pr-worker", "purpose": "stacked branch and isolated worker method"},
+    {"name": "github-delivery-loop", "purpose": "GitHub publication and receipt boundary"},
+    {"name": "dual-forge-repository-loop", "purpose": "optional GitHub plus local Forgejo delivery plane", "optional": true}
+  ],
+  "constraints": {
+    "private_skill_bodies_must_not_be_copied": true,
+    "consumer_specific_configuration_stays_local": true,
+    "runtime_receipts_must_not_contain_secrets_or_private_machine_paths": true,
+    "missing_required_binding_state": "ABSENT"
+  }
+}
