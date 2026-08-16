@@ -43,6 +43,8 @@ jobs:
         run: pnpm v2:responsive-composition
       - name: Verify page-level motion choreography and accessibility fallbacks
         run: pnpm v2:motion-choreography
+      - name: Verify bounded media and graphics orchestration strategy
+        run: pnpm v2:media-orchestration
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
