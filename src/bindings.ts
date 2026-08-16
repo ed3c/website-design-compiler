@@ -15,6 +15,7 @@ export interface SharedBindingsFile {
     visibility: "private" | "public";
     registry: string;
     mode: string;
+    expectedIdentity?: string;
   };
   bindings: SharedBinding[];
 }
@@ -58,20 +59,26 @@ export function resolveSharedBindings(
   localSkillNames: readonly string[] = [],
   consumerIdentity = "NOT_EXERCISED"
 ): BindingReceipt {
+  const failAll = (reason: string): BindingReceipt => ({
+    schema: "website-design-compiler/shared-binding-receipt/v1",
+    sourceRepository: projection.sourceRepository,
+    sourceIdentity: projection.sourceIdentity,
+    consumerIdentity,
+    overall: "FAIL",
+    resolutions: bindingFile.bindings.map((binding) => ({
+      name: binding.name,
+      optional: binding.optional ?? false,
+      state: "FAIL",
+      reason
+    }))
+  });
+
   if (projection.sourceRepository !== bindingFile.source.repository) {
-    return {
-      schema: "website-design-compiler/shared-binding-receipt/v1",
-      sourceRepository: projection.sourceRepository,
-      sourceIdentity: projection.sourceIdentity,
-      consumerIdentity,
-      overall: "FAIL",
-      resolutions: bindingFile.bindings.map((binding) => ({
-        name: binding.name,
-        optional: binding.optional ?? false,
-        state: "FAIL",
-        reason: "registry projection source repository does not match binding source"
-      }))
-    };
+    return failAll("registry projection source repository does not match binding source");
+  }
+
+  if (bindingFile.source.expectedIdentity && projection.sourceIdentity !== bindingFile.source.expectedIdentity) {
+    return failAll("registry projection source identity does not match pinned binding identity");
   }
 
   const identities = new Map(projection.skills.map((skill) => [skill.name, skill.identity]));
