@@ -15,6 +15,10 @@ export interface ReferenceManifestEntry {
     adapter: string;
     sourceKind: CompilerReference["kind"];
     sourceMode: "INLINE" | "FILE" | "REMOTE" | "UNEXERCISED";
+    finalUrl?: string;
+    httpStatus?: number;
+    contentType?: string;
+    responseSha256?: string;
   };
   reason?: string;
 }
