@@ -21,8 +21,9 @@ for (const benchmark of matrix.categories) {
   await validateAgainstSchema(tokens, "semantic-design-tokens-v2.schema.json");
   const css = projectSemanticTokensToCss(tokens);
   const cssSha256 = createHash("sha256").update(css).digest("hex");
-  const state = tokens.color.contrastEvidence.textOnBackground >= 4.5 && tokens.color.contrastEvidence.mutedTextOnBackground >= 4.5 && tokens.color.contrastEvidence.focusOnBackground >= 3 && tokens.interaction.rawValueBypass === false ? "PASS" : "FAIL";
-  categories.push({ id: benchmark.id, state, sourceVisualDirection: tokens.sourceVisualDirection, cssSha256, displayFamily: tokens.typography.display.family, desktopContainerPx: tokens.layout.containerMaxPx.desktop, desktopColumns: tokens.layout.columns.desktop, contrast: tokens.color.contrastEvidence });
+  const contrast = tokens.color.contrastEvidence;
+  const state = contrast.textOnBackground >= 4.5 && contrast.mutedTextOnBackground >= 4.5 && contrast.onAccentOnAccent >= 4.5 && contrast.focusOnBackground >= 3 && tokens.interaction.rawValueBypass === false ? "PASS" : "FAIL";
+  categories.push({ id: benchmark.id, state, sourceVisualDirection: tokens.sourceVisualDirection, cssSha256, displayFamily: tokens.typography.display.family, desktopContainerPx: tokens.layout.containerMaxPx.desktop, desktopColumns: tokens.layout.columns.desktop, contrast });
   await writeFile(resolve(outputDirectory, `${benchmark.id}.json`), `${JSON.stringify(tokens, null, 2)}\n`, "utf8");
   await writeFile(resolve(outputDirectory, `${benchmark.id}.css`), css, "utf8");
 }
