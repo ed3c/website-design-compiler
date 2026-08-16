@@ -45,6 +45,8 @@ jobs:
         run: pnpm v2:motion-choreography
       - name: Verify bounded media and graphics orchestration strategy
         run: pnpm v2:media-orchestration
+      - name: Verify complete governed page graph compilation
+        run: pnpm v2:complete-page-graph
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
