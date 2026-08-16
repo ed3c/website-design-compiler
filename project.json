@@ -26,7 +26,14 @@
     "release-receipt"
   ],
   "implementedCoreStages": ["release-receipt"],
-  "sharedSkillBindings": ".skill-bindings/skills-shared.json",
+  "sharedSkillBindings": {
+    "config": ".skill-bindings/skills-shared.json",
+    "resolver": "PASS",
+    "liveProjectionSnapshot": "PASS",
+    "liveProjectionRefresh": "NOT_EXERCISED",
+    "sourceRepository": "ed3c/skills-shared",
+    "sourceIdentity": "git:4c15d261e63f3f10c195951f636e89cd66939550"
+  },
   "evidenceStates": [
     "PASS",
     "FAIL",
