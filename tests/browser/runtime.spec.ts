@@ -14,6 +14,10 @@ test("core runtime is keyboard reachable, console clean, network clean, and scre
     failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? "unknown"}`);
   });
 
+  if (testInfo.project.name === "reduced-motion-chromium") {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+  }
+
   const response = await page.goto("/", { waitUntil: "networkidle" });
   expect(response?.ok()).toBeTruthy();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Compile design intent");
@@ -23,7 +27,7 @@ test("core runtime is keyboard reachable, console clean, network clean, and scre
   await expect(firstButton).toBeFocused();
 
   if (testInfo.project.name === "reduced-motion-chromium") {
-    const reduced = await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const reduced = await page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     expect(reduced).toBe(true);
   }
 
