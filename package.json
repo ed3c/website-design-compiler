@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "tsx --test tests/**/*.test.ts",
     "compile:fixture": "tsx src/cli.ts fixtures/minimal/compiler-input.json artifacts/runtime/minimal",
+    "v2:brief-ia": "tsx scripts/v2-brief-ia-fixture.ts",
     "showcase:typecheck": "tsc --noEmit -p tsconfig.showcase.json",
     "showcase:compile": "tsx src/cli.ts fixtures/showcase/compiler-input.json artifacts/showcase/compiler",
     "showcase:compiler-receipt": "tsx scripts/showcase-compiler-receipt.ts",
