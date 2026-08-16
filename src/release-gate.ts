@@ -10,6 +10,7 @@ export interface ReleaseGateInputs {
   showcase: ReleaseInputState;
   externalSkills: ReleaseInputState;
   mediaGenerator: ReleaseInputState;
+  authoringStudio: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {
