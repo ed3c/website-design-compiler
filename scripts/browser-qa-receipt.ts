@@ -11,6 +11,8 @@ const requiredProjects = [
   "reduced-motion-chromium"
 ];
 
+type ResultRecord = { projectName?: string; status?: string };
+
 async function walk(directory: string): Promise<string[]> {
   try {
     const entries = await readdir(directory);
@@ -27,17 +29,17 @@ async function walk(directory: string): Promise<string[]> {
   }
 }
 
-function collectResults(value: unknown, results: Array<{ projectName?: string; status?: string }> = []) {
+function collectResults(value: unknown, results: ResultRecord[] = []): ResultRecord[] {
   if (!value || typeof value !== "object") return results;
   const object = value as Record<string, unknown>;
   if (Array.isArray(object.results)) {
     for (const result of object.results) {
       if (result && typeof result === "object") {
         const typed = result as Record<string, unknown>;
-        results.push({
-          projectName: typeof typed.projectName === "string" ? typed.projectName : undefined,
-          status: typeof typed.status === "string" ? typed.status : undefined
-        });
+        const record: ResultRecord = {};
+        if (typeof typed.projectName === "string") record.projectName = typed.projectName;
+        if (typeof typed.status === "string") record.status = typed.status;
+        results.push(record);
       }
     }
   }
