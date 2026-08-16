@@ -43,6 +43,7 @@ export interface BindingReceipt {
   schema: "website-design-compiler/shared-binding-receipt/v1";
   sourceRepository: string;
   sourceIdentity: string;
+  consumerIdentity: string;
   overall: BindingState;
   resolutions: BindingResolution[];
 }
@@ -54,13 +55,15 @@ export async function readJsonFile<T>(path: string): Promise<T> {
 export function resolveSharedBindings(
   bindingFile: SharedBindingsFile,
   projection: RegistryProjection,
-  localSkillNames: readonly string[] = []
+  localSkillNames: readonly string[] = [],
+  consumerIdentity = "NOT_EXERCISED"
 ): BindingReceipt {
   if (projection.sourceRepository !== bindingFile.source.repository) {
     return {
       schema: "website-design-compiler/shared-binding-receipt/v1",
       sourceRepository: projection.sourceRepository,
       sourceIdentity: projection.sourceIdentity,
+      consumerIdentity,
       overall: "FAIL",
       resolutions: bindingFile.bindings.map((binding) => ({
         name: binding.name,
@@ -105,6 +108,7 @@ export function resolveSharedBindings(
     schema: "website-design-compiler/shared-binding-receipt/v1",
     sourceRepository: projection.sourceRepository,
     sourceIdentity: projection.sourceIdentity,
+    consumerIdentity,
     overall: requiredFailure ? "FAIL" : "PASS",
     resolutions
   };
