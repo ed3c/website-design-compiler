@@ -12,6 +12,7 @@ export type EvidenceState = (typeof EVIDENCE_STATES)[number];
 export const PIPELINE_STAGES = [
   "reference-intelligence",
   "art-direction",
+  "information-architecture",
   "design-system-compiler",
   "page-architect",
   "frontend-builder",
