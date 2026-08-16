@@ -14,6 +14,7 @@
     "showcase:compiler-receipt": "tsx scripts/showcase-compiler-receipt.ts",
     "external-skills:receipt": "tsx scripts/external-skill-registry-receipt.ts",
     "media:fixture": "tsx scripts/media-router-fixture.ts",
+    "authoring:receipt": "tsx scripts/authoring-fixture-receipt.ts",
     "verify:bindings": "tsx src/bindings-cli.ts .skill-bindings/skills-shared.json",
     "project:shared-registry": "tsx src/project-shared-registry.ts",
     "provenance:fixture": "tsx src/license-provenance-cli.ts fixtures/provenance/workspace/package.json fixtures/provenance/workspace/pnpm-lock.yaml fixtures/provenance/workspace/rights-evidence.json artifacts/provenance/license-receipt.json",
