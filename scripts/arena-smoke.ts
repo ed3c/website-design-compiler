@@ -22,6 +22,11 @@ function evidenceState(value: unknown): EvidenceState {
     : "ABSENT";
 }
 
+function passIf(condition: boolean, absent = false): EvidenceState {
+  if (absent) return "ABSENT";
+  return condition ? "PASS" : "FAIL";
+}
+
 await mkdir(outputRoot, { recursive: true });
 const matrix = await readJson<ArenaMatrix>(matrixPath);
 if (!matrix || matrix.schema !== "website-design-compiler/arena-benchmark-matrix/v1") {
@@ -66,10 +71,42 @@ for (const benchmark of matrix.categories) {
   });
 }
 
-const browser = await readJson<{ overall?: unknown }>(join(root, "artifacts", "browser-qa", "browser-qa.json"));
-const quality = await readJson<{ overall?: unknown }>(join(root, "artifacts", "accessibility-performance", "accessibility-performance.json"));
-const storybook = await readJson<{ overall?: unknown; visualRegression?: unknown }>(join(root, "artifacts", "storybook", "storybook-workshop.json"));
-const provenance = await readJson<{ overall?: unknown }>(join(root, "artifacts", "provenance", "license-receipt.json"));
+type BrowserReceipt = {
+  overall?: unknown;
+  passedProjects?: string[];
+  missingProjects?: string[];
+  failedProjects?: string[];
+  gates?: Record<string, unknown>;
+  artifacts?: { traces?: string[]; screenshots?: string[] };
+};
+type QualityProject = {
+  project?: string;
+  overall?: unknown;
+  exercisedDegradationPaths?: string[];
+  gates?: Record<string, unknown>;
+};
+type QualityReceipt = {
+  overall?: unknown;
+  projects?: QualityProject[];
+  missingProjects?: string[];
+  failedProjects?: string[];
+};
+type StorybookReceipt = {
+  overall?: unknown;
+  visualRegression?: unknown;
+  gates?: Record<string, unknown>;
+};
+type ProvenanceReceipt = {
+  overall?: unknown;
+  reviewQueue?: unknown[];
+  denied?: unknown[];
+  unknown?: unknown[];
+};
+
+const browser = await readJson<BrowserReceipt>(join(root, "artifacts", "browser-qa", "browser-qa.json"));
+const quality = await readJson<QualityReceipt>(join(root, "artifacts", "accessibility-performance", "accessibility-performance.json"));
+const storybook = await readJson<StorybookReceipt>(join(root, "artifacts", "storybook", "storybook-workshop.json"));
+const provenance = await readJson<ProvenanceReceipt>(join(root, "artifacts", "provenance", "license-receipt.json"));
 const bindings = await readJson<{
   overall?: unknown;
   sourceRepository?: string;
@@ -78,14 +115,82 @@ const bindings = await readJson<{
   resolutions?: Array<{ name?: string; state?: string; identity?: string }>;
 }>(join(root, "artifacts", "runtime", "shared-binding-receipt.json"));
 
-const storybookVisual = evidenceState(storybook?.overall) === "PASS" && storybook?.visualRegression === "PASS" ? "PASS" : evidenceState(storybook?.overall);
-const evaluation = evaluateArena(matrix, receipts, {
-  browser: evidenceState(browser?.overall),
-  accessibilityPerformance: evidenceState(quality?.overall),
-  storybookVisualGoldens: storybookVisual,
-  licenseProvenance: evidenceState(provenance?.overall),
-  sharedBindings: evidenceState(bindings?.overall)
-});
+const projects = new Map((quality?.projects ?? []).map((entry) => [entry.project ?? "", entry]));
+const desktop = projects.get("desktop-chromium");
+const tablet = projects.get("tablet-chromium");
+const mobile = projects.get("mobile-chromium");
+const reduced = projects.get("reduced-motion-chromium");
+const passedProjects = new Set(browser?.passedProjects ?? []);
+const browserMatrix = evidenceState(browser?.overall);
+const qualityOverall = evidenceState(quality?.overall);
+const provenanceOverall = evidenceState(provenance?.overall);
+const bindingOverall = evidenceState(bindings?.overall);
+
+const globalEvidence: Record<string, EvidenceState> = {
+  browserMatrix,
+  responsiveBehavior: passIf(
+    ["desktop-chromium", "tablet-chromium", "mobile-chromium"].every((name) => passedProjects.has(name)) &&
+    [desktop, tablet, mobile].every((entry) => evidenceState(entry?.overall) === "PASS"),
+    !browser || !quality
+  ),
+  keyboardCompletion: passIf(
+    browserMatrix === "PASS" && [desktop, tablet, mobile, reduced].every((entry) => evidenceState(entry?.overall) === "PASS"),
+    !browser || !quality
+  ),
+  reducedMotion: passIf(
+    evidenceState(reduced?.gates?.reducedMotion) === "PASS" && (reduced?.exercisedDegradationPaths ?? []).includes("prefers-reduced-motion"),
+    !reduced
+  ),
+  coarsePointer: passIf(
+    evidenceState(mobile?.gates?.coarsePointer) === "PASS" && (mobile?.exercisedDegradationPaths ?? []).includes("coarse-pointer"),
+    !mobile
+  ),
+  graphics2dFallback: passIf(
+    evidenceState(desktop?.gates?.graphics2dFallback) === "PASS" && (desktop?.exercisedDegradationPaths ?? []).includes("graphics=off"),
+    !desktop
+  ),
+  graphics3dFallback: passIf(
+    evidenceState(desktop?.gates?.graphics3dFallback) === "PASS" && (desktop?.exercisedDegradationPaths ?? []).includes("graphics3d=off"),
+    !desktop
+  ),
+  accessibilityPerformance: qualityOverall,
+  visualRegression: passIf(
+    evidenceState(storybook?.overall) === "PASS" && storybook?.visualRegression === "PASS" && evidenceState(storybook?.gates?.visualRegression) === "PASS",
+    !storybook
+  ),
+  interactionTraces: passIf(
+    browserMatrix === "PASS" && evidenceState(browser?.gates?.traces) === "PASS" && (browser?.artifacts?.traces?.length ?? 0) >= 4,
+    !browser
+  ),
+  buildReliability: passIf(
+    evidenceState(storybook?.gates?.storybookBuild) === "PASS" && receipts.size === matrix.categories.length && [...receipts.values()].every((receipt) => receipt.overall === "PASS"),
+    !storybook
+  ),
+  benchmarkProvenanceCompleteness: passIf(
+    provenanceOverall === "PASS" && (provenance?.reviewQueue?.length ?? 0) === 0 && (provenance?.denied?.length ?? 0) === 0 && (provenance?.unknown?.length ?? 0) === 0,
+    !provenance
+  ),
+  benchmarkLicenseCompliance: provenanceOverall,
+  sharedBindings: bindingOverall
+};
+
+const evaluation = evaluateArena(matrix, receipts, globalEvidence);
+const metricEvidence = {
+  browserMatrix: ["artifacts/browser-qa/browser-qa.json"],
+  responsiveBehavior: ["artifacts/browser-qa/browser-qa.json", "artifacts/accessibility-performance/accessibility-performance.json"],
+  keyboardCompletion: ["tests/browser/runtime.spec.ts#keyboard-focus-and-primary-action", "artifacts/browser-qa/playwright-report.json"],
+  reducedMotion: ["artifacts/accessibility-performance/reduced-motion-chromium.json"],
+  coarsePointer: ["artifacts/accessibility-performance/mobile-chromium.json"],
+  graphics2dFallback: ["artifacts/accessibility-performance/desktop-chromium.json"],
+  graphics3dFallback: ["artifacts/accessibility-performance/desktop-chromium.json"],
+  accessibilityPerformance: ["artifacts/accessibility-performance/accessibility-performance.json"],
+  visualRegression: ["artifacts/storybook/storybook-workshop.json", "fixtures/storybook/visual-goldens.json"],
+  interactionTraces: browser?.artifacts?.traces ?? [],
+  buildReliability: ["artifacts/storybook/storybook-workshop.json", ...benchmarkArtifacts.map((entry) => entry.runtimeReceipt)],
+  benchmarkProvenanceCompleteness: ["artifacts/provenance/license-receipt.json"],
+  benchmarkLicenseCompliance: ["artifacts/provenance/license-receipt.json"],
+  sharedBindings: ["artifacts/runtime/shared-binding-receipt.json"]
+};
 
 const receipt = {
   ...evaluation,
@@ -100,6 +205,7 @@ const receipt = {
     resolutions: bindings.resolutions ?? []
   } : "ABSENT",
   benchmarkArtifacts,
+  metricEvidence,
   evidence: {
     browser: "artifacts/browser-qa/browser-qa.json",
     accessibilityPerformance: "artifacts/accessibility-performance/accessibility-performance.json",
@@ -107,6 +213,10 @@ const receipt = {
     licenseProvenance: "artifacts/provenance/license-receipt.json",
     sharedBindings: "artifacts/runtime/shared-binding-receipt.json",
     visualGoldenManifest: "fixtures/storybook/visual-goldens.json"
+  },
+  scopeNotes: {
+    benchmarkProvenanceCompleteness: "PASS applies to the deterministic Arena provenance fixture only; repository-wide rights clearance remains outside this claim.",
+    keyboardCompletion: "The browser runtime test contract explicitly exercises Tab focus followed by the primary button action; project PASS plus retained Playwright report/trace is the runtime evidence boundary."
   }
 };
 
