@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "@playwright/test"],
+    "noEmit": true,
+    "declaration": false,
+    "rootDir": "."
+  },
+  "include": [
+    "playwright.storybook.config.ts",
+    "tests/storybook/**/*.ts",
+    "scripts/storybook-workshop-receipt.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
+}
