@@ -11,6 +11,7 @@ export interface ReleaseGateInputs {
   externalSkills: ReleaseInputState;
   mediaGenerator: ReleaseInputState;
   authoringStudio: ReleaseInputState;
+  payloadCms: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {
