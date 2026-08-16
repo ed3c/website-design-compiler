@@ -4,7 +4,7 @@
   "brief": {
     "pageType": "product-landing",
     "audience": "design engineering teams",
-    "objective": "prove deterministic compiler, evidence, governed UI, and bounded motion"
+    "objective": "prove deterministic compiler, evidence, governed UI, bounded motion, and progressive 2D graphics"
   },
   "references": [
     {
@@ -16,5 +16,5 @@
     "primary": ["repo-native"],
     "reviewers": ["anthropic-frontend-design"]
   },
-  "requestedStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "release-receipt"]
+  "requestedStages": ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "release-receipt"]
 }
