@@ -13,6 +13,7 @@ const IMPLEMENTED_CORE_STAGES = new Set([
   "reference-intelligence",
   "art-direction",
   "information-architecture",
+  "content-architecture",
   "design-system-compiler",
   "page-architect",
   "frontend-builder",
@@ -71,6 +72,15 @@ function stageEvidence(stage: string): StageEvidence {
     };
   }
 
+  if (stage === "content-architecture") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Content Architecture converts IA requirements into claim-safe field contracts with provenance, publishability, responsive length budgets, and explicit NEEDS_INPUT placeholders.",
+      artifacts: ["content-architecture/content-architecture.json"]
+    };
+  }
+
   if (stage === "design-system-compiler") {
     return {
       stage,
@@ -84,7 +94,7 @@ function stageEvidence(stage: string): StageEvidence {
     return {
       stage,
       state: "PASS",
-      reason: "Page Architect emits semantic required/optional sections, governed component slots, and non-blocking enhancement fallbacks.",
+      reason: "Page Architect emits semantic required/optional sections, governed component slots, content-contract references, and non-blocking enhancement fallbacks.",
       artifacts: ["page-architect/page-architecture-plan.json"]
     };
   }
