@@ -1,45 +1,23 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  PIPELINE_STAGES,
-  type CompilerInput,
-  type EvidenceState,
-  type RuntimeReceipt,
-  type StageEvidence
-} from "./contracts.js";
+import { PIPELINE_STAGES, type CompilerInput, type EvidenceState, type RuntimeReceipt, type StageEvidence } from "./contracts.js";
 
 const IMPLEMENTED_CORE_STAGES = new Set([
-  "reference-intelligence",
-  "art-direction",
-  "information-architecture",
-  "content-architecture",
-  "visual-direction-search",
-  "design-system-compiler",
-  "page-architect",
-  "frontend-builder",
-  "motion-director",
-  "graphics-2d",
-  "graphics-3d",
-  "media-generator",
-  "release-receipt"
+  "reference-intelligence", "art-direction", "information-architecture", "content-architecture", "visual-direction-search", "semantic-design-tokens", "design-system-compiler", "page-architect", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "media-generator", "release-receipt"
 ]);
 
-function sha256(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
-}
+function sha256(value: unknown): string { return createHash("sha256").update(JSON.stringify(value)).digest("hex"); }
 
 function stageEvidence(stage: string): StageEvidence {
-  if (!PIPELINE_STAGES.includes(stage as (typeof PIPELINE_STAGES)[number])) {
-    return { stage, state: "FAIL", reason: "Unknown pipeline stage requested.", artifacts: [] };
-  }
-
+  if (!PIPELINE_STAGES.includes(stage as (typeof PIPELINE_STAGES)[number])) return { stage, state: "FAIL", reason: "Unknown pipeline stage requested.", artifacts: [] };
   const explicit: Record<string, StageEvidence> = {
     "reference-intelligence": { stage, state: "PASS", reason: "Reference Intelligence emits evidence-bounded manifest, analysis, and originality-plan artifacts; unsupported live modes remain explicit rather than inferred.", artifacts: ["reference-intelligence/reference-manifest.json", "reference-intelligence/reference-analysis.md", "reference-intelligence/originality-plan.json", "reference-intelligence/originality-plan.md"] },
     "art-direction": { stage, state: "PASS", reason: "Art Direction enforces exactly one primary authority and emits schema-validated design contracts.", artifacts: ["art-direction/design-read.json", "art-direction/DESIGN.md", "art-direction/semantic-tokens.json", "art-direction/component-state-matrix.json", "art-direction/motion-spec.json", "art-direction/scene-spec.json"] },
     "information-architecture": { stage, state: "PASS", reason: "Information Architecture derives a page-family-specific, evidence-linked section graph and marks unsupported content requirements as NEEDS_INPUT instead of fabricating claims.", artifacts: ["information-architecture/information-architecture.json"] },
     "content-architecture": { stage, state: "PASS", reason: "Content Architecture converts IA requirements into claim-safe field contracts with provenance, publishability, responsive length budgets, and explicit NEEDS_INPUT placeholders.", artifacts: ["content-architecture/content-architecture.json"] },
     "visual-direction-search": { stage, state: "PASS", reason: "Visual Direction Search deterministically generates materially different candidates, scores originality and delivery risk, retains rejection reasons, and selects exactly one downstream direction.", artifacts: ["visual-direction-search/visual-direction-search.json"] },
+    "semantic-design-tokens": { stage, state: "PASS", reason: "Semantic Design Tokens compile the selected visual direction into concrete OKLCH, typography, responsive grid, spacing, focus and motion values with executable contrast evidence and CSS projection.", artifacts: ["semantic-design-tokens/semantic-design-tokens.json", "semantic-design-tokens/semantic-design-tokens.css"] },
     "design-system-compiler": { stage, state: "PASS", reason: "Design System Compiler binds the selected visual direction to the original-values-only token and governed-component contract.", artifacts: ["design-system-compiler/design-system-plan.json"] },
     "page-architect": { stage, state: "PASS", reason: "Page Architect emits semantic required/optional sections, governed component slots, content-contract references, and non-blocking enhancement fallbacks.", artifacts: ["page-architect/page-architecture-plan.json"] },
     "frontend-builder": { stage, state: "PASS", reason: "Frontend Builder emits a schema-validated component graph restricted to the repository-owned registry; arbitrary markup is forbidden.", artifacts: ["frontend-builder/frontend-plan.json"] },
@@ -64,15 +42,7 @@ function overallState(stages: StageEvidence[]): EvidenceState {
 
 export function compile(input: CompilerInput, now = new Date()): RuntimeReceipt {
   const stages = input.requestedStages.map(stageEvidence);
-  return {
-    schema: "website-design-compiler/runtime-receipt/v1",
-    project: input.project,
-    generatedAt: now.toISOString(),
-    inputSha256: sha256(input),
-    runtime: { node: process.version, platform: process.platform, arch: process.arch },
-    stages,
-    overall: overallState(stages)
-  };
+  return { schema: "website-design-compiler/runtime-receipt/v1", project: input.project, generatedAt: now.toISOString(), inputSha256: sha256(input), runtime: { node: process.version, platform: process.platform, arch: process.arch }, stages, overall: overallState(stages) };
 }
 
 export async function writeRuntimeReceipt(receipt: RuntimeReceipt, outputDirectory: string): Promise<string> {
