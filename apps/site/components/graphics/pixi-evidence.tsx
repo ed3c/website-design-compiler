@@ -48,8 +48,13 @@ export function PixiEvidence() {
       setResolution(cappedResolution);
 
       try {
-        const { Application, Graphics } = await import("pixi.js");
+        const { AccessibilitySystem, Application, Graphics, extensions } = await import("pixi.js");
         if (disposed) return;
+
+        // This scene is decorative and its complete semantic equivalent is DOM-owned below.
+        // Removing Pixi's accessibility renderer prevents its mobile 1px activation hook from
+        // becoming a duplicate, undersized interactive control in the document accessibility tree.
+        extensions.remove(AccessibilitySystem);
 
         const app = new Application();
         await app.init({
