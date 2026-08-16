@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildFrontendPlan } from "./frontend-builder.js";
+import { compileInformationArchitecture, type IaSectionStatus, type IaPriority } from "./information-architecture.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface PageArchitecturePlan {
@@ -16,6 +17,15 @@ export interface PageArchitecturePlan {
     required: boolean;
     componentIds: string[];
   }>;
+  sectionIntents: Array<{
+    id: string;
+    type: string;
+    purpose: string;
+    priority: IaPriority;
+    status: IaSectionStatus;
+    requiredContent: string[];
+    fallback: string;
+  }>;
   optionalEnhancements: Array<{
     capability: "motion" | "graphics-2d" | "graphics-3d";
     blocksPrimaryAction: false;
@@ -25,6 +35,7 @@ export interface PageArchitecturePlan {
 
 export function buildPageArchitecturePlan(input: CompilerInput): PageArchitecturePlan {
   const frontend = buildFrontendPlan(input);
+  const ia = compileInformationArchitecture(input);
   return {
     schema: "website-design-compiler/page-architecture-plan/v1",
     project: input.project,
@@ -51,6 +62,15 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
         componentIds: []
       }
     ],
+    sectionIntents: ia.sections.map((section) => ({
+      id: section.id,
+      type: section.type,
+      purpose: section.purpose,
+      priority: section.priority,
+      status: section.status,
+      requiredContent: section.requiredContent,
+      fallback: section.fallback
+    })),
     optionalEnhancements: ["motion", "graphics-2d", "graphics-3d"].map((capability) => ({
       capability: capability as "motion" | "graphics-2d" | "graphics-3d",
       blocksPrimaryAction: false as const,
