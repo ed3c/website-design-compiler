@@ -1,3 +1,4 @@
+import { PixiEvidence } from "@/components/graphics/pixi-evidence";
 import { MotionEvidence } from "@/components/motion/motion-evidence";
 import { Button } from "@/components/ui/button";
 import { StatusPanel } from "@/components/ui/status-panel";
@@ -27,6 +28,7 @@ export default function HomePage() {
       </section>
 
       <MotionEvidence />
+      <PixiEvidence />
     </main>
   );
 }
