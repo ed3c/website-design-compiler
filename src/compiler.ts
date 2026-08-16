@@ -9,7 +9,7 @@ import {
   type StageEvidence
 } from "./contracts.js";
 
-const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "release-receipt"]);
+const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "release-receipt"]);
 
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -17,12 +17,7 @@ function sha256(value: unknown): string {
 
 function stageEvidence(stage: string): StageEvidence {
   if (!PIPELINE_STAGES.includes(stage as (typeof PIPELINE_STAGES)[number])) {
-    return {
-      stage,
-      state: "FAIL",
-      reason: "Unknown pipeline stage requested.",
-      artifacts: []
-    };
+    return { stage, state: "FAIL", reason: "Unknown pipeline stage requested.", artifacts: [] };
   }
 
   if (stage === "reference-intelligence") {
@@ -39,21 +34,27 @@ function stageEvidence(stage: string): StageEvidence {
     };
   }
 
-  if (IMPLEMENTED_CORE_STAGES.has(stage)) {
+  if (stage === "art-direction") {
     return {
       stage,
       state: "PASS",
-      reason: "Compiler core can emit and bind the runtime receipt for this stage.",
-      artifacts: ["runtime-receipt.json"]
+      reason: "Art Direction enforces exactly one primary authority and emits schema-validated design contracts.",
+      artifacts: [
+        "art-direction/design-read.json",
+        "art-direction/DESIGN.md",
+        "art-direction/semantic-tokens.json",
+        "art-direction/component-state-matrix.json",
+        "art-direction/motion-spec.json",
+        "art-direction/scene-spec.json"
+      ]
     };
   }
 
-  return {
-    stage,
-    state: "NOT_IMPLEMENTED",
-    reason: "Stage contract is known but its executable adapter has not landed yet.",
-    artifacts: []
-  };
+  if (IMPLEMENTED_CORE_STAGES.has(stage)) {
+    return { stage, state: "PASS", reason: "Compiler core can emit and bind the runtime receipt for this stage.", artifacts: ["runtime-receipt.json"] };
+  }
+
+  return { stage, state: "NOT_IMPLEMENTED", reason: "Stage contract is known but its executable adapter has not landed yet.", artifacts: [] };
 }
 
 function overallState(stages: StageEvidence[]): EvidenceState {
@@ -67,17 +68,12 @@ function overallState(stages: StageEvidence[]): EvidenceState {
 
 export function compile(input: CompilerInput, now = new Date()): RuntimeReceipt {
   const stages = input.requestedStages.map(stageEvidence);
-
   return {
     schema: "website-design-compiler/runtime-receipt/v1",
     project: input.project,
     generatedAt: now.toISOString(),
     inputSha256: sha256(input),
-    runtime: {
-      node: process.version,
-      platform: process.platform,
-      arch: process.arch
-    },
+    runtime: { node: process.version, platform: process.platform, arch: process.arch },
     stages,
     overall: overallState(stages)
   };
