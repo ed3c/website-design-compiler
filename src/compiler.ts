@@ -9,7 +9,7 @@ import {
   type StageEvidence
 } from "./contracts.js";
 
-const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "release-receipt"]);
+const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "release-receipt"]);
 
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -65,6 +65,15 @@ function stageEvidence(stage: string): StageEvidence {
       state: "PASS",
       reason: "Motion Director emits schema-validated Motion/GSAP effects with purpose, interruption, mobile/coarse-pointer, reduced-motion, and non-blocking policies.",
       artifacts: ["motion-director/motion-plan.json"]
+    };
+  }
+
+  if (stage === "graphics-2d") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Graphics 2D emits a schema-validated PixiJS progressive-enhancement scene contract with renderer capability order, DPR caps, lifecycle disposal, static fallback, and asset budget.",
+      artifacts: ["graphics-2d/graphics-2d-plan.json"]
     };
   }
 
