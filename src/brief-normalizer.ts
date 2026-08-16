@@ -45,10 +45,10 @@ const PAGE_TYPE_PATTERNS: Array<[RegExp, string]> = [
 ];
 
 const RISKY_CONTENT_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(testimonial|customer quote|case study)\b/i, "testimonials"],
-  [/\b(customer logo|logo cloud|trusted by)\b/i, "customer-logos"],
-  [/\b(metric|kpi|conversion rate|performance number|usage number)\b/i, "metrics"],
-  [/\b(pricing|price|plan tier)\b/i, "pricing"]
+  [/\b(testimonials?|customer quotes?|case stud(?:y|ies))\b/i, "testimonials"],
+  [/\b(customer logos?|logo clouds?|trusted by)\b/i, "customer-logos"],
+  [/\b(metrics?|kpis?|conversion rates?|performance numbers?|usage numbers?)\b/i, "metrics"],
+  [/\b(pricing|prices?|plan tiers?)\b/i, "pricing"]
 ];
 
 function hash(value: unknown): string {
