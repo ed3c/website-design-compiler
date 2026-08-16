@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
+import { validateAgainstSchema } from "./validate.js";
 
 export type IaSectionStatus = "READY" | "NEEDS_INPUT";
 export type IaPriority = "PRIMARY" | "SECONDARY" | "SUPPORTING";
@@ -146,9 +147,11 @@ export function compileInformationArchitecture(input: CompilerInput): Informatio
 }
 
 export async function writeInformationArchitecturePlan(input: CompilerInput, outputDirectory: string): Promise<string> {
+  const plan = compileInformationArchitecture(input);
+  await validateAgainstSchema(plan, "information-architecture-v2.schema.json");
   const directory = join(outputDirectory, "information-architecture");
   await mkdir(directory, { recursive: true });
   const path = join(directory, "information-architecture.json");
-  await writeFile(path, `${JSON.stringify(compileInformationArchitecture(input), null, 2)}\n`, "utf8");
+  await writeFile(path, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
   return path;
 }
