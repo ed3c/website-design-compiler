@@ -32,13 +32,14 @@ jobs:
       - run: pnpm ui:build
       - run: pnpm browser:typecheck
       - run: pnpm storybook:typecheck
+      - run: pnpm arena:typecheck
       - run: pnpm exec playwright install --with-deps chromium
       - name: Bind exact head runtime receipt
         run: |
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
-      - name: Run Storybook, browser, accessibility-performance, and release gates
+      - name: Run Storybook, browser, accessibility-performance, arena, and release gates
         run: |
           set +e
           pnpm storybook:build
@@ -53,9 +54,11 @@ jobs:
           browser_receipt_status=$?
           pnpm quality:receipt
           quality_status=$?
+          pnpm arena:smoke
+          arena_status=$?
           pnpm release:receipt
           release_status=$?
-          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
       - uses: actions/upload-artifact@v4
@@ -86,6 +89,7 @@ jobs:
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
             artifacts/accessibility-performance/
+            artifacts/arena/
             artifacts/release/release-gate-receipt.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: warn
