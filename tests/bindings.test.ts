@@ -8,7 +8,8 @@ const bindingFile: SharedBindingsFile = {
     repository: "ed3c/skills-shared",
     visibility: "private",
     registry: "registry.json",
-    mode: "reference-only-no-vendoring"
+    mode: "reference-only-no-vendoring",
+    expectedIdentity: "fixture-sha"
   },
   bindings: [
     { name: "truth-verify-loop", purpose: "verification" },
@@ -47,4 +48,13 @@ test("mismatched registry source fails closed", () => {
     sourceRepository: "example/other-registry"
   });
   assert.equal(receipt.overall, "FAIL");
+});
+
+test("mismatched pinned registry identity fails closed", () => {
+  const receipt = resolveSharedBindings(bindingFile, {
+    ...projection,
+    sourceIdentity: "fixture-sha-drifted"
+  });
+  assert.equal(receipt.overall, "FAIL");
+  assert.match(receipt.resolutions[0]?.reason ?? "", /identity/);
 });
