@@ -27,7 +27,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--wdc-color-accen
 .wdc-hero p { margin: 0; color: var(--wdc-color-text-muted); font-size: 1.125rem; line-height: 1.6; }
 .wdc-eyebrow { color: var(--wdc-color-accent) !important; font-size: 0.875rem !important; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
 .wdc-actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-sm); }
-.wdc-button { min-height: 2.75rem; border-radius: var(--wdc-radius-md); border: 1px solid transparent; padding: 0.7rem 1rem; cursor: pointer; transition: transform var(--wdc-motion-fast) ease, background var(--wdc-motion-fast) ease; }
+.wdc-button { min-width: 3rem; min-height: 3rem; border-radius: var(--wdc-radius-md); border: 1px solid transparent; padding: 0.7rem 1rem; cursor: pointer; transition: transform var(--wdc-motion-fast) ease, background var(--wdc-motion-fast) ease; }
 .wdc-button--primary { background: var(--wdc-color-accent); color: #07111b; }
 .wdc-button--secondary { background: transparent; color: var(--wdc-color-text-primary); border-color: color-mix(in srgb, var(--wdc-color-text-muted) 45%, transparent); }
 .wdc-button:hover { transform: translateY(-1px); }
