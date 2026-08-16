@@ -16,7 +16,9 @@
     "ui:build": "pnpm --filter @website-design-compiler/site build",
     "browser:typecheck": "tsc --noEmit -p tsconfig.browser.json",
     "browser:qa": "playwright test",
-    "browser:receipt": "tsx scripts/browser-qa-receipt.ts"
+    "browser:receipt": "tsx scripts/browser-qa-receipt.ts",
+    "quality:receipt": "tsx scripts/accessibility-performance-receipt.ts",
+    "release:receipt": "tsx scripts/release-gate-receipt.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",
@@ -24,6 +26,7 @@
     "yaml": "2.9.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@playwright/test": "^1.59.0",
     "@types/node": "^24.3.0",
     "tsx": "^4.20.5",
