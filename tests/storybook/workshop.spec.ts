@@ -11,7 +11,7 @@ const stories = [
   { id: "governed-ui-statuspanel--empty", state: "empty" },
   { id: "governed-ui-statuspanel--error", state: "error" },
   { id: "governed-ui-statuspanel--success", state: "success" },
-  ...["navigation","hero","feature-grid","bento-grid","proof-cloud","metrics","testimonial","comparison","pricing","faq","cta","footer","editorial-prose","editorial-media","product-showcase","media-stage","graphics2d-stage","graphics3d-stage"].map((name)=>({id:`governed-sections-section--${name}`}))
+  ...["navigation","hero","feature-grid","bento-grid","proof-cloud","metrics","testimonial","comparison","pricing","faq","cta","footer","editorial-prose","editorial-media","product-showcase","media-stage","graphics-2-d-stage","graphics-3-d-stage"].map((name)=>({id:`governed-sections-section--${name}`}))
 ] as const;
 
 for (const story of stories) {
