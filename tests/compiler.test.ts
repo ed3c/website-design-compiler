@@ -30,7 +30,7 @@ test("known but unavailable stage is NOT_IMPLEMENTED, never PASS", async () => {
     schema: "website-design-compiler/input/v1",
     project: "unimplemented-stage",
     brief: { pageType: "landing", audience: "teams", objective: "test evidence" },
-    requestedStages: ["page-architect"]
+    requestedStages: ["media-generator"]
   });
   const receipt = compile(input, new Date("2026-08-16T00:00:00.000Z"));
 
