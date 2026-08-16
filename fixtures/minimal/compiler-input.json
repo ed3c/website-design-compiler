@@ -4,8 +4,13 @@
   "brief": {
     "pageType": "product-landing",
     "audience": "design engineering teams",
-    "objective": "prove deterministic compiler receipt generation"
+    "objective": "prove deterministic compiler and reference-evidence generation"
   },
-  "references": [],
-  "requestedStages": ["release-receipt"]
+  "references": [
+    {
+      "kind": "html",
+      "value": "<!doctype html><html><head><title>Reference Fixture</title></head><body><nav><a href='/docs'>Docs</a></nav><main><h1>Evidence-first design</h1><section><h2>Runtime receipts</h2></section></main></body></html>"
+    }
+  ],
+  "requestedStages": ["reference-intelligence", "release-receipt"]
 }
