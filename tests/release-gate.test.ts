@@ -8,7 +8,8 @@ const pass = {
   accessibilityPerformance: "PASS",
   storybook: "PASS",
   sharedBindings: "PASS",
-  arena: "PASS"
+  arena: "PASS",
+  showcase: "PASS"
 } as const;
 
 test("release gate passes only when all hard evidence layers pass", () => {
@@ -31,10 +32,15 @@ test("arena regression makes release fail", () => {
   assert.equal(evaluateReleaseGate({ ...pass, arena: "FAIL" }).overall, "FAIL");
 });
 
+test("showcase compiler drift makes release fail", () => {
+  assert.equal(evaluateReleaseGate({ ...pass, showcase: "FAIL" }).overall, "FAIL");
+});
+
 test("missing or unimplemented evidence cannot become release PASS", () => {
   assert.equal(evaluateReleaseGate({ ...pass, browser: "NOT_EXERCISED" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, runtime: "NOT_IMPLEMENTED" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, storybook: "ABSENT" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, sharedBindings: "ABSENT" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, arena: "ABSENT" }).overall, "FAIL");
+  assert.equal(evaluateReleaseGate({ ...pass, showcase: "ABSENT" }).overall, "FAIL");
 });
