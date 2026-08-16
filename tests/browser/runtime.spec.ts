@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-test("core runtime is keyboard reachable, console clean, network clean, and screenshotable", async ({ page }, testInfo) => {
+test("core runtime is keyboard reachable, motion-bounded, console clean, network clean, and screenshotable", async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
   const failedRequests: string[] = [];
 
@@ -26,9 +26,25 @@ test("core runtime is keyboard reachable, console clean, network clean, and scre
   const firstButton = page.getByRole("button").first();
   await expect(firstButton).toBeFocused();
 
+  const motionEffect = page.locator("[data-motion-engine='motion']");
+  const gsapEffect = page.locator("[data-motion-engine='gsap']");
+  await expect(motionEffect).toHaveCount(1);
+  await expect(gsapEffect).toHaveCount(1);
+  await expect(gsapEffect).not.toHaveAttribute("data-gsap-active", "pending");
+  expect(await page.locator("[data-custom-cursor]").count()).toBe(0);
+
   if (testInfo.project.name === "reduced-motion-chromium") {
     const reduced = await page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     expect(reduced).toBe(true);
+    await expect(motionEffect).toHaveAttribute("data-reduced-motion", "true");
+    await expect(gsapEffect).toHaveAttribute("data-reduced-motion", "true");
+    await expect(gsapEffect).toHaveAttribute("data-gsap-active", "false");
+  } else if (testInfo.project.name === "mobile-chromium") {
+    await expect(gsapEffect).toHaveAttribute("data-coarse-pointer", "true");
+    await expect(gsapEffect).toHaveAttribute("data-gsap-active", "false");
+  } else {
+    await expect(motionEffect).toHaveAttribute("data-reduced-motion", "false");
+    await expect(gsapEffect).toHaveAttribute("data-gsap-active", "true");
   }
 
   const screenshotDirectory = join(process.cwd(), "artifacts", "browser-qa", "screenshots");
