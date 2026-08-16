@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/design-read.schema.json",
+  "title": "Design Read",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "primaryAuthority", "reviewers", "pageType", "audience", "objective", "evidencePolicy", "referenceEvidenceState"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/design-read/v1" },
+    "project": { "type": "string", "minLength": 1 },
+    "primaryAuthority": { "enum": ["anthropic-frontend-design", "google-stitch", "taste-skill", "repo-native"] },
+    "reviewers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["anthropic-frontend-design", "google-stitch", "taste-skill", "repo-native"] }
+    },
+    "pageType": { "type": "string", "minLength": 1 },
+    "audience": { "type": "string", "minLength": 1 },
+    "objective": { "type": "string", "minLength": 1 },
+    "evidencePolicy": { "const": "REFERENCE_FACTS_ONLY" },
+    "referenceEvidenceState": { "enum": ["PRESENT", "ABSENT"] }
+  }
+}
