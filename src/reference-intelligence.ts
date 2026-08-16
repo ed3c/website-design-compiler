@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput, CompilerReference, EvidenceState } from "./contracts.js";
 import { captureReference } from "./reference-capture.js";
+import { validateAgainstSchema } from "./validate.js";
 
 export interface ReferenceManifestEntry {
   id: string;
@@ -91,6 +92,9 @@ export async function writeReferenceIntelligenceArtifacts(
 
   const manifest = await buildReferenceManifest(input);
   const originalityPlan = buildOriginalityPlan();
+  await validateAgainstSchema<ReferenceManifest>(manifest, "reference-manifest.schema.json");
+  await validateAgainstSchema<OriginalityPlan>(originalityPlan, "originality-plan.schema.json");
+
   const manifestPath = join(directory, "reference-manifest.json");
   const originalityPath = join(directory, "originality-plan.json");
   const analysisPath = join(directory, "reference-analysis.md");
