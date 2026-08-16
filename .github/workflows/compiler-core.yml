@@ -27,6 +27,7 @@ jobs:
       - run: pnpm compile:fixture
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
+      - run: pnpm browser:typecheck
       - run: pnpm exec playwright install --with-deps chromium
       - name: Run browser QA and emit receipt
         run: |
