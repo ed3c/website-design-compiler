@@ -6,6 +6,7 @@ export interface ReleaseGateInputs {
   accessibilityPerformance: ReleaseInputState;
   storybook: ReleaseInputState;
   sharedBindings: ReleaseInputState;
+  arena: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {
