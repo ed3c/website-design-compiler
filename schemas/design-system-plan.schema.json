@@ -3,13 +3,36 @@
   "$id": "https://ed3c.github.io/website-design-compiler/schemas/design-system-plan.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "sourceContract", "identityPolicy", "arbitraryComponentAdmission", "tokenRoles", "governedComponents", "requiredStateOwnership"],
+  "required": ["schema", "project", "sourceContract", "identityPolicy", "arbitraryComponentAdmission", "selectedVisualDirection", "tokenRoles", "governedComponents", "requiredStateOwnership"],
   "properties": {
     "schema": { "const": "website-design-compiler/design-system-plan/v1" },
     "project": { "type": "string", "minLength": 1 },
     "sourceContract": { "const": "website-design-compiler/design-contract-bundle/v1" },
     "identityPolicy": { "const": "ORIGINAL_VALUES_ONLY" },
     "arbitraryComponentAdmission": { "const": false },
+    "selectedVisualDirection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "candidateId", "dimensions"],
+      "properties": {
+        "source": { "const": "website-design-compiler/visual-direction-search/v2" },
+        "candidateId": { "type": "string", "minLength": 1 },
+        "dimensions": {
+          "type": "object", "additionalProperties": false,
+          "required": ["typography", "typeContrast", "density", "grid", "surface", "colorStrategy", "mediaStrategy", "motionIntensity", "signatureInteraction"],
+          "properties": {
+            "typography": { "enum": ["neo-grotesk", "editorial-serif", "humanist-sans", "display-contrast"] },
+            "typeContrast": { "enum": ["restrained", "balanced", "dramatic"] },
+            "density": { "enum": ["airy", "balanced", "dense"] },
+            "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
+            "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
+            "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+            "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
+            "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
+            "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }
+          }
+        }
+      }
+    },
     "tokenRoles": {
       "type": "object", "additionalProperties": false,
       "required": ["color", "type", "spacing", "radii", "motion"],
