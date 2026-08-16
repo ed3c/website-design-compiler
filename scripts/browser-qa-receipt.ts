@@ -1,5 +1,6 @@
 import { readdir, readFile, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { collectBrowserProjectResults } from "../src/browser-qa.js";
 
 const root = join(process.cwd(), "artifacts", "browser-qa");
 const reportPath = join(root, "playwright-report.json");
@@ -10,8 +11,6 @@ const requiredProjects = [
   "mobile-chromium",
   "reduced-motion-chromium"
 ];
-
-type ResultRecord = { projectName?: string; status?: string };
 
 async function walk(directory: string): Promise<string[]> {
   try {
@@ -29,30 +28,6 @@ async function walk(directory: string): Promise<string[]> {
   }
 }
 
-function collectResults(value: unknown, results: ResultRecord[] = []): ResultRecord[] {
-  if (!value || typeof value !== "object") return results;
-  const object = value as Record<string, unknown>;
-  if (Array.isArray(object.results)) {
-    for (const result of object.results) {
-      if (result && typeof result === "object") {
-        const typed = result as Record<string, unknown>;
-        const record: ResultRecord = {};
-        if (typeof typed.projectName === "string") record.projectName = typed.projectName;
-        if (typeof typed.status === "string") record.status = typed.status;
-        results.push(record);
-      }
-    }
-  }
-  for (const nested of Object.values(object)) {
-    if (Array.isArray(nested)) {
-      for (const item of nested) collectResults(item, results);
-    } else if (nested && typeof nested === "object") {
-      collectResults(nested, results);
-    }
-  }
-  return results;
-}
-
 await mkdir(root, { recursive: true });
 const files = await walk(root);
 const screenshots = files.filter((path) => path.endsWith(".png")).map((path) => relative(root, path));
@@ -64,37 +39,49 @@ try {
 } catch {
   report = null;
 }
-const results = collectResults(report);
+
+const projectResults = collectBrowserProjectResults(report);
 const passedProjects = new Set(
-  results.filter((result) => result.status === "passed" && result.projectName).map((result) => result.projectName as string)
+  projectResults.filter((result) => result.status === "passed").map((result) => result.projectName)
 );
+const failedProjects = projectResults
+  .filter((result) => result.status === "failed")
+  .map((result) => result.projectName)
+  .sort();
 const missingProjects = requiredProjects.filter((project) => !passedProjects.has(project));
 const missingScreenshots = requiredProjects.filter(
-  (project) => !screenshots.some((path) => path.endsWith(`${project}.png`))
+  (project) => !screenshots.some((path) => path === `screenshots/${project}.png`)
 );
 
-const overall = report !== null && missingProjects.length === 0 && missingScreenshots.length === 0 && traces.length >= requiredProjects.length
-  ? "PASS"
-  : "FAIL";
+const browserMatrixPass = missingProjects.length === 0 && failedProjects.length === 0;
+const screenshotsPass = missingScreenshots.length === 0;
+const tracesPass = traces.length >= requiredProjects.length;
+const reportPass = report !== null;
+const overall = browserMatrixPass && screenshotsPass && tracesPass && reportPass ? "PASS" : "FAIL";
 
 const receipt = {
-  schema: "website-design-compiler/browser-qa/v1",
+  schema: "website-design-compiler/browser-qa-runtime-receipt/v1",
   overall,
   git: {
     sha: process.env.GITHUB_SHA ?? "UNBOUND",
     ref: process.env.GITHUB_REF ?? "UNBOUND"
   },
   requiredProjects,
+  projectResults,
   passedProjects: [...passedProjects].sort(),
+  failedProjects,
   missingProjects,
-  screenshots: screenshots.sort(),
+  artifacts: {
+    report: reportPass ? "playwright-report.json" : null,
+    screenshots: screenshots.sort(),
+    traces: traces.sort()
+  },
   missingScreenshots,
-  traces: traces.sort(),
   gates: {
-    browserMatrix: missingProjects.length === 0 ? "PASS" : "FAIL",
-    screenshots: missingScreenshots.length === 0 ? "PASS" : "FAIL",
-    traces: traces.length >= requiredProjects.length ? "PASS" : "FAIL",
-    playwrightReport: report !== null ? "PASS" : "FAIL"
+    browserMatrix: browserMatrixPass ? "PASS" : "FAIL",
+    screenshots: screenshotsPass ? "PASS" : "FAIL",
+    traces: tracesPass ? "PASS" : "FAIL",
+    playwrightReport: reportPass ? "PASS" : "FAIL"
   }
 };
 
