@@ -34,7 +34,9 @@ for (const story of stories) {
     }
 
     if (story.id.endsWith("--primary")) {
-      await page.keyboard.press("Tab");
+      // The story's production interaction contract owns the keyboard action in its play()
+      // function. Here we verify that Storybook actually executed that contract rather than
+      // pressing Tab a second time and moving focus away from the governed button.
       await expect(page.getByRole("button", { name: "Primary action" })).toBeFocused();
     }
 
