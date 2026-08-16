@@ -13,6 +13,7 @@
     "v2:brief-benchmarks": "tsx scripts/v2-brief-benchmark-receipt.ts",
     "v2:content-architecture": "tsx scripts/content-architecture-benchmark-receipt.ts",
     "v2:visual-directions": "tsx scripts/visual-direction-benchmark-receipt.ts",
+    "v2:semantic-tokens": "tsx scripts/semantic-token-benchmark-receipt.ts && tsx scripts/semantic-token-projection-receipt.ts",
     "showcase:typecheck": "tsc --noEmit -p tsconfig.showcase.json",
     "showcase:compile": "tsx src/cli.ts fixtures/showcase/compiler-input.json artifacts/showcase/compiler",
     "showcase:compiler-receipt": "tsx scripts/showcase-compiler-receipt.ts",
@@ -40,18 +41,6 @@
     "arena:smoke": "tsx scripts/arena-smoke.ts",
     "release:receipt": "tsx scripts/release-gate-receipt.ts"
   },
-  "dependencies": {
-    "@payloadcms/db-sqlite": "3.86.0",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
-    "payload": "3.86.0",
-    "yaml": "2.9.0"
-  },
-  "devDependencies": {
-    "@axe-core/playwright": "4.12.1",
-    "@playwright/test": "^1.59.0",
-    "@types/node": "^24.3.0",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
-  }
+  "dependencies": { "@payloadcms/db-sqlite": "3.86.0", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "payload": "3.86.0", "yaml": "2.9.0" },
+  "devDependencies": { "@axe-core/playwright": "4.12.1", "@playwright/test": "^1.59.0", "@types/node": "^24.3.0", "tsx": "^4.20.5", "typescript": "^5.9.2" }
 }
