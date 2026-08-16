@@ -9,7 +9,17 @@ import {
   type StageEvidence
 } from "./contracts.js";
 
-const IMPLEMENTED_CORE_STAGES = new Set(["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"]);
+const IMPLEMENTED_CORE_STAGES = new Set([
+  "reference-intelligence",
+  "art-direction",
+  "design-system-compiler",
+  "page-architect",
+  "frontend-builder",
+  "motion-director",
+  "graphics-2d",
+  "graphics-3d",
+  "release-receipt"
+]);
 
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -24,7 +34,7 @@ function stageEvidence(stage: string): StageEvidence {
     return {
       stage,
       state: "PASS",
-      reason: "Reference Intelligence emits evidence-bounded manifest, analysis, and originality-plan artifacts; unsupported capture modes remain NOT_EXERCISED per entry.",
+      reason: "Reference Intelligence emits evidence-bounded manifest, analysis, and originality-plan artifacts; unsupported live modes remain explicit rather than inferred.",
       artifacts: [
         "reference-intelligence/reference-manifest.json",
         "reference-intelligence/reference-analysis.md",
@@ -47,6 +57,24 @@ function stageEvidence(stage: string): StageEvidence {
         "art-direction/motion-spec.json",
         "art-direction/scene-spec.json"
       ]
+    };
+  }
+
+  if (stage === "design-system-compiler") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Design System Compiler converts art-direction roles into a schema-validated original-values-only token and governed-component contract.",
+      artifacts: ["design-system-compiler/design-system-plan.json"]
+    };
+  }
+
+  if (stage === "page-architect") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Page Architect emits semantic required/optional sections, governed component slots, and non-blocking enhancement fallbacks.",
+      artifacts: ["page-architect/page-architecture-plan.json"]
     };
   }
 
