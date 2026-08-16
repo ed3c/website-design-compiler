@@ -1,7 +1,7 @@
 import type { Data } from "@puckeditor/core";
 import authoringData from "@/generated/showcase-authoring-data.json";
 import { StudioEditor } from "@/components/studio/studio-editor";
-import { validateAuthoringData } from "../../../src/puck-authoring";
+import { validateAuthoringData } from "../../../../src/puck-authoring";
 
 export default function StudioPage() {
   const validation = validateAuthoringData(authoringData);
