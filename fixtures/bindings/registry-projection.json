@@ -1,0 +1,16 @@
+{
+  "schema": "website-design-compiler/shared-registry-projection/v1",
+  "sourceRepository": "ed3c/skills-shared",
+  "sourceIdentity": "synthetic-fixture-only",
+  "skills": [
+    {"name": "repo-agent-native", "identity": "fixture:repo-agent-native"},
+    {"name": "sdlc-plan-composer", "identity": "fixture:sdlc-plan-composer"},
+    {"name": "unknown-discovery-composer", "identity": "fixture:unknown-discovery-composer"},
+    {"name": "truth-verify-loop", "identity": "fixture:truth-verify-loop"},
+    {"name": "external-verify", "identity": "fixture:external-verify"},
+    {"name": "knowledge-continuity", "identity": "fixture:knowledge-continuity"},
+    {"name": "git-town-stacked-pr-worker", "identity": "fixture:git-town-stacked-pr-worker"},
+    {"name": "github-delivery-loop", "identity": "fixture:github-delivery-loop"},
+    {"name": "dual-forge-repository-loop", "identity": "fixture:dual-forge-repository-loop"}
+  ]
+}
