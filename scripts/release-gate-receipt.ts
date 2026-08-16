@@ -20,13 +20,15 @@ async function readOverall(path: string): Promise<ReleaseInputState> {
 const runtimePath = join(root, "artifacts", "runtime", "minimal", "runtime-receipt.json");
 const browserPath = join(root, "artifacts", "browser-qa", "browser-qa.json");
 const qualityPath = join(root, "artifacts", "accessibility-performance", "accessibility-performance.json");
+const storybookPath = join(root, "artifacts", "storybook", "storybook-workshop.json");
 const outputDirectory = join(root, "artifacts", "release");
 const outputPath = join(outputDirectory, "release-gate-receipt.json");
 
 const evaluation = evaluateReleaseGate({
   runtime: await readOverall(runtimePath),
   browser: await readOverall(browserPath),
-  accessibilityPerformance: await readOverall(qualityPath)
+  accessibilityPerformance: await readOverall(qualityPath),
+  storybook: await readOverall(storybookPath)
 });
 
 const receipt = {
@@ -40,7 +42,8 @@ const receipt = {
   evidence: {
     runtime: "artifacts/runtime/minimal/runtime-receipt.json",
     browser: "artifacts/browser-qa/browser-qa.json",
-    accessibilityPerformance: "artifacts/accessibility-performance/accessibility-performance.json"
+    accessibilityPerformance: "artifacts/accessibility-performance/accessibility-performance.json",
+    storybook: "artifacts/storybook/storybook-workshop.json"
   }
 };
 
