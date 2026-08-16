@@ -48,10 +48,19 @@
     "release-receipt"
   ],
   "requiredGlobalEvidence": [
-    "browser",
+    "browserMatrix",
+    "responsiveBehavior",
+    "keyboardCompletion",
+    "reducedMotion",
+    "coarsePointer",
+    "graphics2dFallback",
+    "graphics3dFallback",
     "accessibilityPerformance",
-    "storybookVisualGoldens",
-    "licenseProvenance",
+    "visualRegression",
+    "interactionTraces",
+    "buildReliability",
+    "provenanceCompleteness",
+    "licenseCompliance",
     "sharedBindings"
   ]
 }
