@@ -33,6 +33,8 @@ jobs:
         run: pnpm v2:brief-benchmarks
       - name: Verify six-category claim-safe content architecture
         run: pnpm v2:content-architecture
+      - name: Verify deterministic multi-candidate visual direction search
+        run: pnpm v2:visual-directions
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
