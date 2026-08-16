@@ -41,6 +41,8 @@ jobs:
         run: pnpm v2:section-grammar
       - name: Verify responsive composition policies and six page graphs
         run: pnpm v2:responsive-composition
+      - name: Verify page-level motion choreography and accessibility fallbacks
+        run: pnpm v2:motion-choreography
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
