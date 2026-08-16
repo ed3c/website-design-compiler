@@ -97,7 +97,11 @@ function collectConstraints(input: NaturalLanguageBriefInput): string[] {
 }
 
 function collectRiskyContentRequests(text: string): string[] {
-  return RISKY_CONTENT_PATTERNS.filter(([pattern]) => pattern.test(text)).map(([, label]) => label);
+  const positiveText = text
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*(must not|do not|never|forbid|without)\b/i.test(line))
+    .join("\n");
+  return RISKY_CONTENT_PATTERNS.filter(([pattern]) => pattern.test(positiveText)).map(([, label]) => label);
 }
 
 export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormalizationReceipt {
