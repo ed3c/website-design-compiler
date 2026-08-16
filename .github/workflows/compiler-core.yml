@@ -35,6 +35,8 @@ jobs:
         run: pnpm external-skills:receipt
       - name: Verify deterministic authenticated media worker
         run: pnpm media:fixture
+      - name: Verify governed Puck authoring projection
+        run: pnpm authoring:receipt
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
       - run: pnpm browser:typecheck
@@ -98,6 +100,7 @@ jobs:
             artifacts/showcase/
             artifacts/external-skills/registry-receipt.json
             artifacts/media-generator/
+            artifacts/authoring/
             artifacts/provenance/license-receipt.json
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
