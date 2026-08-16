@@ -1,4 +1,4 @@
-import { SECTION_KINDS, validateSectionInstance, type SectionInstance, type SectionKind } from "./section-grammar.js";
+import { SECTION_KINDS, validateSectionInstance, type SectionInstance, type SectionKind } from "./section-grammar";
 
 export type GovernedAuthoringType = "ButtonBlock" | "StatusPanelBlock" | "Section" | "RichSectionBlock";
 
