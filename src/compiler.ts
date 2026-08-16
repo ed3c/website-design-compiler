@@ -12,6 +12,7 @@ import {
 const IMPLEMENTED_CORE_STAGES = new Set([
   "reference-intelligence",
   "art-direction",
+  "information-architecture",
   "design-system-compiler",
   "page-architect",
   "frontend-builder",
@@ -58,6 +59,15 @@ function stageEvidence(stage: string): StageEvidence {
         "art-direction/motion-spec.json",
         "art-direction/scene-spec.json"
       ]
+    };
+  }
+
+  if (stage === "information-architecture") {
+    return {
+      stage,
+      state: "PASS",
+      reason: "Information Architecture derives a page-family-specific, evidence-linked section graph and marks unsupported content requirements as NEEDS_INPUT instead of fabricating claims.",
+      artifacts: ["information-architecture/information-architecture.json"]
     };
   }
 
