@@ -83,6 +83,27 @@ export function buildOriginalityPlan(): OriginalityPlan {
   };
 }
 
+function originalityPlanMarkdown(plan: OriginalityPlan): string {
+  return [
+    "# Originality Plan",
+    "",
+    `Policy: ${plan.policy}`,
+    "",
+    "## Retain only as evidence-backed grammar",
+    "",
+    ...plan.retain.map((item) => `- ${item}`),
+    "",
+    "## Transform",
+    "",
+    ...plan.transform.map((item) => `- ${item}`),
+    "",
+    "## Reject from implementation inputs",
+    "",
+    ...plan.reject.map((item) => `- ${item}`),
+    ""
+  ].join("\n");
+}
+
 export async function writeReferenceIntelligenceArtifacts(
   input: CompilerInput,
   outputDirectory: string
@@ -96,7 +117,8 @@ export async function writeReferenceIntelligenceArtifacts(
   await validateAgainstSchema<OriginalityPlan>(originalityPlan, "originality-plan.schema.json");
 
   const manifestPath = join(directory, "reference-manifest.json");
-  const originalityPath = join(directory, "originality-plan.json");
+  const originalityJsonPath = join(directory, "originality-plan.json");
+  const originalityMarkdownPath = join(directory, "originality-plan.md");
   const analysisPath = join(directory, "reference-analysis.md");
 
   const observed = manifest.entries.filter((entry) => entry.captureState === "PASS");
@@ -111,7 +133,8 @@ export async function writeReferenceIntelligenceArtifacts(
   ]);
 
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  await writeFile(originalityPath, `${JSON.stringify(originalityPlan, null, 2)}\n`, "utf8");
+  await writeFile(originalityJsonPath, `${JSON.stringify(originalityPlan, null, 2)}\n`, "utf8");
+  await writeFile(originalityMarkdownPath, originalityPlanMarkdown(originalityPlan), "utf8");
   await writeFile(
     analysisPath,
     [
@@ -129,5 +152,5 @@ export async function writeReferenceIntelligenceArtifacts(
     "utf8"
   );
 
-  return [manifestPath, analysisPath, originalityPath];
+  return [manifestPath, analysisPath, originalityJsonPath, originalityMarkdownPath];
 }
