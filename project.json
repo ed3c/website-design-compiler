@@ -6,7 +6,7 @@
     "packageManager": "pnpm",
     "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core-and-governed-ui",
+    "scope": "compiler-core-governed-ui-browser-evidence",
     "applicationStatus": "PASS"
   },
   "pipeline": [
@@ -58,8 +58,25 @@
     "arbitraryMarkup": "SKIPPED_BY_POLICY",
     "componentPropSchema": "PASS",
     "motionOrWebglDependency": "ABSENT",
-    "lastVerifiedHead": "9df376fc5f91bf65df0ff825163107f56224be1a",
-    "workflowRun": 31939582216
+    "lastVerifiedHead": "a1408cc3c2b981965d99eb3f0148a15716094695",
+    "workflowRun": 31940138304
+  },
+  "browserVisualQa": {
+    "playwrightMatrix": "PASS",
+    "desktop": "PASS",
+    "tablet": "PASS",
+    "mobile": "PASS",
+    "reducedMotion": "PASS",
+    "keyboardFocus": "PASS",
+    "consoleErrors": "ABSENT",
+    "failedNetworkRequests": "ABSENT",
+    "screenshots": "PASS",
+    "traces": "PASS",
+    "runtimeReceipt": "PASS",
+    "webglFallback": "SKIPPED_BY_POLICY",
+    "webglFallbackReason": "Core governed UI has no WebGL dependency; fallback hook becomes required when graphics-3d lands.",
+    "lastVerifiedHead": "a1408cc3c2b981965d99eb3f0148a15716094695",
+    "workflowRun": 31940138304
   },
   "evidenceStates": [
     "PASS",
