@@ -4,6 +4,11 @@ import { validateAuthoringData, type AuthoringComponentData, type AuthoringData 
 
 export const PAYLOAD_VERSION = "3.86.0" as const;
 export const CMS_LOCALES = ["en", "zh-TW"] as const;
+export const PAYLOAD_DEPLOYMENT_POLICY = {
+  developmentSchemaSync: "PUSH_ALLOWED",
+  productionSchemaSync: "MIGRATIONS_REQUIRED",
+  productionCredentialSource: "ENVIRONMENT_ONLY"
+} as const;
 
 const authenticated = ({ req }: { req: { user?: unknown } }) => Boolean(req.user);
 
