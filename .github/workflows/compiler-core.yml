@@ -27,6 +27,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      - name: Verify v2 natural-language brief normalization and IA compilation
+        run: pnpm v2:brief-ia
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
@@ -84,6 +86,7 @@ jobs:
         with:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
+            artifacts/v2/brief-ia/
             artifacts/runtime/minimal/runtime-receipt.json
             artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
             artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
