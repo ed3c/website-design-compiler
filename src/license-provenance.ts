@@ -24,18 +24,18 @@ export interface LicensePolicy {
 }
 
 export interface RightsEvidence {
-  license?: string;
-  source?: string;
-  attribution?: string;
-  kind?: SubjectKind;
-  role?: SubjectRole;
-  hashSha256?: string;
-  outputTerms?: string;
+  license?: string | undefined;
+  source?: string | undefined;
+  attribution?: string | undefined;
+  kind?: SubjectKind | undefined;
+  role?: SubjectRole | undefined;
+  hashSha256?: string | undefined;
+  outputTerms?: string | undefined;
 }
 
 export interface ProvenanceSubject extends RightsEvidence {
   id: string;
-  versionOrCommit?: string;
+  versionOrCommit?: string | undefined;
   kind: SubjectKind;
   role: SubjectRole;
 }
