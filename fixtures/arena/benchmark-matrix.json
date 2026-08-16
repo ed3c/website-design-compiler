@@ -59,8 +59,8 @@
     "visualRegression",
     "interactionTraces",
     "buildReliability",
-    "provenanceCompleteness",
-    "licenseCompliance",
+    "benchmarkProvenanceCompleteness",
+    "benchmarkLicenseCompliance",
     "sharedBindings"
   ]
 }
