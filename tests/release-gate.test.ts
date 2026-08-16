@@ -10,7 +10,8 @@ const pass = {
   sharedBindings: "PASS",
   arena: "PASS",
   showcase: "PASS",
-  externalSkills: "PASS"
+  externalSkills: "PASS",
+  mediaGenerator: "PASS"
 } as const;
 
 test("release gate passes only when all hard evidence layers pass", () => {
@@ -41,6 +42,10 @@ test("external skill admission regression makes release fail", () => {
   assert.equal(evaluateReleaseGate({ ...pass, externalSkills: "FAIL" }).overall, "FAIL");
 });
 
+test("media generator evidence regression makes release fail", () => {
+  assert.equal(evaluateReleaseGate({ ...pass, mediaGenerator: "FAIL" }).overall, "FAIL");
+});
+
 test("missing or unimplemented evidence cannot become release PASS", () => {
   assert.equal(evaluateReleaseGate({ ...pass, browser: "NOT_EXERCISED" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, runtime: "NOT_IMPLEMENTED" }).overall, "FAIL");
@@ -49,4 +54,5 @@ test("missing or unimplemented evidence cannot become release PASS", () => {
   assert.equal(evaluateReleaseGate({ ...pass, arena: "ABSENT" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, showcase: "ABSENT" }).overall, "FAIL");
   assert.equal(evaluateReleaseGate({ ...pass, externalSkills: "ABSENT" }).overall, "FAIL");
+  assert.equal(evaluateReleaseGate({ ...pass, mediaGenerator: "ABSENT" }).overall, "FAIL");
 });
