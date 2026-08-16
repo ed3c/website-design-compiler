@@ -1,0 +1,25 @@
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { GovernedSection } from "./governed-section";
+
+const meta = { title:"Governed Sections/Section", component:GovernedSection, parameters:{layout:"fullscreen"} } satisfies Meta<typeof GovernedSection>;
+export default meta;
+type Story=StoryObj<typeof meta>;
+const common={ body:"Governed, claim-safe content rendered from the canonical section contract.", items:["Evidence-backed item","Responsive item"] } as const;
+export const Navigation:Story={args:{kind:"navigation",variant:"minimal",heading:"Primary navigation",...common}};
+export const Hero:Story={args:{kind:"hero",variant:"text-first",heading:"A governed hero",...common}};
+export const FeatureGrid:Story={args:{kind:"feature-grid",variant:"cards",heading:"Feature grid",...common}};
+export const BentoGrid:Story={args:{kind:"bento-grid",variant:"balanced",heading:"Bento grid",...common}};
+export const ProofCloud:Story={args:{kind:"proof-cloud",variant:"citations",heading:"Proof cloud",...common}};
+export const Metrics:Story={args:{kind:"metrics",variant:"grid",heading:"Metrics",...common}};
+export const Testimonial:Story={args:{kind:"testimonial",variant:"quote",heading:"Testimonial shell",...common}};
+export const Comparison:Story={args:{kind:"comparison",variant:"table",heading:"Comparison",...common}};
+export const Pricing:Story={args:{kind:"pricing",variant:"tiers",heading:"Pricing",...common}};
+export const Faq:Story={args:{kind:"faq",variant:"accordion",heading:"FAQ",...common}};
+export const Cta:Story={args:{kind:"cta",variant:"band",heading:"Call to action",...common}};
+export const Footer:Story={args:{kind:"footer",variant:"compact",heading:"Footer",...common}};
+export const EditorialProse:Story={args:{kind:"editorial-prose",variant:"article",heading:"Editorial prose",...common}};
+export const EditorialMedia:Story={args:{kind:"editorial-media",variant:"figure",heading:"Editorial media",...common}};
+export const ProductShowcase:Story={args:{kind:"product-showcase",variant:"split",heading:"Product showcase",...common}};
+export const MediaStage:Story={args:{kind:"media-stage",variant:"image",heading:"Media stage",...common}};
+export const Graphics2dStage:Story={args:{kind:"graphics-2d-stage",variant:"ambient",heading:"2D stage",...common}};
+export const Graphics3dStage:Story={args:{kind:"graphics-3d-stage",variant:"product",heading:"3D stage",...common}};
