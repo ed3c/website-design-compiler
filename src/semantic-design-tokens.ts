@@ -15,9 +15,10 @@ export interface SemanticDesignTokensV2 {
     text: string;
     mutedText: string;
     accent: string;
+    onAccent: string;
     focus: string;
     contrastPolicy: "WCAG_AA_TEXT";
-    contrastEvidence: { textOnBackground: number; mutedTextOnBackground: number; focusOnBackground: number; minimumText: 4.5; minimumFocus: 3 };
+    contrastEvidence: { textOnBackground: number; mutedTextOnBackground: number; onAccentOnAccent: number; focusOnBackground: number; minimumText: 4.5; minimumFocus: 3 };
   };
   typography: {
     display: { family: string; fallback: string[]; weight: number; lineHeight: number; letterSpacingEm: number };
@@ -40,9 +41,9 @@ export interface SemanticDesignTokensV2 {
 }
 
 const PALETTES = [
-  { background: "oklch(0.985 0.006 250)", surface: "oklch(0.955 0.012 250)", text: "oklch(0.22 0.025 250)", mutedText: "oklch(0.43 0.025 250)", accent: "oklch(0.58 0.19 255)", focus: "oklch(0.50 0.20 255)" },
-  { background: "oklch(0.98 0.012 80)", surface: "oklch(0.94 0.022 80)", text: "oklch(0.23 0.025 65)", mutedText: "oklch(0.43 0.035 65)", accent: "oklch(0.57 0.16 45)", focus: "oklch(0.48 0.18 45)" },
-  { background: "oklch(0.975 0.008 155)", surface: "oklch(0.94 0.018 155)", text: "oklch(0.21 0.025 155)", mutedText: "oklch(0.42 0.035 155)", accent: "oklch(0.54 0.15 155)", focus: "oklch(0.47 0.17 155)" }
+  { background: "oklch(0.985 0.006 250)", surface: "oklch(0.955 0.012 250)", text: "oklch(0.22 0.025 250)", mutedText: "oklch(0.43 0.025 250)", accent: "oklch(0.42 0.18 255)", focus: "oklch(0.50 0.20 255)" },
+  { background: "oklch(0.98 0.012 80)", surface: "oklch(0.94 0.022 80)", text: "oklch(0.23 0.025 65)", mutedText: "oklch(0.43 0.035 65)", accent: "oklch(0.43 0.16 45)", focus: "oklch(0.48 0.18 45)" },
+  { background: "oklch(0.975 0.008 155)", surface: "oklch(0.94 0.018 155)", text: "oklch(0.21 0.025 155)", mutedText: "oklch(0.42 0.035 155)", accent: "oklch(0.42 0.15 155)", focus: "oklch(0.47 0.17 155)" }
 ] as const;
 
 function stableIndex(value: string, modulo: number): number {
@@ -89,15 +90,17 @@ export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesig
   const palette = PALETTES[stableIndex(`${input.brief.pageType}:${selected.colorStrategy}`, PALETTES.length)]!;
   const editorial = selected.density === "airy";
   const displayFamily = selected.typography === "editorial-serif" ? "Georgia" : selected.typography === "display-contrast" ? "Arial Black" : "Inter";
+  const onAccent = palette.background;
   const textOnBackground = contrastRatio(palette.text, palette.background);
   const mutedTextOnBackground = contrastRatio(palette.mutedText, palette.background);
+  const onAccentOnAccent = contrastRatio(onAccent, palette.accent);
   const focusOnBackground = contrastRatio(palette.focus, palette.background);
-  if (textOnBackground < 4.5 || mutedTextOnBackground < 4.5 || focusOnBackground < 3) throw new Error("semantic token palette fails configured contrast policy");
+  if (textOnBackground < 4.5 || mutedTextOnBackground < 4.5 || onAccentOnAccent < 4.5 || focusOnBackground < 3) throw new Error("semantic token palette fails configured contrast policy");
   return {
     schema: "website-design-compiler/semantic-design-tokens/v2",
     project: input.project,
     sourceVisualDirection: visual.selectedCandidateId,
-    color: { mode: "light", ...palette, contrastPolicy: "WCAG_AA_TEXT", contrastEvidence: { textOnBackground, mutedTextOnBackground, focusOnBackground, minimumText: 4.5, minimumFocus: 3 } },
+    color: { mode: "light", ...palette, onAccent, contrastPolicy: "WCAG_AA_TEXT", contrastEvidence: { textOnBackground, mutedTextOnBackground, onAccentOnAccent, focusOnBackground, minimumText: 4.5, minimumFocus: 3 } },
     typography: {
       display: { family: displayFamily, fallback: ["system-ui", "sans-serif"], weight: selected.typeContrast === "dramatic" ? 700 : 600, lineHeight: 1.08, letterSpacingEm: -0.025 },
       body: { family: "Inter", fallback: ["system-ui", "sans-serif"], weight: 400, lineHeight: editorial ? 1.7 : 1.55, measureCh: editorial ? 68 : 62 },
@@ -123,7 +126,7 @@ export function projectSemanticTokensToCss(tokens: SemanticDesignTokensV2): stri
   const s = tokens.spacingPx;
   return [
     ":root {",
-    `  --wdc-color-background: ${tokens.color.background};`, `  --wdc-color-surface: ${tokens.color.surface};`, `  --wdc-color-text-primary: ${tokens.color.text};`, `  --wdc-color-text-muted: ${tokens.color.mutedText};`, `  --wdc-color-accent: ${tokens.color.accent};`, `  --wdc-color-focus: ${tokens.color.focus};`,
+    `  --wdc-color-background: ${tokens.color.background};`, `  --wdc-color-surface: ${tokens.color.surface};`, `  --wdc-color-text-primary: ${tokens.color.text};`, `  --wdc-color-text-muted: ${tokens.color.mutedText};`, `  --wdc-color-accent: ${tokens.color.accent};`, `  --wdc-color-on-accent: ${tokens.color.onAccent};`, `  --wdc-color-focus: ${tokens.color.focus};`,
     `  --wdc-font-display: ${JSON.stringify(tokens.typography.display.family)}, ${tokens.typography.display.fallback.join(", ")};`, `  --wdc-font-body: ${JSON.stringify(tokens.typography.body.family)}, ${tokens.typography.body.fallback.join(", ")};`,
     `  --wdc-space-xs: ${s[1]}px;`, `  --wdc-space-sm: ${s[2]}px;`, `  --wdc-space-md: ${s[3]}px;`, `  --wdc-space-lg: ${s[4]}px;`, `  --wdc-space-xl: ${s[5]}px;`,
     `  --wdc-radius-md: ${tokens.radiiPx.md}px;`, `  --wdc-radius-lg: ${tokens.radiiPx.lg}px;`, `  --wdc-motion-fast: ${tokens.motionMs.fast}ms;`, `  --wdc-motion-base: ${tokens.motionMs.base}ms;`,
