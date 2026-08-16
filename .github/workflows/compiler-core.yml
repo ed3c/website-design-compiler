@@ -35,5 +35,8 @@ jobs:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
             artifacts/runtime/minimal/runtime-receipt.json
+            artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
+            artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
+            artifacts/runtime/minimal/reference-intelligence/originality-plan.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: error
