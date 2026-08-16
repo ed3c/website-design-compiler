@@ -117,10 +117,10 @@ test("core runtime satisfies governed browser accessibility performance and degr
   }));
   const minTouchTargetPx = interactiveBoxes.length > 0 ? Math.min(...interactiveBoxes) : 0;
 
-  const performance = await page.evaluate(() => {
+  const performanceMetrics = await page.evaluate(() => {
     const perf = (window as typeof window & { __wdcPerf?: BrowserPerfStore }).__wdcPerf ?? { lcp: 0, cls: 0, inp: 0 };
-    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-    const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+    const navigation = window.performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    const resources = window.performance.getEntriesByType("resource") as PerformanceResourceTiming[];
     const transferred = (entry: PerformanceResourceTiming | PerformanceNavigationTiming) => entry.transferSize || entry.encodedBodySize || 0;
     const resourceBytes = resources.reduce((sum, entry) => sum + transferred(entry), 0);
     return {
@@ -173,15 +173,15 @@ test("core runtime satisfies governed browser accessibility performance and degr
     mainLandmarks,
     h1Count,
     minTouchTargetPx,
-    lcpMs: performance.lcpMs,
-    cls: performance.cls,
-    ttfbMs: performance.ttfbMs,
-    inpMs: performance.inpMs,
-    totalTransferBytes: performance.totalTransferBytes,
-    scriptTransferBytes: performance.scriptTransferBytes,
-    imageTransferBytes: performance.imageTransferBytes,
-    videoTransferBytes: performance.videoTransferBytes,
-    domNodes: performance.domNodes,
+    lcpMs: performanceMetrics.lcpMs,
+    cls: performanceMetrics.cls,
+    ttfbMs: performanceMetrics.ttfbMs,
+    inpMs: performanceMetrics.inpMs,
+    totalTransferBytes: performanceMetrics.totalTransferBytes,
+    scriptTransferBytes: performanceMetrics.scriptTransferBytes,
+    imageTransferBytes: performanceMetrics.imageTransferBytes,
+    videoTransferBytes: performanceMetrics.videoTransferBytes,
+    domNodes: performanceMetrics.domNodes,
     states,
     reducedMotionVerified: project !== "reduced-motion-chromium" || exercisedDegradationPaths.includes("prefers-reduced-motion"),
     coarsePointerVerified: project !== "mobile-chromium" || exercisedDegradationPaths.includes("coarse-pointer"),
