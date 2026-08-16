@@ -8,7 +8,9 @@ import { validateAgainstSchema } from "../src/validate.js";
 
 const matrix = JSON.parse(await readFile(resolve("fixtures/arena/benchmark-matrix.json"), "utf8")) as ArenaMatrix;
 const outputDirectory = resolve("artifacts/v2/visual-direction-search");
+const arenaDirectory = resolve("artifacts/arena");
 await mkdir(outputDirectory, { recursive: true });
+await mkdir(arenaDirectory, { recursive: true });
 const categories = [];
 for (const benchmark of matrix.categories) {
   const input: CompilerInput = {
@@ -27,6 +29,7 @@ for (const benchmark of matrix.categories) {
   const downstreamWinnerMatch = designSystem.selectedVisualDirection.candidateId === search.selectedCandidateId && JSON.stringify(designSystem.selectedVisualDirection.dimensions) === JSON.stringify(search.selectedDirection);
   const deterministic = JSON.stringify(search) === JSON.stringify(searchVisualDirections(input));
   const seededDeterministic = JSON.stringify(searchVisualDirections(input, "arena-v2")) === JSON.stringify(searchVisualDirections(input, "arena-v2"));
+  const selected = search.candidates.find((candidate) => candidate.id === search.selectedCandidateId)!;
   const state = search.candidateCount >= 3 && uniqueSignatures >= 3 && selectedCount === 1 && rejectedHaveReasons && downstreamWinnerMatch && deterministic && seededDeterministic ? "PASS" : "FAIL";
   categories.push({
     id: benchmark.id,
@@ -34,7 +37,12 @@ for (const benchmark of matrix.categories) {
     candidateCount: search.candidateCount,
     uniqueSignatures,
     selectedCandidateId: search.selectedCandidateId,
-    selectedTotalScore: search.candidates.find((candidate) => candidate.id === search.selectedCandidateId)?.score.total ?? null,
+    selectedTotalScore: selected.score.total,
+    selectedBriefFit: selected.score.briefFit,
+    selectedDifferentiation: selected.score.differentiation,
+    selectedReadability: selected.score.readability,
+    selectedOriginalityDistance: selected.score.originalityDistance,
+    selectedResponsiveRobustness: selected.score.responsiveRobustness,
     rejectedHaveReasons,
     downstreamWinnerMatch,
     deterministic,
@@ -52,5 +60,6 @@ const receipt = {
   categories
 };
 await writeFile(resolve(outputDirectory, "receipt.json"), `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+await writeFile(resolve(arenaDirectory, "visual-direction-metrics.json"), `${JSON.stringify({ ...receipt, schema: "website-design-compiler/arena-visual-direction-metrics/v2" }, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ overall, categoryCount: categories.length, winnerDiversity }));
 if (overall !== "PASS") process.exitCode = 1;
