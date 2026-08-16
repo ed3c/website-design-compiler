@@ -4,7 +4,8 @@
     "repository": "ed3c/skills-shared",
     "visibility": "private",
     "registry": "registry.json",
-    "mode": "reference-only-no-vendoring"
+    "mode": "reference-only-no-vendoring",
+    "expectedIdentity": "git:4c15d261e63f3f10c195951f636e89cd66939550"
   },
   "bindings": [
     {"name": "repo-agent-native", "purpose": "agent-native repository operating contract"},
