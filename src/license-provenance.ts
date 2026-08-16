@@ -63,6 +63,10 @@ export function sha256(value: string | Uint8Array): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export async function hashAssetFile(path: string): Promise<string> {
+  return sha256(await readFile(path));
+}
+
 export function classifySubject(subject: ProvenanceSubject, policy: LicensePolicy): SubjectResult {
   const reasons: string[] = [];
   let decision: Decision = "ALLOW";
@@ -170,6 +174,16 @@ export async function scanWorkspace(
   }
 
   return buildLicenseReceipt(subjects, policy);
+}
+
+export async function scanSubjectManifest(
+  manifestPath: string,
+  policyPath = resolve(process.cwd(), "policies/licenses.yaml")
+): Promise<LicenseReceipt> {
+  const raw = JSON.parse(await readFile(manifestPath, "utf8")) as unknown;
+  if (!Array.isArray(raw)) throw new Error("provenance subject manifest must be an array");
+  const subjects = raw as ProvenanceSubject[];
+  return buildLicenseReceipt(subjects, await loadLicensePolicy(policyPath));
 }
 
 export async function writeLicenseReceipt(receipt: LicenseReceipt, outputPath: string): Promise<void> {
