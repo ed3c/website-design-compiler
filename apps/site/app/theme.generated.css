@@ -3,7 +3,8 @@
   --wdc-color-surface: oklch(0.955 0.012 250);
   --wdc-color-text-primary: oklch(0.22 0.025 250);
   --wdc-color-text-muted: oklch(0.43 0.025 250);
-  --wdc-color-accent: oklch(0.58 0.19 255);
+  --wdc-color-accent: oklch(0.42 0.18 255);
+  --wdc-color-on-accent: oklch(0.985 0.006 250);
   --wdc-color-focus: oklch(0.50 0.20 255);
   --wdc-font-display: "Georgia", system-ui, sans-serif;
   --wdc-font-body: "Inter", system-ui, sans-serif;
