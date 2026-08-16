@@ -61,6 +61,7 @@ jobs:
             artifacts/runtime/minimal/art-direction/motion-spec.json
             artifacts/runtime/minimal/art-direction/scene-spec.json
             artifacts/runtime/minimal/frontend-builder/frontend-plan.json
+            artifacts/runtime/minimal/motion-director/motion-plan.json
             artifacts/browser-qa/browser-qa.json
             artifacts/browser-qa/playwright-report.json
             artifacts/browser-qa/screenshots/
