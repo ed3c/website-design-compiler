@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { compile, writeRuntimeReceipt } from "./compiler.js";
+import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js";
 import { ContractValidationError, validateCompilerInput } from "./validate.js";
 
 async function main(): Promise<void> {
@@ -15,8 +16,14 @@ async function main(): Promise<void> {
   try {
     const raw = JSON.parse(await readFile(resolve(inputPath), "utf8")) as unknown;
     const input = await validateCompilerInput(raw);
+    const resolvedOutputDirectory = resolve(outputDirectory);
+
+    if (input.requestedStages.includes("reference-intelligence")) {
+      await writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory);
+    }
+
     const receipt = compile(input);
-    const receiptPath = await writeRuntimeReceipt(receipt, resolve(outputDirectory));
+    const receiptPath = await writeRuntimeReceipt(receipt, resolvedOutputDirectory);
     console.log(JSON.stringify({ receiptPath, overall: receipt.overall }));
     process.exitCode = receipt.overall === "FAIL" ? 1 : 0;
   } catch (error) {
