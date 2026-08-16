@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const R3FScene = dynamic(() => import("./r3f-scene"), { ssr: false });
 
@@ -23,7 +23,11 @@ function hasWebGL(): boolean {
 export function ThreeEvidence() {
   const [state, setState] = useState<Graphics3DState>("loading");
   const [enabled, setEnabled] = useState(false);
+  const [disposed, setDisposed] = useState(false);
   const [dpr, setDpr] = useState(1);
+
+  const handleReady = useCallback(() => setState("ready"), []);
+  const handleDisposed = useCallback(() => setDisposed(true), []);
 
   useEffect(() => {
     const forcedFallback = new URLSearchParams(window.location.search).get("graphics3d") === "off";
@@ -41,11 +45,21 @@ export function ThreeEvidence() {
     setEnabled(true);
   }, []);
 
+  useEffect(() => {
+    const disposeForVerification = () => {
+      setEnabled(false);
+      setState("fallback");
+    };
+    window.addEventListener("wdc:graphics3d:dispose", disposeForVerification);
+    return () => window.removeEventListener("wdc:graphics3d:dispose", disposeForVerification);
+  }, []);
+
   return (
     <section
       aria-labelledby="graphics-3d-title"
       data-graphics3d-state={state}
       data-graphics3d-enabled={String(enabled)}
+      data-graphics3d-disposed={String(disposed)}
       data-graphics3d-dpr={dpr}
     >
       <h2 id="graphics-3d-title">Governed procedural 3D</h2>
@@ -53,7 +67,7 @@ export function ThreeEvidence() {
         The procedural scene is optional illustration. Primary content and actions remain DOM-owned when WebGL is absent.
       </p>
       <div data-r3f-host="true" role="img" aria-label="Procedural compiler proof object">
-        {enabled ? <R3FScene dpr={dpr} onReady={() => setState("ready")} /> : null}
+        {enabled ? <R3FScene dpr={dpr} onReady={handleReady} onDisposed={handleDisposed} /> : null}
         {state !== "ready" ? (
           <div data-graphics3d-static-poster="true">Procedural proof: body, indicator, pivot, socket, collider.</div>
         ) : null}
