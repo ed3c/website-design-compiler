@@ -1,0 +1,35 @@
+{
+  "schema": "website-design-compiler/project/v1",
+  "name": "website-design-compiler",
+  "runtime": {
+    "language": "TypeScript",
+    "packageManager": "pnpm",
+    "applicationTarget": "Next.js",
+    "status": "NOT_IMPLEMENTED"
+  },
+  "pipeline": [
+    "reference-intelligence",
+    "art-direction",
+    "design-system-compiler",
+    "page-architect",
+    "frontend-builder",
+    "motion-director",
+    "graphics-2d",
+    "graphics-3d",
+    "media-generator",
+    "browser-visual-qa",
+    "accessibility-performance",
+    "originality-gate",
+    "license-provenance",
+    "release-receipt"
+  ],
+  "sharedSkillBindings": ".skill-bindings/skills-shared.json",
+  "evidenceStates": [
+    "PASS",
+    "FAIL",
+    "ABSENT",
+    "NOT_IMPLEMENTED",
+    "NOT_EXERCISED",
+    "SKIPPED_BY_POLICY"
+  ]
+}
