@@ -31,6 +31,8 @@ jobs:
       - run: pnpm showcase:typecheck
       - run: pnpm showcase:compile
       - run: pnpm showcase:compiler-receipt
+      - name: Verify pinned external design skill registry
+        run: pnpm external-skills:receipt
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
       - run: pnpm browser:typecheck
@@ -92,6 +94,7 @@ jobs:
             artifacts/runtime/minimal/graphics-3d/graphics-3d-plan.json
             artifacts/runtime/minimal/graphics-3d/procedural-provenance.json
             artifacts/showcase/
+            artifacts/external-skills/registry-receipt.json
             artifacts/provenance/license-receipt.json
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
