@@ -27,6 +27,7 @@ export const PIPELINE_STAGES = [
 ] as const;
 
 export type PipelineStageName = (typeof PIPELINE_STAGES)[number];
+export type ArtDirectorAuthority = "anthropic-frontend-design" | "google-stitch" | "taste-skill" | "repo-native";
 
 export interface CompilerReference {
   kind: "url" | "image" | "video" | "html";
@@ -42,6 +43,10 @@ export interface CompilerInput {
     objective: string;
   };
   references?: CompilerReference[];
+  artDirection?: {
+    primary: ArtDirectorAuthority[];
+    reviewers?: ArtDirectorAuthority[];
+  };
   requestedStages: string[];
 }
 
