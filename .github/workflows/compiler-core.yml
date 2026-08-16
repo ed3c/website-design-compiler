@@ -37,6 +37,10 @@ jobs:
         run: pnpm media:fixture
       - name: Verify governed Puck authoring projection
         run: pnpm authoring:receipt
+      - name: Verify Payload CMS draft/published persistence and auth boundary
+        env:
+          NODE_ENV: development
+        run: pnpm cms:fixture
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
       - run: pnpm browser:typecheck
@@ -101,6 +105,7 @@ jobs:
             artifacts/external-skills/registry-receipt.json
             artifacts/media-generator/
             artifacts/authoring/
+            artifacts/cms/
             artifacts/provenance/license-receipt.json
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
