@@ -15,9 +15,12 @@ function ProceduralObject() {
 export interface R3FSceneProps {
   dpr: number;
   onReady: () => void;
+  onDisposed: () => void;
 }
 
-export default function R3FScene({ dpr, onReady }: R3FSceneProps) {
+export default function R3FScene({ dpr, onReady, onDisposed }: R3FSceneProps) {
+  useEffect(() => () => onDisposed(), [onDisposed]);
+
   return (
     <Canvas
       frameloop="demand"
