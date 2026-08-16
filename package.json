@@ -13,6 +13,7 @@
     "project:shared-registry": "tsx src/project-shared-registry.ts",
     "ui:typecheck": "pnpm --filter @website-design-compiler/site typecheck",
     "ui:build": "pnpm --filter @website-design-compiler/site build",
+    "browser:typecheck": "tsc --noEmit -p tsconfig.browser.json",
     "browser:qa": "playwright test",
     "browser:receipt": "tsx scripts/browser-qa-receipt.ts"
   },
