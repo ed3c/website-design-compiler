@@ -4,7 +4,7 @@ import test from "node:test";
 import { compile } from "../src/compiler.js";
 import { validateCompilerInput } from "../src/validate.js";
 
-test("minimal fixture validates and produces PASS for implemented release receipt stage", async () => {
+test("minimal fixture validates and produces PASS for implemented reference and release stages", async () => {
   const fixtureUrl = new URL("../fixtures/minimal/compiler-input.json", import.meta.url);
   const raw = JSON.parse(await readFile(fixtureUrl, "utf8")) as unknown;
   const input = await validateCompilerInput(raw);
@@ -13,7 +13,10 @@ test("minimal fixture validates and produces PASS for implemented release receip
   assert.equal(receipt.schema, "website-design-compiler/runtime-receipt/v1");
   assert.equal(receipt.project, "minimal-showcase");
   assert.equal(receipt.overall, "PASS");
-  assert.deepEqual(receipt.stages.map((stage) => [stage.stage, stage.state]), [["release-receipt", "PASS"]]);
+  assert.deepEqual(receipt.stages.map((stage) => [stage.stage, stage.state]), [
+    ["reference-intelligence", "PASS"],
+    ["release-receipt", "PASS"]
+  ]);
   assert.match(receipt.inputSha256, /^[a-f0-9]{64}$/);
 });
 
