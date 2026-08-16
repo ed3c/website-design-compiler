@@ -47,6 +47,8 @@ jobs:
         run: pnpm v2:media-orchestration
       - name: Verify complete governed page graph compilation
         run: pnpm v2:complete-page-graph
+      - name: Verify structural design quality and premium evidence boundary
+        run: pnpm v2:design-quality
       - run: pnpm provenance:fixture
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
