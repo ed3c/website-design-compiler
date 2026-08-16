@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildOriginalityPlan, buildReferenceManifest } from "../src/reference-intelligence.js";
-import { observeHtml } from "../src/reference-capture.js";
+import { captureRemoteUrl, isPublicIpAddress, observeHtml } from "../src/reference-capture.js";
 import type { CompilerInput } from "../src/contracts.js";
 
 const input: CompilerInput = {
@@ -22,7 +22,7 @@ const input: CompilerInput = {
   requestedStages: ["reference-intelligence", "release-receipt"]
 };
 
-test("remote reference remains unexercised while inline html is observed", async () => {
+test("remote reference remains unexercised by default while inline html is observed", async () => {
   const manifest = await buildReferenceManifest(input);
   assert.equal(manifest.entries.length, 2);
   assert.equal(manifest.entries[0]?.captureState, "NOT_EXERCISED");
@@ -38,6 +38,62 @@ test("remote reference remains unexercised while inline html is observed", async
 test("html observer only emits supported observable facts", () => {
   const facts = observeHtml("<main><h1>Hello <em>World</em></h1><canvas></canvas><video></video></main>");
   assert.deepEqual(facts, ["h1 headings: Hello World", "main elements: 1", "videos: 1", "canvas elements: 1"]);
+});
+
+test("remote capture records deterministic HTML provenance with injected public transport", async () => {
+  const html = "<!doctype html><html><head><title>Remote Evidence</title></head><body><main><h1>Observed</h1></main></body></html>";
+  const result = await captureRemoteUrl("https://reference.example/page", {
+    resolveHost: async () => ["93.184.216.34"],
+    fetchImpl: async () => new Response(html, {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" }
+    })
+  });
+
+  assert.equal(result.state, "PASS");
+  assert.equal(result.provenance.sourceMode, "REMOTE");
+  assert.equal(result.provenance.finalUrl, "https://reference.example/page");
+  assert.equal(result.provenance.httpStatus, 200);
+  assert.equal(result.provenance.contentType, "text/html");
+  assert.match(result.provenance.responseSha256 ?? "", /^[a-f0-9]{64}$/);
+  assert.ok(result.facts.includes("document title: Remote Evidence"));
+  assert.ok(result.facts.includes("h1 headings: Observed"));
+});
+
+test("remote capture fails closed for private and metadata-style targets before transport", async () => {
+  let fetched = false;
+  const result = await captureRemoteUrl("http://metadata.internal/latest", {
+    resolveHost: async () => ["169.254.169.254"],
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("unexpected");
+    }
+  });
+  assert.equal(result.state, "FAIL");
+  assert.equal(fetched, false);
+  assert.match(result.reason ?? "", /non-public address/);
+});
+
+test("remote capture revalidates redirect targets and rejects redirect to loopback", async () => {
+  let calls = 0;
+  const result = await captureRemoteUrl("https://reference.example/start", {
+    resolveHost: async (hostname) => hostname === "reference.example" ? ["93.184.216.34"] : ["127.0.0.1"],
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(null, { status: 302, headers: { location: "http://localhost/admin" } });
+    }
+  });
+  assert.equal(result.state, "FAIL");
+  assert.equal(calls, 1);
+  assert.match(result.reason ?? "", /non-public address/);
+});
+
+test("remote target IP policy rejects private/link-local/loopback and allows public addresses", () => {
+  for (const address of ["127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "169.254.169.254", "::1", "fd00::1", "fe80::1"]) {
+    assert.equal(isPublicIpAddress(address), false, address);
+  }
+  assert.equal(isPublicIpAddress("93.184.216.34"), true);
+  assert.equal(isPublicIpAddress("2606:4700:4700::1111"), true);
 });
 
 test("originality policy rejects identity cloning", () => {
