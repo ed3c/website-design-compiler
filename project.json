@@ -4,10 +4,10 @@
   "runtime": {
     "language": "TypeScript",
     "packageManager": "pnpm",
-    "applicationTarget": "CLI core first; Next.js governed UI follows in issue #7",
+    "applicationTarget": "CLI compiler plus governed Next.js UI runtime",
     "status": "PASS",
-    "scope": "compiler-core",
-    "applicationStatus": "NOT_IMPLEMENTED"
+    "scope": "compiler-core-and-governed-ui",
+    "applicationStatus": "PASS"
   },
   "pipeline": [
     "reference-intelligence",
@@ -25,7 +25,7 @@
     "license-provenance",
     "release-receipt"
   ],
-  "implementedCoreStages": ["reference-intelligence", "art-direction", "release-receipt"],
+  "implementedCoreStages": ["reference-intelligence", "art-direction", "frontend-builder", "release-receipt"],
   "sharedSkillBindings": {
     "config": ".skill-bindings/skills-shared.json",
     "resolver": "PASS",
@@ -49,6 +49,17 @@
     "runtimeStage": "PASS",
     "lastVerifiedHead": "ceb90a8879685a64bc37b1ee36b96c52f26786cf",
     "workflowRun": 31938653298
+  },
+  "frontendRuntime": {
+    "nextjsBuild": "PASS",
+    "strictTypecheck": "PASS",
+    "typedRegistry": "PASS",
+    "shadcnConvention": "PASS",
+    "arbitraryMarkup": "SKIPPED_BY_POLICY",
+    "componentPropSchema": "PASS",
+    "motionOrWebglDependency": "ABSENT",
+    "lastVerifiedHead": "9df376fc5f91bf65df0ff825163107f56224be1a",
+    "workflowRun": 31939582216
   },
   "evidenceStates": [
     "PASS",
