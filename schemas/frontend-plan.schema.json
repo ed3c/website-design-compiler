@@ -22,7 +22,12 @@
           "component": { "enum": ["button", "status-panel"] },
           "props": {
             "type": "object",
-            "additionalProperties": { "type": ["string", "boolean"] }
+            "additionalProperties": {
+              "anyOf": [
+                { "type": "string" },
+                { "type": "boolean" }
+              ]
+            }
           }
         }
       }
