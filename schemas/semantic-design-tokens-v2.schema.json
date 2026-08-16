@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/semantic-design-tokens/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "sourceVisualDirection", "color", "typography", "layout", "spacingPx", "radiiPx", "border", "elevation", "motionMs", "media", "interaction"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/semantic-design-tokens/v2" },
+    "project": { "type": "string", "minLength": 1 },
+    "sourceVisualDirection": { "type": "string", "minLength": 1 },
+    "color": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "background", "surface", "text", "mutedText", "accent", "focus", "contrastPolicy", "contrastEvidence"],
+      "properties": {
+        "mode": { "const": "light" },
+        "background": { "$ref": "#/$defs/oklch" }, "surface": { "$ref": "#/$defs/oklch" }, "text": { "$ref": "#/$defs/oklch" }, "mutedText": { "$ref": "#/$defs/oklch" }, "accent": { "$ref": "#/$defs/oklch" }, "focus": { "$ref": "#/$defs/oklch" },
+        "contrastPolicy": { "const": "WCAG_AA_TEXT" },
+        "contrastEvidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["textOnBackground", "mutedTextOnBackground", "focusOnBackground", "minimumText", "minimumFocus"],
+          "properties": {
+            "textOnBackground": { "type": "number", "minimum": 4.5 },
+            "mutedTextOnBackground": { "type": "number", "minimum": 4.5 },
+            "focusOnBackground": { "type": "number", "minimum": 3 },
+            "minimumText": { "const": 4.5 }, "minimumFocus": { "const": 3 }
+          }
+        }
+      }
+    },
+    "typography": { "type": "object" },
+    "layout": { "type": "object" },
+    "spacingPx": { "type": "array", "minItems": 7, "items": { "type": "number", "minimum": 0 } },
+    "radiiPx": { "type": "object" }, "border": { "type": "object" }, "elevation": { "type": "object" }, "motionMs": { "type": "object" }, "media": { "type": "object" },
+    "interaction": { "type": "object", "required": ["focusRingPx", "focusOffsetPx", "rawValueBypass"], "properties": { "rawValueBypass": { "const": false } } }
+  },
+  "$defs": { "oklch": { "type": "string", "pattern": "^oklch\\([0-9.]+ [0-9.]+ [0-9.]+\\)$" } }
+}
