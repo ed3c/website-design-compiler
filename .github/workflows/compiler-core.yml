@@ -27,12 +27,24 @@ jobs:
       - run: pnpm compile:fixture
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Run browser QA and emit receipt
+        run: |
+          set +e
+          pnpm browser:qa
+          qa_status=$?
+          pnpm browser:receipt
+          receipt_status=$?
+          if [ "$qa_status" -ne 0 ] || [ "$receipt_status" -ne 0 ]; then
+            exit 1
+          fi
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Bind exact head receipt
         run: |
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
@@ -48,5 +60,9 @@ jobs:
             artifacts/runtime/minimal/art-direction/motion-spec.json
             artifacts/runtime/minimal/art-direction/scene-spec.json
             artifacts/runtime/minimal/frontend-builder/frontend-plan.json
+            artifacts/browser-qa/browser-qa.json
+            artifacts/browser-qa/playwright-report.json
+            artifacts/browser-qa/screenshots/
+            artifacts/browser-qa/test-results/
             artifacts/runtime/shared-binding-receipt.json
-          if-no-files-found: error
+          if-no-files-found: warn
