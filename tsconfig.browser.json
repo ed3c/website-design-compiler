@@ -10,7 +10,8 @@
   "include": [
     "playwright.config.ts",
     "tests/browser/**/*.ts",
-    "scripts/browser-qa-receipt.ts"
+    "scripts/browser-qa-receipt.ts",
+    "scripts/reference-media-fixture.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }
