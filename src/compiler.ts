@@ -33,7 +33,8 @@ function stageEvidence(stage: string): StageEvidence {
       artifacts: [
         "reference-intelligence/reference-manifest.json",
         "reference-intelligence/reference-analysis.md",
-        "reference-intelligence/originality-plan.json"
+        "reference-intelligence/originality-plan.json",
+        "reference-intelligence/originality-plan.md"
       ]
     };
   }
