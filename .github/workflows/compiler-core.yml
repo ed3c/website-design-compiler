@@ -3,7 +3,8 @@ name: compiler-core
 on:
   push:
     branches:
-      - agent/bootstrap-website-design-compiler
+      - main
+      - 'agent/**'
   pull_request:
 
 permissions:
