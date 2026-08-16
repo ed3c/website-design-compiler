@@ -3,7 +3,7 @@
   "$id": "https://ed3c.github.io/website-design-compiler/schemas/page-architecture-plan.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "pageType", "primaryObjective", "semanticLandmarks", "sections", "optionalEnhancements"],
+  "required": ["schema", "project", "pageType", "primaryObjective", "semanticLandmarks", "sections", "sectionIntents", "optionalEnhancements"],
   "properties": {
     "schema": { "const": "website-design-compiler/page-architecture-plan/v1" },
     "project": { "type": "string", "minLength": 1 },
@@ -19,6 +19,24 @@
           "role": { "enum": ["hero", "runtime-evidence", "progressive-enhancement"] },
           "required": { "type": "boolean" },
           "componentIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    },
+    "sectionIntents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "purpose", "priority", "status", "requiredContent", "fallback"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 },
+          "priority": { "enum": ["PRIMARY", "SECONDARY", "SUPPORTING"] },
+          "status": { "enum": ["READY", "NEEDS_INPUT"] },
+          "requiredContent": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "fallback": { "type": "string", "minLength": 1 }
         }
       }
     },
