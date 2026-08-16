@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
@@ -34,6 +36,8 @@ jobs:
       - name: Bind exact head runtime receipt
         run: |
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
+      - name: Verify shared binding resolver fixture
+        run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, accessibility-performance, and release gates
         run: |
           set +e
@@ -54,8 +58,6 @@ jobs:
           if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
-      - name: Verify shared binding resolver fixture
-        run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
