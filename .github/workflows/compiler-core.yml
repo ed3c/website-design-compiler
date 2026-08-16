@@ -29,13 +29,20 @@ jobs:
       - run: pnpm ui:typecheck
       - run: pnpm ui:build
       - run: pnpm browser:typecheck
+      - run: pnpm storybook:typecheck
       - run: pnpm exec playwright install --with-deps chromium
       - name: Bind exact head runtime receipt
         run: |
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
-      - name: Run browser, accessibility-performance, and release gates
+      - name: Run Storybook, browser, accessibility-performance, and release gates
         run: |
           set +e
+          pnpm storybook:build
+          storybook_build_status=$?
+          pnpm storybook:qa
+          storybook_qa_status=$?
+          pnpm storybook:receipt
+          storybook_receipt_status=$?
           pnpm browser:qa
           qa_status=$?
           pnpm browser:receipt
@@ -44,7 +51,7 @@ jobs:
           quality_status=$?
           pnpm release:receipt
           release_status=$?
-          if [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
       - name: Verify shared binding resolver fixture
@@ -71,6 +78,7 @@ jobs:
             artifacts/runtime/minimal/graphics-3d/graphics-3d-plan.json
             artifacts/runtime/minimal/graphics-3d/procedural-provenance.json
             artifacts/provenance/license-receipt.json
+            artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
             artifacts/browser-qa/playwright-report.json
             artifacts/browser-qa/screenshots/
