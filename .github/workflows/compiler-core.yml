@@ -39,5 +39,11 @@ jobs:
             artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
             artifacts/runtime/minimal/reference-intelligence/originality-plan.json
             artifacts/runtime/minimal/reference-intelligence/originality-plan.md
+            artifacts/runtime/minimal/art-direction/design-read.json
+            artifacts/runtime/minimal/art-direction/DESIGN.md
+            artifacts/runtime/minimal/art-direction/semantic-tokens.json
+            artifacts/runtime/minimal/art-direction/component-state-matrix.json
+            artifacts/runtime/minimal/art-direction/motion-spec.json
+            artifacts/runtime/minimal/art-direction/scene-spec.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: error
