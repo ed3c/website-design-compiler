@@ -13,15 +13,29 @@ test("all six categories emit separate mobile and desktop quality scorecards",()
   assert.ok(cards.every((card)=>Object.keys(card.dimensions).length===10));
 });
 
-test("intentionally poor graph fails premium structural threshold",()=>{
+test("intentionally poor conversion graph fails premium structural threshold",()=>{
   const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
   const first=graph.nodes[0]!;
   const poor={...graph,conversionPath:[],nodes:Array.from({length:6},(_,index)=>({...first,id:`poor-${index}`,kind:"graphics-3d-stage" as const,mediaHook:{...first.mediaHook,renderer:"three" as const}}))};
   const card=evaluateDesignQuality(poor,"desktop",90);
   assert.equal(card.overall,"FAIL");
+  assert.equal(card.intent.mode,"CONVERSION");
   assert.ok(card.penalties.includes("repetitive-section-template"));
   assert.ok(card.penalties.includes("gratuitous-gpu-complexity"));
   assert.ok(card.penalties.includes("weak-conversion-path"));
+  assert.ok(card.penalties.includes("required-cta-missing"));
+});
+
+test("editorial quality evaluates information progression instead of inventing a commercial CTA requirement",()=>{
+  const editorial=compileAllSectionPageFixtures().find((page)=>page.category==="editorial")!;
+  const graph=compileCompletePageGraph(editorial);
+  assert.equal(graph.nodes.some((node)=>node.kind==="cta"),false);
+  const mobile=evaluateDesignQuality(graph,"mobile",78);
+  assert.equal(mobile.intent.mode,"INFORMATION");
+  assert.equal(mobile.intent.ctaRequired,false);
+  assert.equal(mobile.penalties.includes("weak-conversion-path"),false);
+  assert.equal(mobile.penalties.includes("required-cta-missing"),false);
+  assert.equal(mobile.overall,"PASS");
 });
 
 test("exact reference structure is rejected by design-quality originality audit",()=>{
