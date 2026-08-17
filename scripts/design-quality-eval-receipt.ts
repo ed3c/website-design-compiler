@@ -8,20 +8,32 @@ import { decidePremiumQuality, type DesignQualityEvidenceBinding, type ExpectedD
 
 interface GeneratedPageEvidence{category:string;project:string;path:string;sha256:string}
 interface GeneratedPageReceipt{schema:string;overall:string;git:{sha:string;ref:string};evidence:GeneratedPageEvidence[]}
+interface TokenReceiptEntry{id:string;state:string}
+interface TokenReceipt{schema:string;overall:string;categories:TokenReceiptEntry[]}
 const sha256=(value:Buffer|string)=>createHash("sha256").update(value).digest("hex");
+function tokenEntryFor(category:string,receipt:TokenReceipt):TokenReceiptEntry{
+  const matches=receipt.categories.filter((entry)=>entry.id===category||entry.id.startsWith(`${category}-`));
+  if(matches.length!==1)throw new Error(`${category}: expected exactly one semantic-token receipt identity, got ${matches.map((entry)=>entry.id).join(",")||"none"}`);
+  const entry=matches[0]!;
+  if(entry.state!=="PASS")throw new Error(`${category}: semantic-token receipt ${entry.id} is ${entry.state}`);
+  return entry;
+}
 const outputDirectory=join(process.cwd(),"artifacts","v2","design-quality");
 await mkdir(outputDirectory,{recursive:true});
 const gitSha=process.env.GITHUB_SHA??"UNBOUND";
 const generatedReceipt=JSON.parse(await readFile(join(process.cwd(),"artifacts","generated-pages","generated-page-browser-receipt.json"),"utf8")) as GeneratedPageReceipt;
+const tokenReceipt=JSON.parse(await readFile(join(process.cwd(),"artifacts","v2","semantic-design-tokens","receipt.json"),"utf8")) as TokenReceipt;
+if(tokenReceipt.overall!=="PASS")throw new Error(`semantic-token benchmark receipt is ${tokenReceipt.overall}`);
 const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
 const evaluations=[];
 for(const graph of graphs){
+  const tokenEntry=tokenEntryFor(graph.category,tokenReceipt);
   for(const viewport of ["mobile","desktop"] as const satisfies readonly QualityViewport[]){
     const card=evaluateDesignQuality(graph,viewport);
     const project=viewport==="mobile"?"mobile-chromium":"desktop-chromium";
     const screenshotEvidence=generatedReceipt.evidence.find((entry)=>entry.category===graph.category&&entry.project===project);
     const graphSha256=sha256(JSON.stringify(graph));
-    const tokenPath=join(process.cwd(),"artifacts","v2","semantic-design-tokens",`${graph.category}.json`);
+    const tokenPath=join(process.cwd(),"artifacts","v2","semantic-design-tokens",`${tokenEntry.id}.json`);
     const tokenBytes=await readFile(tokenPath);
     const designTokensSha256=sha256(tokenBytes);
     let screenshotSha256="";
@@ -33,7 +45,7 @@ for(const graph of graphs){
     const expected:ExpectedDesignQualityEvidence={category:graph.category,viewport,pageGraphSha256:graphSha256,designTokensSha256,screenshotSha256:screenshotEvidence?.sha256??"",gitSha,graphSignature:graph.signature};
     const binding:DesignQualityEvidenceBinding={schema:"website-design-compiler/design-quality-evidence/v2",category:graph.category,viewport,pageGraphSha256:graphSha256,designTokensSha256,screenshotSha256,gitSha,graphSignature:graph.signature,screenshotPath};
     const decision=decidePremiumQuality(card,binding,expected);
-    evaluations.push({card,binding,decision,source:{generatedPageReceipt:generatedReceipt.schema,generatedPageReceiptGitSha:generatedReceipt.git.sha,tokenPath:`artifacts/v2/semantic-design-tokens/${graph.category}.json`}});
+    evaluations.push({card,binding,decision,source:{generatedPageReceipt:generatedReceipt.schema,generatedPageReceiptGitSha:generatedReceipt.git.sha,semanticTokenReceipt:tokenReceipt.schema,tokenArtifactId:tokenEntry.id,tokenPath:`artifacts/v2/semantic-design-tokens/${tokenEntry.id}.json`}});
   }
 }
 const categories=new Set(evaluations.map((entry)=>entry.card.category));
@@ -46,5 +58,5 @@ const overall=categories.size===6&&viewportCoverage.mobile===6&&viewportCoverage
 const receipt={schema:"website-design-compiler/design-quality-eval-receipt/v2",overall,git:{sha:gitSha,ref:process.env.GITHUB_REF??"UNBOUND"},threshold:78,categoryCount:categories.size,viewportCoverage,exactHeadBound,allEvidenceBound,allStructuralPass,premium:{state:premiumPass?"PASS":"FAIL",evaluations}};
 const path=join(outputDirectory,"design-quality-eval-receipt.json");
 await writeFile(path,`${JSON.stringify(receipt,null,2)}\n`,`utf8`);
-console.log(JSON.stringify({path,overall:receipt.overall,categoryCount:receipt.categoryCount,viewportCoverage,exactHeadBound,allEvidenceBound,allStructuralPass,premium:receipt.premium.state}));
+console.log(JSON.stringify({path,overall:receipt.overall,categoryCount:receipt.categoryCount,viewportCoverage,exactHeadBound,allEvidenceBound,allStructuralPass,premium:receipt.premium.state,scores:evaluations.map((entry)=>({category:entry.card.category,viewport:entry.card.viewport,score:entry.card.score,state:entry.decision.overall}))}));
 if(receipt.overall!=="PASS")process.exitCode=1;
