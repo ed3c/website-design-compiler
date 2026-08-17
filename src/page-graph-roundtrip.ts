@@ -1,26 +1,27 @@
 import { createHash } from "node:crypto";
 import type { CompletePageGraph, CompletePageNode } from "./complete-page-graph.js";
 
+export type PageGraphNodeProjection = {
+  id:string;
+  kind:CompletePageNode["kind"];
+  variant:string;
+  section:CompletePageNode["section"];
+  tokenRef:CompletePageNode["tokenRef"];
+  responsive:CompletePageNode["responsive"];
+  motionHook:CompletePageNode["motionHook"];
+  mediaHook:CompletePageNode["mediaHook"];
+  semanticIndex:number;
+};
 export interface PageGraphAuthoringBlock {
   type:"GovernedPageSection";
-  props:{
-    id:string;
-    kind:CompletePageNode["kind"];
-    variant:string;
-    section:CompletePageNode["section"];
-    tokenRef:CompletePageNode["tokenRef"];
-    responsive:CompletePageNode["responsive"];
-    motionHook:CompletePageNode["motionHook"];
-    mediaHook:CompletePageNode["mediaHook"];
-    semanticIndex:number;
-  };
+  props:PageGraphNodeProjection;
 }
 export interface PageGraphAuthoringData {
   schema:"website-design-compiler/puck-page-graph/v2";
   content:PageGraphAuthoringBlock[];
   root:{props:{category:string;route:string;readiness:CompletePageGraph["readiness"];semanticOrder:string[];conversionPath:string[];sharedChrome:CompletePageGraph["sharedChrome"];contracts:CompletePageGraph["contracts"];signature:string;missingEvidence:string[]}};
 }
-export interface PayloadPageGraphBlock extends PageGraphAuthoringBlock["props"] { blockType:"governed-page-section"; }
+export type PayloadPageGraphBlock = PageGraphNodeProjection & { blockType:"governed-page-section" };
 export interface PayloadPageGraphDocument {
   schema:"website-design-compiler/payload-page-graph/v2";
   category:string;
@@ -48,7 +49,7 @@ export function pageGraphToPuck(graph:CompletePageGraph):PageGraphAuthoringData{
 export function puckToPageGraph(data:PageGraphAuthoringData):CompletePageGraph{
   if(data.schema!=="website-design-compiler/puck-page-graph/v2")throw new Error("unsupported Puck page graph schema");
   const root=data.root.props;
-  const nodes=data.content.map((entry,index)=>{if(entry.type!=="GovernedPageSection")throw new Error(`unsupported Puck page block at ${index}`);return structuredClone(entry.props);});
+  const nodes:CompletePageNode[]=data.content.map((entry,index)=>{if(entry.type!=="GovernedPageSection")throw new Error(`unsupported Puck page block at ${index}`);return structuredClone(entry.props);});
   return{schema:"website-design-compiler/page-graph/v2",category:root.category,route:root.route as "/",readiness:root.readiness,missingEvidence:[...root.missingEvidence],semanticOrder:[...root.semanticOrder],conversionPath:[...root.conversionPath],nodes,sharedChrome:structuredClone(root.sharedChrome),contracts:structuredClone(root.contracts),signature:root.signature};
 }
 export function puckToPayload(data:PageGraphAuthoringData):PayloadPageGraphDocument{
@@ -57,7 +58,12 @@ export function puckToPayload(data:PageGraphAuthoringData):PayloadPageGraphDocum
 }
 export function payloadToPuck(document:PayloadPageGraphDocument):PageGraphAuthoringData{
   if(document.schema!=="website-design-compiler/payload-page-graph/v2")throw new Error("unsupported Payload page graph schema");
-  return{schema:"website-design-compiler/puck-page-graph/v2",content:document.layout.map((block,index)=>{if(block.blockType!=="governed-page-section")throw new Error(`unsupported Payload block at ${index}`);const {blockType:_,...props}=block;return{type:"GovernedPageSection",props:structuredClone(props)};}),root:{props:{category:document.category,route:document.route,readiness:document.readiness,semanticOrder:[...document.semanticOrder],conversionPath:[...document.conversionPath],sharedChrome:structuredClone(document.sharedChrome),contracts:structuredClone(document.contracts),signature:document.signature,missingEvidence:[...document.missingEvidence]}}};
+  const content:PageGraphAuthoringBlock[]=document.layout.map((block,index)=>{
+    if(block.blockType!=="governed-page-section")throw new Error(`unsupported Payload block at ${index}`);
+    const {blockType:_,...props}=block;
+    return{type:"GovernedPageSection",props:structuredClone(props)};
+  });
+  return{schema:"website-design-compiler/puck-page-graph/v2",content,root:{props:{category:document.category,route:document.route,readiness:document.readiness,semanticOrder:[...document.semanticOrder],conversionPath:[...document.conversionPath],sharedChrome:structuredClone(document.sharedChrome),contracts:structuredClone(document.contracts),signature:document.signature,missingEvidence:[...document.missingEvidence]}}};
 }
 export function assertLosslessPageGraphRoundTrip(graph:CompletePageGraph):{puck:string;payload:string}{
   const source=pageGraphFingerprint(graph);
