@@ -1,0 +1,8 @@
+{
+  "schema": "website-design-compiler/design-quality-release-profile/v2",
+  "id": "premium-web-v2",
+  "premiumQualityThreshold": 78,
+  "originalitySimilarityThreshold": 0.82,
+  "requiredViewports": ["mobile", "desktop"],
+  "requireExactEvidenceBinding": true
+}

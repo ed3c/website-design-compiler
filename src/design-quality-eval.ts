@@ -42,7 +42,7 @@ export function auditGraphOriginality(signature:string,references:readonly Origi
   if(corpusMatch&&corpusMatch.similarity>=threshold)reasons.push(`corpus-structure-too-close:${corpusMatch.id}:${corpusMatch.similarity.toFixed(3)}>=${threshold.toFixed(3)}`);
   return{state:reasons.length===0?"PASS":"FAIL",threshold,maxReferenceSimilarity:reference?.similarity??0,maxCorpusSimilarity:corpusMatch?.similarity??0,nearestReference:reference?.id??null,nearestCorpus:corpusMatch?.id??null,reasons};
 }
-export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityViewport,threshold=78,originalityReferences:readonly OriginalitySubject[]=[],originalityCorpus:readonly OriginalitySubject[]=[]):DesignQualityScorecard{
+export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityViewport,threshold=78,originalityReferences:readonly OriginalitySubject[]=[],originalityCorpus:readonly OriginalitySubject[]=[],originalitySimilarityThreshold=0.82):DesignQualityScorecard{
   const kinds=graph.nodes.map((node)=>node.kind);
   const layouts=graph.nodes.map((node)=>node.responsive[viewport].layout);
   const renderers=graph.nodes.map((node)=>node.mediaHook.renderer);
@@ -52,7 +52,7 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
   const gpuCount=renderers.filter((renderer)=>renderer==="pixi"||renderer==="three").length;if(gpuCount>2)penalties.push("gratuitous-gpu-complexity");
   const animatedRatio=engines.filter((engine)=>engine!=="none").length/Math.max(1,engines.length);if(animatedRatio>0.95)penalties.push("motion-applied-to-nearly-every-section");
   if(graph.conversionPath.length<2)penalties.push("weak-conversion-path");
-  const originalityAudit=auditGraphOriginality(graph.signature,originalityReferences,originalityCorpus);
+  const originalityAudit=auditGraphOriginality(graph.signature,originalityReferences,originalityCorpus,originalitySimilarityThreshold);
   if(originalityAudit.state==="FAIL")penalties.push(...originalityAudit.reasons);
   const layoutVariety=new Set(layouts).size;
   const rendererVariety=new Set(renderers).size;
