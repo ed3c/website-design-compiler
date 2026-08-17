@@ -12,7 +12,6 @@ export interface DesignQualityScorecard {
   overall:"PASS"|"FAIL";
   dimensions:DesignQualityDimensions;
   penalties:string[];
-  evidence:{pageGraph:"BOUND";tokens:"PENDING_SCREENSHOT_BINDING";screenshot:"NOT_EXERCISED";gitSha:"UNBOUND_IN_CORE"};
 }
 const clamp=(value:number)=>Math.max(0,Math.min(100,Math.round(value)));
 function duplicates(values:string[]):number{return values.length-new Set(values).size;}
@@ -42,5 +41,5 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
     originality:clamp(80-repeatedKinds*10)
   };
   const values=Object.values(dimensions);const score=clamp(values.reduce((sum,value)=>sum+value,0)/values.length-penalties.length*3);
-  return{schema:"website-design-compiler/design-quality-eval/v2",category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold?"PASS":"FAIL",dimensions,penalties,evidence:{pageGraph:"BOUND",tokens:"PENDING_SCREENSHOT_BINDING",screenshot:"NOT_EXERCISED",gitSha:"UNBOUND_IN_CORE"}};
+  return{schema:"website-design-compiler/design-quality-eval/v2",category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold?"PASS":"FAIL",dimensions,penalties};
 }
