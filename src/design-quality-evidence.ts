@@ -1,4 +1,4 @@
-import type { DesignQualityScorecard, QualityViewport } from "./design-quality-eval.js";
+import type { DesignQualityScorecard, DesignQualityScorecardV3, QualityViewport } from "./design-quality-eval.js";
 
 export type EvidenceState="BOUND"|"ABSENT"|"MISMATCH";
 export interface DesignQualityEvidenceBinding{
@@ -46,13 +46,14 @@ export function validateDesignQualityEvidence(binding:DesignQualityEvidenceBindi
     graphSignature:binding.graphSignature===expected.graphSignature&&binding.category===expected.category&&binding.viewport===expected.viewport?"BOUND":"MISMATCH"
   };
 }
-export function decidePremiumQuality(card:DesignQualityScorecard,binding:DesignQualityEvidenceBinding|null,expected:ExpectedDesignQualityEvidence,threshold=card.threshold):PremiumQualityDecision{
+export function decidePremiumQuality(card:DesignQualityScorecard|DesignQualityScorecardV3,binding:DesignQualityEvidenceBinding|null,expected:ExpectedDesignQualityEvidence,threshold=card.threshold):PremiumQualityDecision{
   const emptyBindings:PremiumQualityDecision["bindings"]={pageGraph:"ABSENT",designTokens:"ABSENT",screenshot:"ABSENT",gitSha:"ABSENT",graphSignature:"ABSENT"};
   const bindings=binding?validateDesignQualityEvidence(binding,expected):emptyBindings;
   const reasons:string[]=[];
   if(card.score<threshold)reasons.push(`structural-score-below-threshold:${card.score}<${threshold}`);
+  if(card.overall!=="PASS")reasons.push("scorecard-overall:FAIL");
   for(const [name,state] of Object.entries(bindings))if(state!=="BOUND")reasons.push(`${name}:${state}`);
   const evidenceState=Object.values(bindings).every((state)=>state==="BOUND")?"PASS":"FAIL";
   const structuralState=card.score>=threshold?"PASS":"FAIL";
-  return{schema:"website-design-compiler/premium-quality-decision/v2",category:card.category,viewport:card.viewport,threshold,structuralScore:card.score,structuralState,evidenceState,overall:structuralState==="PASS"&&evidenceState==="PASS"?"PREMIUM_PASS":"FAIL",bindings,reasons};
+  return{schema:"website-design-compiler/premium-quality-decision/v2",category:card.category,viewport:card.viewport,threshold,structuralScore:card.score,structuralState,evidenceState,overall:card.overall==="PASS"&&structuralState==="PASS"&&evidenceState==="PASS"?"PREMIUM_PASS":"FAIL",bindings,reasons};
 }

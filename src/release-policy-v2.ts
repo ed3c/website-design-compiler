@@ -9,7 +9,7 @@ export const CAPABILITY_RECEIPT_CONTRACTS:Record<Capability,CapabilityReceiptCon
   webgpu:{path:"artifacts/graphics-3d/webgpu-receipt.json",schemaFile:"webgpu-runtime-receipt.schema.json",identity:"website-design-compiler/webgpu-runtime-receipt/v1"},
   repositoryRights:{path:"artifacts/rights-clearance/repository-rights-clearance.json",schemaFile:"repository-rights-clearance.schema.json",identity:"website-design-compiler/repository-rights-clearance/v2"},
   productionProvider:{path:"artifacts/media-generator/production-provider-status.json",schemaFile:"production-provider-status.schema.json",identity:"website-design-compiler/production-provider-status/v2"},
-  premiumQuality:{path:"artifacts/v2/design-quality/design-quality-eval-receipt.json",schemaFile:"design-quality-eval-receipt.schema.json",identity:"website-design-compiler/design-quality-eval-receipt/v2"}
+  premiumQuality:{path:"artifacts/v3/design-quality/design-quality-eval-receipt.json",schemaFile:"design-quality-eval-receipt-v3.schema.json",identity:"website-design-compiler/design-quality-eval-receipt/v3"}
 };
 export interface CapabilityEvidence{state:CapabilityState;gitSha:string|null;identity:string|null;artifactPath:string;artifactSha256:string|null;}
 export interface ReleasePolicy{
@@ -44,7 +44,7 @@ export function validateReleasePolicy(policy:ReleasePolicy):string[]{
   }
   if(!policy.profiles.COMMERCIAL_PRODUCTION.required.includes("repositoryRights")||!policy.profiles.COMMERCIAL_PRODUCTION.required.includes("productionProvider"))errors.push("COMMERCIAL_PRODUCTION requires repository rights and production provider evidence");
   if(!CAPABILITIES.every((capability)=>policy.profiles.FULL_V2.required.includes(capability)))errors.push("FULL_V2 must require every capability");
-  if(policy.premiumQuality.profilePath!=="fixtures/v2/release-profiles/premium.json")errors.push("premium quality must point to the governed profile SSOT");
+  if(policy.premiumQuality.profilePath!=="fixtures/v3/release-profiles/premium.json")errors.push("premium quality must point to the governed profile SSOT");
   return errors;
 }
 

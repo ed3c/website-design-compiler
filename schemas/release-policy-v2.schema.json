@@ -24,7 +24,7 @@
       "additionalProperties": false,
       "required": ["profilePath"],
       "properties": {
-        "profilePath": { "const": "fixtures/v2/release-profiles/premium.json" }
+        "profilePath": { "const": "fixtures/v3/release-profiles/premium.json" }
       }
     }
   },

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
 import { compileCompletePageGraph } from "../src/complete-page-graph.js";
-import { auditGraphOriginality, evaluateDesignQuality } from "../src/design-quality-eval.js";
+import { auditGraphOriginality, evaluateDesignQuality, evaluateDesignQualityV3 } from "../src/design-quality-eval.js";
 import { distantVisualCorpus,qualityObservation,tokenMatchPass } from "./helpers/design-quality.js";
 import { orderedTokenSimilarity, pageGraphStructureSignature } from "../src/design-quality-calibration.js";
 
@@ -85,4 +85,56 @@ test("runtime measurement fails closed for an undersized CTA or unsettled motion
   const motionCard=evaluateDesignQuality(graph,"mobile",50,[],[],.82,unsettled,tokenMatchPass,[],distantVisualCorpus("mobile"));
   assert.equal(motionCard.measurement.state,"FAIL");
   assert.ok(motionCard.penalties.includes("motion-runtime-not-settled"));
+});
+
+test("v3 evaluates all twelve runtime observations with calibrated visual and ordered structural evidence",()=>{
+  const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
+  const cards=graphs.flatMap((graph)=>["mobile","desktop"].map((viewport)=>evaluateDesignQualityV3(graph,viewport as "mobile"|"desktop",{
+    observation:qualityObservation(graph.category,viewport as "mobile"|"desktop"),
+    tokenMatch:tokenMatchPass,
+    structuralCorpus:graphs.filter((candidate)=>candidate.category!==graph.category).map((candidate)=>({id:candidate.category,graph:candidate})),
+    visualCorpus:distantVisualCorpus(viewport as "mobile"|"desktop")
+  })));
+  assert.equal(cards.length,12);
+  assert.ok(cards.every((card)=>card.schema==="website-design-compiler/design-quality-eval/v3"));
+  assert.ok(cards.every((card)=>card.threshold===78&&card.originalityAudit.threshold===.82));
+  assert.ok(cards.every((card)=>card.methods.structuralSimilarity==="ordered-page-graph/v1"&&card.methods.visualSimilarity==="calibrated-visual/v1"));
+  assert.ok(cards.every((card)=>card.overall==="PASS"),JSON.stringify(cards.map(({category,viewport,score,penalties,originalityAudit})=>({category,viewport,score,penalties,reasons:originalityAudit.reasons}))));
+});
+
+test("v3 rejects identical and over-close runtime visual evidence",()=>{
+  const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
+  const observation=qualityObservation(graph.category,"desktop");
+  const identical=evaluateDesignQualityV3(graph,"desktop",{observation,tokenMatch:tokenMatchPass,visualReferences:[{id:"identical",observation:structuredClone(observation)}]});
+  assert.equal(identical.originalityAudit.state,"FAIL");
+  assert.equal(identical.originalityAudit.maxVisualReferenceSimilarity,1);
+  const overClose=structuredClone(observation);overClose.pixels.luminanceMean+=.001;
+  const near=evaluateDesignQualityV3(graph,"desktop",{observation,tokenMatch:tokenMatchPass,visualReferences:[{id:"over-close",observation:overClose}]});
+  assert.equal(near.originalityAudit.state,"FAIL");
+});
+
+test("v3 rejects identical ordered graph evidence and still fails a repetitive GPU-heavy graph",()=>{
+  const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
+  const clone=evaluateDesignQualityV3(graph,"desktop",{observation:qualityObservation(graph.category,"desktop"),tokenMatch:tokenMatchPass,structuralReferences:[{id:"clone",graph}]});
+  assert.equal(clone.originalityAudit.state,"FAIL");
+  assert.ok(clone.originalityAudit.reasons.some((reason)=>reason.startsWith("reference-ordered-structure-too-close:")));
+  const first=graph.nodes[0]!;
+  const poor={...graph,conversionPath:[],nodes:Array.from({length:6},(_,index)=>({...first,id:`poor-v3-${index}`,kind:"graphics-3d-stage" as const,mediaHook:{...first.mediaHook,renderer:"three" as const}}))};
+  const poorCard=evaluateDesignQualityV3(poor,"desktop",{observation:qualityObservation(poor.category,"desktop"),tokenMatch:tokenMatchPass,visualCorpus:distantVisualCorpus("desktop")});
+  assert.equal(poorCard.overall,"FAIL");
+  assert.ok(poorCard.penalties.includes("repetitive-section-template"));
+  assert.ok(poorCard.penalties.includes("gratuitous-gpu-complexity"));
+});
+
+test("v3 fails closed when either viewport observation is absent",()=>{
+  const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
+  const missing=evaluateDesignQualityV3(graph,"mobile",{tokenMatch:tokenMatchPass,visualCorpus:distantVisualCorpus("mobile")});
+  assert.equal(missing.measurement.state,"ABSENT");
+  assert.equal(missing.overall,"FAIL");
+});
+
+test("v3 refuses callers that try to lower either governed threshold",()=>{
+  const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
+  assert.throws(()=>evaluateDesignQualityV3(graph,"desktop",{premiumQualityThreshold:77}),/cannot be lower than 78/);
+  assert.throws(()=>evaluateDesignQualityV3(graph,"desktop",{originalitySimilarityThreshold:.81}),/cannot be lower than 0.82/);
 });

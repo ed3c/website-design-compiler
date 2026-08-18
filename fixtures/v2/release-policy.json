@@ -8,6 +8,6 @@
     "FULL_V2": { "required": ["core", "liveReference", "webgpu", "repositoryRights", "productionProvider", "premiumQuality"] }
   },
   "premiumQuality": {
-    "profilePath": "fixtures/v2/release-profiles/premium.json"
+    "profilePath": "fixtures/v3/release-profiles/premium.json"
   }
 }

@@ -1,5 +1,6 @@
 import type { CompletePageGraph } from "./complete-page-graph.js";
 import { visualObservationSimilarity,type DesignQualityBrowserObservation,type RuntimeTokenMatch,type VisualOriginalitySubject } from "./design-quality-observation.js";
+import { calibratedVisualSimilarity,orderedTokenSimilarity,pageGraphStructureSignature } from "./design-quality-calibration.js";
 
 export type QualityViewport="mobile"|"desktop";
 export interface DesignQualityDimensions { hierarchy:number; composition:number; rhythm:number; density:number; ctaClarity:number; responsiveCoherence:number; mediaRestraint:number; motionRestraint:number; differentiation:number; originality:number; }
@@ -30,7 +31,22 @@ export interface DesignQualityScorecard {
   measurement:{state:"PASS"|"FAIL"|"ABSENT";observationSchema:string|null;screenshotSha256:string|null;tokenMatch:RuntimeTokenMatch|null};
   intent:{mode:"CONVERSION"|"INFORMATION";requiredConversionSteps:number;ctaRequired:boolean};
 }
+export interface DesignQualityScorecardV3 extends Omit<DesignQualityScorecard,"schema"> {
+  schema:"website-design-compiler/design-quality-eval/v3";
+  methods:{scoreModel:"runtime-evidence-weighted/v3";structuralSimilarity:"ordered-page-graph/v1";visualSimilarity:"calibrated-visual/v1"};
+}
 export interface OriginalitySubject { id:string; signature:string; }
+export interface OrderedOriginalitySubject { id:string; graph:CompletePageGraph; }
+export interface DesignQualityV3Evidence {
+  premiumQualityThreshold?:number;
+  originalitySimilarityThreshold?:number;
+  structuralReferences?:readonly OrderedOriginalitySubject[];
+  structuralCorpus?:readonly OrderedOriginalitySubject[];
+  observation?:DesignQualityBrowserObservation|null;
+  tokenMatch?:RuntimeTokenMatch|null;
+  visualReferences?:readonly VisualOriginalitySubject[];
+  visualCorpus?:readonly VisualOriginalitySubject[];
+}
 interface QualityIntent { mode:"CONVERSION"|"INFORMATION"; requiredConversionSteps:number; ctaRequired:boolean; }
 const CATEGORY_QUALITY_INTENTS:Record<string,QualityIntent>={
   "b2b-product":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
@@ -60,7 +76,15 @@ export function auditGraphOriginality(signature:string,references:readonly Origi
   if(corpusMatch&&corpusMatch.similarity>=threshold)reasons.push(`corpus-structure-too-close:${corpusMatch.id}:${corpusMatch.similarity.toFixed(3)}>=${threshold.toFixed(3)}`);
   return{state:reasons.length===0?"PASS":"FAIL",threshold,maxReferenceSimilarity:reference?.similarity??0,maxCorpusSimilarity:corpusMatch?.similarity??0,nearestReference:reference?.id??null,nearestCorpus:corpusMatch?.id??null,maxVisualReferenceSimilarity:0,maxVisualCorpusSimilarity:0,nearestVisualReference:null,nearestVisualCorpus:null,reasons};
 }
-export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityViewport,threshold=78,originalityReferences:readonly OriginalitySubject[]=[],originalityCorpus:readonly OriginalitySubject[]=[],originalitySimilarityThreshold=0.82,observation:DesignQualityBrowserObservation|null=null,tokenMatch:RuntimeTokenMatch|null=null,visualReferences:readonly VisualOriginalitySubject[]=[],visualCorpus:readonly VisualOriginalitySubject[]=[]):DesignQualityScorecard{
+export function auditOrderedGraphOriginality(graph:CompletePageGraph,references:readonly OrderedOriginalitySubject[]=[],corpus:readonly OrderedOriginalitySubject[]=[],threshold=.82):OriginalityAudit{
+  const signature=pageGraphStructureSignature(graph).split("|");
+  const nearest=(subjects:readonly OrderedOriginalitySubject[])=>subjects.map((subject)=>({id:subject.id,similarity:orderedTokenSimilarity(signature,pageGraphStructureSignature(subject.graph).split("|"))})).sort((left,right)=>right.similarity-left.similarity||left.id.localeCompare(right.id))[0]??null;
+  const reference=nearest(references);const corpusMatch=nearest(corpus);const reasons:string[]=[];
+  if(reference&&reference.similarity>=threshold)reasons.push(`reference-ordered-structure-too-close:${reference.id}:${reference.similarity.toFixed(3)}>=${threshold.toFixed(3)}`);
+  if(corpusMatch&&corpusMatch.similarity>=threshold)reasons.push(`corpus-ordered-structure-too-close:${corpusMatch.id}:${corpusMatch.similarity.toFixed(3)}>=${threshold.toFixed(3)}`);
+  return{state:reasons.length===0?"PASS":"FAIL",threshold,maxReferenceSimilarity:reference?.similarity??0,maxCorpusSimilarity:corpusMatch?.similarity??0,nearestReference:reference?.id??null,nearestCorpus:corpusMatch?.id??null,maxVisualReferenceSimilarity:0,maxVisualCorpusSimilarity:0,nearestVisualReference:null,nearestVisualCorpus:null,reasons};
+}
+function evaluateDesignQualityModel(graph:CompletePageGraph,viewport:QualityViewport,threshold:number,originalityReferences:readonly OriginalitySubject[]|readonly OrderedOriginalitySubject[],originalityCorpus:readonly OriginalitySubject[]|readonly OrderedOriginalitySubject[],originalitySimilarityThreshold:number,observation:DesignQualityBrowserObservation|null,tokenMatch:RuntimeTokenMatch|null,visualReferences:readonly VisualOriginalitySubject[],visualCorpus:readonly VisualOriginalitySubject[],version:"v2"|"v3"):DesignQualityScorecard|DesignQualityScorecardV3{
   const kinds=graph.nodes.map((node)=>node.kind);
   const layouts=graph.nodes.map((node)=>node.responsive[viewport].layout);
   const renderers=graph.nodes.map((node)=>node.mediaHook.renderer);
@@ -74,8 +98,11 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
   const animatedRatio=engines.filter((engine)=>engine!=="none").length/Math.max(1,engines.length);if(animatedRatio>0.95)penalties.push("motion-applied-to-nearly-every-section");
   if(intent.mode==="CONVERSION"&&graph.conversionPath.length<intent.requiredConversionSteps)penalties.push("weak-conversion-path");
   if(intent.ctaRequired&&!kinds.includes("cta"))penalties.push("required-cta-missing");
-  const originalityAudit=auditGraphOriginality(graph.signature,originalityReferences,originalityCorpus,originalitySimilarityThreshold);
-  const nearestVisual=(subjects:readonly VisualOriginalitySubject[])=>observation?subjects.map((subject)=>({id:subject.id,similarity:visualObservationSimilarity(observation,subject.observation)})).sort((a,b)=>b.similarity-a.similarity||a.id.localeCompare(b.id))[0]??null:null;
+  const originalityAudit=version==="v3"?auditOrderedGraphOriginality(graph,originalityReferences as readonly OrderedOriginalitySubject[],originalityCorpus as readonly OrderedOriginalitySubject[],originalitySimilarityThreshold):auditGraphOriginality(graph.signature,originalityReferences as readonly OriginalitySubject[],originalityCorpus as readonly OriginalitySubject[],originalitySimilarityThreshold);
+  if(version==="v3"&&originalityCorpus.length===0)originalityAudit.reasons.push("ordered-structural-originality-corpus-absent");
+  if(version==="v3"&&visualCorpus.length===0)originalityAudit.reasons.push("calibrated-visual-originality-corpus-absent");
+  const visualSimilarity=version==="v3"?calibratedVisualSimilarity:visualObservationSimilarity;
+  const nearestVisual=(subjects:readonly VisualOriginalitySubject[])=>observation?subjects.map((subject)=>({id:subject.id,similarity:visualSimilarity(observation,subject.observation)})).sort((a,b)=>b.similarity-a.similarity||a.id.localeCompare(b.id))[0]??null:null;
   const visualReference=nearestVisual(visualReferences);const visualCorpusMatch=nearestVisual(visualCorpus);
   originalityAudit.maxVisualReferenceSimilarity=visualReference?.similarity??0;originalityAudit.maxVisualCorpusSimilarity=visualCorpusMatch?.similarity??0;originalityAudit.nearestVisualReference=visualReference?.id??null;originalityAudit.nearestVisualCorpus=visualCorpusMatch?.id??null;
   if(visualReference&&visualReference.similarity>=originalitySimilarityThreshold)originalityAudit.reasons.push(`reference-visual-too-close:${visualReference.id}:${visualReference.similarity.toFixed(3)}>=${originalitySimilarityThreshold.toFixed(3)}`);
@@ -120,6 +147,17 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
   };
   const values=Object.values(dimensions);const score=clamp(values.reduce((sum,value)=>sum+value,0)/values.length-penalties.length*3);
   const observationIdentityPass=Boolean(observation&&observation.category===graph.category&&observation.viewport===viewport&&/^[a-f0-9]{64}$/.test(observation.screenshot.sha256)&&observation.accessibility.seriousCriticalViolationCount===0&&!observation.computed.overflowX&&observation.computed.contentBudgetPass&&observation.computed.h1Count===1&&(!intent.ctaRequired||validAction)&&motionSettled);
-  const measurementState=!observation?"ABSENT":observationIdentityPass&&tokenMatch?.state==="PASS"?"PASS":"FAIL";
-  return{schema:"website-design-compiler/design-quality-eval/v2",category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold&&originalityAudit.state==="PASS"&&measurementState==="PASS"?"PASS":"FAIL",dimensions,penalties,originalityAudit,measurement:{state:measurementState,observationSchema:observation?.schema??null,screenshotSha256:observation?.screenshot.sha256??null,tokenMatch},intent};
+  const measurementState:"PASS"|"FAIL"|"ABSENT"=!observation?"ABSENT":observationIdentityPass&&tokenMatch?.state==="PASS"?"PASS":"FAIL";
+  const card={category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold&&originalityAudit.state==="PASS"&&measurementState==="PASS"?"PASS" as const:"FAIL" as const,dimensions,penalties,originalityAudit,measurement:{state:measurementState,observationSchema:observation?.schema??null,screenshotSha256:observation?.screenshot.sha256??null,tokenMatch},intent};
+  return version==="v3"?{schema:"website-design-compiler/design-quality-eval/v3",...card,methods:{scoreModel:"runtime-evidence-weighted/v3",structuralSimilarity:"ordered-page-graph/v1",visualSimilarity:"calibrated-visual/v1"}}:{schema:"website-design-compiler/design-quality-eval/v2",...card};
+}
+export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityViewport,threshold=78,originalityReferences:readonly OriginalitySubject[]=[],originalityCorpus:readonly OriginalitySubject[]=[],originalitySimilarityThreshold=0.82,observation:DesignQualityBrowserObservation|null=null,tokenMatch:RuntimeTokenMatch|null=null,visualReferences:readonly VisualOriginalitySubject[]=[],visualCorpus:readonly VisualOriginalitySubject[]=[]):DesignQualityScorecard{
+  return evaluateDesignQualityModel(graph,viewport,threshold,originalityReferences,originalityCorpus,originalitySimilarityThreshold,observation,tokenMatch,visualReferences,visualCorpus,"v2") as DesignQualityScorecard;
+}
+export function evaluateDesignQualityV3(graph:CompletePageGraph,viewport:QualityViewport,evidence:DesignQualityV3Evidence={}):DesignQualityScorecardV3{
+  const threshold=evidence.premiumQualityThreshold??78;
+  const originalityThreshold=evidence.originalitySimilarityThreshold??.82;
+  if(threshold<78)throw new Error(`v3 premium quality threshold cannot be lower than 78: ${threshold}`);
+  if(originalityThreshold<.82)throw new Error(`v3 originality similarity threshold cannot be lower than 0.82: ${originalityThreshold}`);
+  return evaluateDesignQualityModel(graph,viewport,threshold,evidence.structuralReferences??[],evidence.structuralCorpus??[],originalityThreshold,evidence.observation??null,evidence.tokenMatch??null,evidence.visualReferences??[],evidence.visualCorpus??[],"v3") as DesignQualityScorecardV3;
 }

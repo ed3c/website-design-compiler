@@ -7,6 +7,9 @@ import type { DesignQualityBrowserObservation } from "../src/design-quality-obse
 import { validateAgainstSchema } from "../src/validate.js";
 
 const sha256=(value:Buffer|string)=>createHash("sha256").update(value).digest("hex");
+const v3Mode=process.env.DESIGN_QUALITY_CALIBRATION_VERSION==="v3";
+const gitSha=process.env.GITHUB_SHA??"UNBOUND";
+const gitRef=process.env.GITHUB_REF??"UNBOUND";
 const threshold=.82;
 const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
 const observationDirectory=join(process.cwd(),"artifacts","design-quality-browser");
@@ -48,9 +51,11 @@ for(let first=0;first<structures.length;first+=1)for(let second=first+1;second<s
 structurePairs.sort((left,right)=>right.similarity-left.similarity||left.first.localeCompare(right.first)||left.second.localeCompare(right.second));
 const structure={pairCount:structurePairs.length,maxSimilarity:structurePairs[0]?.similarity??1,nearestPair:structurePairs[0]??null,pairs:structurePairs};
 const corpusPass=viewports.every((entry)=>entry.pairCount===15&&entry.maxSimilarity<threshold)&&structure.pairCount===15&&structure.maxSimilarity<threshold;
-const receipt={schema:"website-design-compiler/design-quality-calibration-receipt/v1",overall:controlsPass&&corpusPass?"PASS":"FAIL",threshold,categoryCount:categories.length,observationCount:observations.length,controls:{state:controlsPass?"PASS":"FAIL",...controls},viewports,structure,sources:{projection:{path:"apps/site/generated/benchmark-page-graphs.json",sha256:sha256(projectionBytes)},observations:observationSources}};
-await validateAgainstSchema(receipt,"design-quality-calibration-receipt.schema.json");
-const outputDirectory=join(process.cwd(),"artifacts","v2","design-quality-calibration");await mkdir(outputDirectory,{recursive:true});
+const exactHeadBound=/^[a-f0-9]{40}$/.test(gitSha)&&observations.every((observation)=>observation.git.sha===gitSha);
+const common={threshold,categoryCount:categories.length,observationCount:observations.length,controls:{state:controlsPass?"PASS":"FAIL",...controls},viewports,structure,sources:{projection:{path:"apps/site/generated/benchmark-page-graphs.json",sha256:sha256(projectionBytes)},observations:observationSources}};
+const receipt=v3Mode?{schema:"website-design-compiler/design-quality-calibration-receipt/v2",overall:controlsPass&&corpusPass&&exactHeadBound?"PASS":"FAIL",git:{sha:gitSha,ref:gitRef},exactHeadBound,methods:{scoreModel:"runtime-evidence-weighted/v3",structuralSimilarity:"ordered-page-graph/v1",visualSimilarity:"calibrated-visual/v1"},...common}:{schema:"website-design-compiler/design-quality-calibration-receipt/v1",overall:controlsPass&&corpusPass?"PASS":"FAIL",...common};
+await validateAgainstSchema(receipt,v3Mode?"design-quality-calibration-receipt-v2.schema.json":"design-quality-calibration-receipt.schema.json");
+const outputDirectory=join(process.cwd(),"artifacts",v3Mode?"v3":"v2","design-quality-calibration");await mkdir(outputDirectory,{recursive:true});
 const outputPath=join(outputDirectory,"design-quality-calibration-receipt.json");await writeFile(outputPath,`${JSON.stringify(receipt,null,2)}\n`,"utf8");
-console.log(JSON.stringify({path:outputPath,overall:receipt.overall,controls:receipt.controls,viewports:receipt.viewports.map((entry)=>({viewport:entry.viewport,maxSimilarity:entry.maxSimilarity,nearestPair:entry.nearestPair})),structure:{maxSimilarity:receipt.structure.maxSimilarity,nearestPair:receipt.structure.nearestPair}}));
+console.log(JSON.stringify({path:outputPath,overall:receipt.overall,...(v3Mode?{exactHeadBound}:{}),controls:receipt.controls,viewports:receipt.viewports.map((entry)=>({viewport:entry.viewport,maxSimilarity:entry.maxSimilarity,nearestPair:entry.nearestPair})),structure:{maxSimilarity:receipt.structure.maxSimilarity,nearestPair:receipt.structure.nearestPair}}));
 if(receipt.overall!=="PASS")process.exitCode=1;

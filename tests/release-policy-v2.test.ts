@@ -16,7 +16,7 @@ const policy:ReleasePolicy={
     COMMERCIAL_PRODUCTION:{required:["core","repositoryRights","productionProvider"]},
     FULL_V2:{required:["core","liveReference","webgpu","repositoryRights","productionProvider","premiumQuality"]}
   },
-  premiumQuality:{profilePath:"fixtures/v2/release-profiles/premium.json"}
+  premiumQuality:{profilePath:"fixtures/v3/release-profiles/premium.json"}
 };
 const sha="a".repeat(40);
 const pass=(capability:Capability):CapabilityEvidence=>({state:"PASS",gitSha:sha,identity:CAPABILITY_RECEIPT_CONTRACTS[capability].identity,artifactPath:CAPABILITY_RECEIPT_CONTRACTS[capability].path,artifactSha256:"b".repeat(64)});
@@ -25,6 +25,8 @@ const all=Object.fromEntries(CAPABILITIES.map((capability)=>[capability,pass(cap
 test("release policy validates versioned profiles and points to the premium threshold SSOT",async()=>{
   assert.deepEqual(validateReleasePolicy(policy),[]);
   await validateAgainstSchema(policy,"release-policy-v2.schema.json");
+  assert.equal(CAPABILITY_RECEIPT_CONTRACTS.premiumQuality.identity,"website-design-compiler/design-quality-eval-receipt/v3");
+  assert.equal(CAPABILITY_RECEIPT_CONTRACTS.premiumQuality.path,"artifacts/v3/design-quality/design-quality-eval-receipt.json");
 });
 
 test("CORE visibly marks every non-required capability NOT_REQUIRED",()=>{
