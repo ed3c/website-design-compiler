@@ -4,6 +4,6 @@
   "properties":{
     "schema":{"const":"website-design-compiler/storybook-visual-goldens/v2"},
     "source":{"type":"object","additionalProperties":false,"required":["gitSha","workflowRun","artifactId","runnerImage","browser","fonts","projects"],"properties":{"gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"},"workflowRun":{"type":"integer","minimum":1},"artifactId":{"type":"integer","minimum":1},"runnerImage":{"type":"object","additionalProperties":false,"required":["os","version","release"],"properties":{"os":{"const":"ubuntu-24.04"},"version":{"type":"string","minLength":1},"release":{"type":"string","minLength":1}}},"browser":{"type":"object","additionalProperties":false,"required":["engine","version","playwrightPackage","playwrightChromiumRevision"],"properties":{"engine":{"const":"Chrome Headless Shell"},"version":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$"},"playwrightPackage":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+$"},"playwrightChromiumRevision":{"type":"integer","minimum":1}}},"fonts":{"type":"array","minItems":8,"uniqueItems":true,"items":{"type":"string","pattern":"^[^=]+=[^=]+$"}},"projects":{"type":"array","minItems":2,"maxItems":2,"uniqueItems":true,"items":{"enum":["storybook-desktop","storybook-mobile"]}}}},
-    "screenshots":{"type":"object","minProperties":50,"additionalProperties":{"type":"string","pattern":"^[a-f0-9]{64}$"}}
+    "screenshots":{"type":"object","minProperties":90,"additionalProperties":{"type":"string","pattern":"^[a-f0-9]{64}$"}}
   }
 }
