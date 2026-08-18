@@ -15,6 +15,7 @@ type RendererReceipt = {
       renderer: string;
       rendererVersion: string;
       tslModule: string;
+      adapterInfo: { state: "REPORTED" | "UNREPORTED"; sha256: string };
       features: string[];
       limits: Record<string, number | null>;
     };
@@ -58,6 +59,11 @@ test("WebGPU opt-in records real execution or explicit NOT_EXERCISED fallback", 
       rendererVersion: "0.184.0",
       tslModule: "three/tsl@0.184.0"
     });
+    expect(selected.runtime?.identity.adapterInfo).toMatchObject({
+      state: expect.stringMatching(/^(REPORTED|UNREPORTED)$/),
+      sha256: expect.stringMatching(/^[a-f0-9]{64}$/)
+    });
+    expect(JSON.stringify(selected.runtime?.identity.adapterInfo)).not.toMatch(/vendor|architecture|device|description/i);
     expect(selected.runtime?.budget).toMatchObject({
       frameLoop: "demand",
       framesRendered: 1,

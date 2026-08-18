@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/production-provider-execution-config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "signedRequestPath", "policyPath", "rightsReceiptPath", "admissionPacketPath", "admissionAuthority", "adapter", "requestSecretEnv", "credentialEnv"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-provider-execution-config/v1" },
+    "signedRequestPath": { "$ref": "#/$defs/relativePath" },
+    "policyPath": { "$ref": "#/$defs/relativePath" },
+    "rightsReceiptPath": { "$ref": "#/$defs/relativePath" },
+    "admissionPacketPath": { "$ref": "#/$defs/relativePath" },
+    "admissionAuthority": {
+      "type": "object", "additionalProperties": false, "required": ["authorityId", "publicKeyPath"],
+      "properties": {
+        "authorityId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$" },
+        "publicKeyPath": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "adapter": {
+      "type": "object", "additionalProperties": false, "required": ["schema", "identity", "endpoint"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/http-production-provider-adapter/v1" },
+        "identity": {
+          "type": "object", "additionalProperties": false,
+          "required": ["providerId", "serviceRevision", "modelId", "modelRevision", "adapter", "kind"],
+          "properties": {
+            "providerId": { "type": "string" }, "serviceRevision": { "type": "string" },
+            "modelId": { "type": "string" }, "modelRevision": { "type": "string" },
+            "adapter": { "enum": ["diffusers-image", "diffusers-video", "three-d-worker"] },
+            "kind": { "enum": ["image", "video", "3d"] }
+          }
+        },
+        "endpoint": { "type": "string", "format": "uri" }
+      }
+    },
+    "requestSecretEnv": { "$ref": "#/$defs/environmentName" },
+    "credentialEnv": { "$ref": "#/$defs/environmentName" }
+  },
+  "$defs": {
+    "relativePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" },
+    "environmentName": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" }
+  }
+}

@@ -2,13 +2,42 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/website-design-compiler/production-provider-status.schema.json",
   "type": "object", "additionalProperties": false,
-  "required": ["schema", "gate", "overall", "admissionState", "productionReleaseEligible", "providerIdentity", "modelIdentity", "rightsClearance", "runtimeCredentials", "budgetAuthorization", "deterministicMockGate", "reason", "git"],
+  "required": ["schema", "gate", "overall", "admissionState", "productionReleaseEligible", "providerIdentity", "modelIdentity", "rightsClearance", "runtimeCredentials", "budgetAuthorization", "deterministicMockGate", "executionReceiptSha256", "requestSha256", "assetSha256", "reason", "git"],
   "properties": {
-    "schema": { "const": "website-design-compiler/production-provider-status/v1" }, "gate": { "const": "PRODUCTION_PROVIDER" },
-    "overall": { "const": "NOT_EXERCISED" }, "admissionState": { "const": "NEEDS_HUMAN_ADMIT" }, "productionReleaseEligible": { "const": false },
-    "providerIdentity": { "const": "ABSENT" }, "modelIdentity": { "const": "ABSENT" }, "rightsClearance": { "const": "ABSENT" },
-    "runtimeCredentials": { "const": "ABSENT" }, "budgetAuthorization": { "const": "ABSENT" }, "deterministicMockGate": { "const": "SEPARATE" },
+    "schema": { "const": "website-design-compiler/production-provider-status/v2" }, "gate": { "const": "PRODUCTION_PROVIDER" },
+    "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] }, "admissionState": { "enum": ["ADMITTED", "NEEDS_HUMAN_ADMIT", "DENIED", "REVOKED"] }, "productionReleaseEligible": { "type": "boolean" },
+    "providerIdentity": { "$ref": "#/$defs/digestOrAbsent" }, "modelIdentity": { "$ref": "#/$defs/digestOrAbsent" }, "rightsClearance": { "enum": ["PASS", "FAIL", "ABSENT"] },
+    "runtimeCredentials": { "enum": ["AVAILABLE", "ABSENT"] }, "budgetAuthorization": { "enum": ["AUTHORIZED", "ABSENT"] }, "deterministicMockGate": { "const": "SEPARATE" },
+    "executionReceiptSha256": { "$ref": "#/$defs/rawDigestOrAbsent" }, "requestSha256": { "$ref": "#/$defs/rawDigestOrAbsent" }, "assetSha256": { "$ref": "#/$defs/rawDigestOrAbsent" },
     "reason": { "type": "string" },
     "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] },
+      "then": {
+        "properties": {
+          "admissionState": { "const": "ADMITTED" }, "productionReleaseEligible": { "const": true },
+          "providerIdentity": { "$ref": "#/$defs/digest" }, "modelIdentity": { "$ref": "#/$defs/digest" },
+          "rightsClearance": { "const": "PASS" }, "runtimeCredentials": { "const": "AVAILABLE" },
+          "budgetAuthorization": { "const": "AUTHORIZED" }, "executionReceiptSha256": { "$ref": "#/$defs/rawDigest" },
+          "requestSha256": { "$ref": "#/$defs/rawDigest" }, "assetSha256": { "$ref": "#/$defs/rawDigest" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "overall": { "const": "NOT_EXERCISED" } }, "required": ["overall"] },
+      "then": { "properties": { "productionReleaseEligible": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "overall": { "const": "FAIL" } }, "required": ["overall"] },
+      "then": { "properties": { "productionReleaseEligible": { "const": false } } }
+    }
+  ],
+  "$defs": {
+    "rawDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "rawDigestOrAbsent": { "oneOf": [{ "$ref": "#/$defs/rawDigest" }, { "const": "ABSENT" }] },
+    "digestOrAbsent": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "const": "ABSENT" }] }
   }
 }
