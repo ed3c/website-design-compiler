@@ -60,6 +60,12 @@ export interface StageEvidence {
   artifacts: string[];
 }
 
+export interface StageExecutionEvidence {
+  state: EvidenceState;
+  reason: string;
+  artifacts: string[];
+}
+
 export interface RuntimeReceipt {
   schema: "website-design-compiler/runtime-receipt/v1";
   project: string;

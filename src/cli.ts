@@ -14,6 +14,13 @@ import { writeGraphics2DPlan } from "./graphics-2d.js";
 import { writeGraphics3DArtifacts } from "./graphics-3d.js";
 import { writeMediaGeneratorPlan } from "./media-generator.js";
 import { ContractValidationError, validateCompilerInput } from "./validate.js";
+import type { StageExecutionEvidence } from "./contracts.js";
+
+type StageWriterOutput = string | string[] | StageExecutionEvidence;
+
+function isStageExecutionEvidence(value: StageWriterOutput): value is StageExecutionEvidence {
+  return typeof value === "object" && !Array.isArray(value);
+}
 
 async function main(): Promise<void> {
   const [inputPath, outputDirectory] = process.argv.slice(2);
@@ -27,12 +34,17 @@ async function main(): Promise<void> {
     const raw = JSON.parse(await readFile(resolve(inputPath), "utf8")) as unknown;
     const input = await validateCompilerInput(raw);
     const resolvedOutputDirectory = resolve(outputDirectory);
-    const executedStageArtifacts = new Map<string, string[]>();
+    const executedStages = new Map<string, StageExecutionEvidence>();
 
-    const executeStage = async (stage: string, writer: () => Promise<string | string[]>): Promise<void> => {
+    const executeStage = async (stage: string, writer: () => Promise<StageWriterOutput>): Promise<void> => {
       const result = await writer();
-      const paths = Array.isArray(result) ? result : [result];
-      executedStageArtifacts.set(stage, paths.map((path) => relative(resolvedOutputDirectory, path)));
+      const execution = isStageExecutionEvidence(result)
+        ? result
+        : { state: "PASS" as const, reason: "The stage writer completed.", artifacts: Array.isArray(result) ? result : [result] };
+      executedStages.set(stage, {
+        ...execution,
+        artifacts: execution.artifacts.map((path) => relative(resolvedOutputDirectory, path))
+      });
     };
 
     if (input.requestedStages.includes("reference-intelligence")) await executeStage("reference-intelligence", () => writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory));
@@ -48,13 +60,17 @@ async function main(): Promise<void> {
     if (input.requestedStages.includes("media-generator")) await executeStage("media-generator", () => writeMediaGeneratorPlan(resolvedOutputDirectory));
 
     if (input.requestedStages.includes("release-receipt")) {
-      executedStageArtifacts.set("release-receipt", ["runtime-receipt.json"]);
+      executedStages.set("release-receipt", {
+        state: "PASS",
+        reason: "The runtime receipt target is bound to this compiler invocation.",
+        artifacts: ["runtime-receipt.json"]
+      });
     }
 
-    const receipt = compile(input, new Date(), executedStageArtifacts);
+    const receipt = compile(input, new Date(), executedStages);
     const receiptPath = await writeRuntimeReceipt(receipt, resolvedOutputDirectory);
     console.log(JSON.stringify({ receiptPath, overall: receipt.overall }));
-    process.exitCode = receipt.overall === "FAIL" ? 1 : 0;
+    process.exitCode = receipt.overall === "PASS" ? 0 : 1;
   } catch (error) {
     if (error instanceof ContractValidationError) {
       console.error(JSON.stringify({ state: "FAIL", kind: "CONTRACT_VALIDATION", errors: error.validationErrors }));

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildFrontendPlan } from "./frontend-builder.js";
 import { compileInformationArchitecture, type IaSectionStatus, type IaPriority } from "./information-architecture.js";
-import { compileContentArchitecture, type ContentFieldState } from "./content-architecture.js";
+import { compileContentArchitecture, type SectionContentContract } from "./content-architecture.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface PageArchitecturePlan {
@@ -28,10 +28,7 @@ export interface PageArchitecturePlan {
     requiredContent: string[];
     missingContent: string[];
     fallback: string;
-    contentContract: {
-      state: "READY" | "NEEDS_INPUT";
-      fields: Array<{ slot: string; state: ContentFieldState; publishable: boolean }>;
-    };
+    contentContract: SectionContentContract & { state: "READY" | "NEEDS_INPUT" };
   }>;
   optionalEnhancements: Array<{
     capability: "motion" | "graphics-2d" | "graphics-3d";
@@ -73,8 +70,8 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
     ],
     sectionIntents: ia.sections.map((section) => {
       const contentSection = contentBySection.get(section.id);
-      const fields = contentSection?.fields.map((field) => ({ slot: field.slot, state: field.state, publishable: field.publishable })) ?? [];
-      const contentState = fields.some((field) => field.state === "NEEDS_INPUT") ? "NEEDS_INPUT" : "READY";
+      if (!contentSection) throw new Error(`content contract missing for IA section: ${section.id}`);
+      const contentState = contentSection.fields.some((field) => field.state === "NEEDS_INPUT") ? "NEEDS_INPUT" : "READY";
       return {
         id: section.id,
         type: section.type,
@@ -87,7 +84,7 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
         fallback: section.fallback,
         contentContract: {
           state: contentState,
-          fields
+          ...contentSection
         }
       };
     }),

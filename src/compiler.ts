@@ -7,6 +7,7 @@ import {
   type EvidenceState,
   type PipelineStageName,
   type RuntimeReceipt,
+  type StageExecutionEvidence,
   type StageEvidence
 } from "./contracts.js";
 
@@ -44,7 +45,7 @@ function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-function stageEvidence(stage: string, executedStageArtifacts: ReadonlyMap<string, readonly string[]>): StageEvidence {
+function stageEvidence(stage: string, executedStages: ReadonlyMap<string, StageExecutionEvidence>): StageEvidence {
   if (!PIPELINE_STAGES.includes(stage as (typeof PIPELINE_STAGES)[number])) {
     return { stage, state: "FAIL", reason: "Unknown pipeline stage requested.", artifacts: [] };
   }
@@ -53,8 +54,8 @@ function stageEvidence(stage: string, executedStageArtifacts: ReadonlyMap<string
     return { stage, state: "NOT_IMPLEMENTED", reason: "Stage contract is known but its executable adapter has not landed yet.", artifacts: [] };
   }
 
-  const artifacts = executedStageArtifacts.get(stage) ?? [];
-  if (artifacts.length === 0) {
+  const execution = executedStages.get(stage);
+  if (!execution || execution.artifacts.length === 0) {
     return {
       stage,
       state: "NOT_EXERCISED",
@@ -63,11 +64,15 @@ function stageEvidence(stage: string, executedStageArtifacts: ReadonlyMap<string
     };
   }
 
+  if (execution.state !== "PASS") {
+    return { stage, state: execution.state, reason: execution.reason, artifacts: [...execution.artifacts] };
+  }
+
   return {
     stage,
     state: "PASS",
     reason: STAGE_PASS_REASONS[stage as PipelineStageName] ?? "The stage emitted runtime-bound artifacts.",
-    artifacts: [...artifacts]
+    artifacts: [...execution.artifacts]
   };
 }
 
@@ -83,9 +88,9 @@ function overallState(stages: StageEvidence[]): EvidenceState {
 export function compile(
   input: CompilerInput,
   now = new Date(),
-  executedStageArtifacts: ReadonlyMap<string, readonly string[]> = new Map()
+  executedStages: ReadonlyMap<string, StageExecutionEvidence> = new Map()
 ): RuntimeReceipt {
-  const stages = input.requestedStages.map((stage) => stageEvidence(stage, executedStageArtifacts));
+  const stages = input.requestedStages.map((stage) => stageEvidence(stage, executedStages));
   return {
     schema: "website-design-compiler/runtime-receipt/v1",
     project: input.project,

@@ -9,10 +9,10 @@ Translate a product brief and optional design references into a deployable websi
 ```text
 natural-language brief -> brief-normalization -> structured compiler input
 structured compiler input -> information-architecture
+information-architecture -> content-architecture
 references -> reference-intelligence
-information-architecture + reference-intelligence
-  -> art-direction
-  -> design-system-compiler
+reference-intelligence -> art-direction -> design-system-compiler
+information-architecture + content-architecture + design-system-compiler
   -> page-architect
   -> frontend-builder
   -> motion / 2d / 3d / media specialists
@@ -38,6 +38,13 @@ Produces a page-family-specific section graph. Every section records its support
 
 Required output:
 - `information-architecture.json`
+
+### Content architecture
+
+Turns each IA content requirement into a provenance-bound authoring field with a source classification, publishability decision, responsive length budget, locale policy, and quality findings. Brief objectives remain planning evidence; they are not publishable headlines, product claims, or action labels. Missing authored content produces `NEEDS_INPUT` in the artifact and `ABSENT` in the runtime stage receipt.
+
+Required output:
+- `content-architecture.json`
 
 ### Reference intelligence
 Produces observable facts only. It may describe layout, typography, motion, assets, hierarchy, and interaction patterns, but must not claim unknown implementation details as facts.

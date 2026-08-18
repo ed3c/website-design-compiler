@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { compile } from "../src/compiler.js";
+import type { StageExecutionEvidence } from "../src/contracts.js";
 import { validateCompilerInput } from "../src/validate.js";
 
-function executedStages(input: { requestedStages: string[] }): ReadonlyMap<string, readonly string[]> {
+function executedStages(input: { requestedStages: string[] }): ReadonlyMap<string, StageExecutionEvidence> {
   const artifacts: Record<string, string[]> = {
     "reference-intelligence": ["reference-intelligence/reference-manifest.json"],
     "art-direction": ["art-direction/design-read.json"],
@@ -15,7 +16,11 @@ function executedStages(input: { requestedStages: string[] }): ReadonlyMap<strin
     "media-generator": ["media-generator/media-generator-plan.json"],
     "release-receipt": ["runtime-receipt.json"]
   };
-  return new Map(input.requestedStages.map((stage) => [stage, artifacts[stage] ?? [`${stage}/verified-artifact.json`]]));
+  return new Map(input.requestedStages.map((stage) => [stage, {
+    state: "PASS" as const,
+    reason: "test writer completed",
+    artifacts: artifacts[stage] ?? [`${stage}/verified-artifact.json`]
+  }]));
 }
 
 test("minimal fixture validates and produces PASS for implemented reference, art direction, frontend, motion, 2d, 3d, and release stages", async () => {
@@ -79,6 +84,26 @@ test("implemented stage is NOT_EXERCISED until exact artifacts are supplied", as
   assert.equal(receipt.overall, "NOT_EXERCISED");
   assert.equal(receipt.stages[0]?.state, "NOT_EXERCISED");
   assert.deepEqual(receipt.stages[0]?.artifacts, []);
+});
+
+test("an executed stage can report ABSENT inputs without being promoted to PASS", async () => {
+  const input = await validateCompilerInput({
+    schema: "website-design-compiler/input/v1",
+    project: "missing-content-inputs",
+    brief: { pageType: "landing", audience: "teams", objective: "plan a conversion path" },
+    requestedStages: ["content-architecture"]
+  });
+  const receipt = compile(input, new Date("2026-08-16T00:00:00.000Z"), new Map([
+    ["content-architecture", {
+      state: "ABSENT",
+      reason: "Required authoring inputs are absent.",
+      artifacts: ["content-architecture/content-architecture.json"]
+    }]
+  ]));
+
+  assert.equal(receipt.overall, "ABSENT");
+  assert.equal(receipt.stages[0]?.state, "ABSENT");
+  assert.deepEqual(receipt.stages[0]?.artifacts, ["content-architecture/content-architecture.json"]);
 });
 
 test("unknown stage fails closed", async () => {
