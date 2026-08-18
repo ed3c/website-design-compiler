@@ -1,15 +1,22 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 import {
   buildUnconfiguredProductionProviderStatus,
   ProductionProviderError,
-  routeProductionMediaGeneration,
+  routeProductionMediaGeneration as routeProvider,
   validateProductionProviderPolicy,
   type ProductionProviderPolicy,
   type ProductionProviderTransport
 } from "../src/production-media-provider.js";
 import { signMediaRequest, type MediaRequest } from "../src/media-router.js";
+import { canonicalMediaValue, sha256 } from "../src/media-router.js";
+import {
+  productionAdmissionSigningPayload,
+  type ProductionAdmissionPacket
+} from "../src/production-provider-admission.js";
 import type { RepositoryClearanceReceipt, RightsSubject } from "../src/repository-rights-clearance.js";
+import { validateAgainstSchema } from "../src/validate.js";
 
 const request: MediaRequest = {
   schema: "website-design-compiler/media-request/v1",
@@ -17,7 +24,7 @@ const request: MediaRequest = {
   kind: "image",
   modelId: "fixture-model",
   prompt: "A neutral geometric product scene",
-  parameters: { width: 1024, height: 1024, seed: 42 },
+  parameters: { width: 1, height: 1, seed: 42 },
   optimization: { target: "web", maxBytes: 65536 }
 };
 
@@ -84,14 +91,63 @@ function signed() {
   return { request, signature: signMediaRequest(request, secret) };
 }
 
-const admittedExecution = {
-  humanAdmission: "ADMITTED",
-  credentials: "AVAILABLE",
-  budget: "AUTHORIZED",
-  admissionReceiptId: "human-admit:fixture:1",
-  rateLimitRemaining: 2,
-  quotaUnitsRemaining: 2
-} as const;
+const { publicKey: admissionPublicKey, privateKey: admissionPrivateKey } = generateKeyPairSync("ed25519");
+const admissionPublicKeyPem = admissionPublicKey.export({ type: "spki", format: "pem" }).toString();
+const admissionAuthorityKeySha256 = sha256(admissionPublicKey.export({ type: "spki", format: "der" }));
+const admissionAuthorities = [{ authorityId: "fixture-reviewer", publicKeyPem: admissionPublicKeyPem }] as const;
+const validWebp = new Uint8Array(Buffer.from(
+  "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==",
+  "base64"
+));
+
+function admissionFor(
+  admittedPolicy: ProductionProviderPolicy = policy,
+  admittedRights: RepositoryClearanceReceipt = rightsReceipt,
+  admittedRequest: MediaRequest = request,
+  overrides: Partial<ProductionAdmissionPacket> = {}
+): ProductionAdmissionPacket {
+  const packet: ProductionAdmissionPacket = {
+    schema: "website-design-compiler/production-provider-admission/v1",
+    state: "ADMITTED",
+    admissionId: "human-admit:fixture:1",
+    approvedBy: "fixture-reviewer",
+    issuedAt: "2026-08-18T00:00:00.000Z",
+    expiresAt: "2026-08-19T00:00:00.000Z",
+    requestSha256: sha256(canonicalMediaValue(admittedRequest)),
+    providerIdentitySha256: sha256(canonicalMediaValue(admittedPolicy.identity)),
+    modelIdentitySha256: sha256(canonicalMediaValue({
+      modelId: admittedPolicy.identity.modelId,
+      modelRevision: admittedPolicy.identity.modelRevision,
+      kind: admittedPolicy.identity.kind
+    })),
+    policySha256: sha256(canonicalMediaValue(admittedPolicy)),
+    rightsReceiptSha256: sha256(canonicalMediaValue(admittedRights)),
+    credentials: "AVAILABLE",
+    budget: "AUTHORIZED",
+    rateLimitRemaining: 2,
+    quotaUnitsRemaining: 2,
+    authorityKeySha256: admissionAuthorityKeySha256,
+    signatureAlgorithm: "Ed25519",
+    signatureBase64: "PENDING",
+    ...overrides
+  };
+  packet.signatureBase64 = sign(
+    null,
+    Buffer.from(productionAdmissionSigningPayload(packet)),
+    admissionPrivateKey
+  ).toString("base64");
+  return packet;
+}
+
+const admittedExecution = admissionFor();
+
+async function routeProductionMediaGeneration(args: Parameters<typeof routeProvider>[0]) {
+  return routeProvider({
+    ...args,
+    admissionAuthorities: args.admissionAuthorities ?? admissionAuthorities,
+    now: args.now ?? new Date("2026-08-18T12:00:00.000Z")
+  });
+}
 
 test("production provider is not called without explicit human, credential, and budget admission", async () => {
   let calls = 0;
@@ -118,6 +174,59 @@ test("production provider is not called without explicit human, credential, and 
   assert.match(result.receipt.reason, /human admission|credentials|budget/i);
 });
 
+test("durable production admission satisfies its strict schema and exact digest bindings", async () => {
+  const packet = admissionFor();
+  await validateAgainstSchema(packet, "production-provider-admission.schema.json");
+  assert.match(packet.requestSha256, /^[a-f0-9]{64}$/);
+  assert.match(packet.providerIdentitySha256, /^[a-f0-9]{64}$/);
+  assert.match(packet.modelIdentitySha256, /^[a-f0-9]{64}$/);
+  assert.match(packet.policySha256, /^[a-f0-9]{64}$/);
+  assert.match(packet.rightsReceiptSha256, /^[a-f0-9]{64}$/);
+  assert.match(packet.signatureBase64, /^[A-Za-z0-9+/]+=*$/);
+});
+
+test("tampered, expired, or untrusted human admission cannot execute the provider", async () => {
+  let calls = 0;
+  const transport: ProductionProviderTransport = {
+    identity: policy.identity,
+    async generate() {
+      calls += 1;
+      throw new Error("must not execute");
+    }
+  };
+  const tampered = admissionFor();
+  tampered.requestSha256 = "b".repeat(64);
+  const expired = admissionFor(policy, rightsReceipt, request, {
+    expiresAt: "2026-08-18T06:00:00.000Z"
+  });
+  const untrusted = admissionFor();
+
+  const tamperedResult = await routeProductionMediaGeneration({
+    signed: signed(), secret, policy, rightsReceipt, transport,
+    executionAdmission: tampered
+  });
+  const expiredResult = await routeProductionMediaGeneration({
+    signed: signed(), secret, policy, rightsReceipt, transport,
+    executionAdmission: expired
+  });
+  const untrustedResult = await routeProvider({
+    signed: signed(), secret, policy, rightsReceipt, transport,
+    executionAdmission: untrusted,
+    admissionAuthorities: [],
+    now: new Date("2026-08-18T12:00:00.000Z")
+  });
+
+  assert.equal(calls, 0);
+  for (const result of [tamperedResult, expiredResult, untrustedResult]) {
+    assert.equal(result.receipt.overall, "FAIL");
+    assert.equal(result.receipt.admissionState, "DENIED");
+    assert.equal(result.receipt.productionReleaseEligible, false);
+  }
+  assert.match(tamperedResult.receipt.reason, /requestSha256.*does not match/);
+  assert.match(expiredResult.receipt.reason, /expired/);
+  assert.match(untrustedResult.receipt.reason, /authority.*not trusted/);
+});
+
 test("non-ALLOW repository rights fail closed before provider execution", async () => {
   let calls = 0;
   const transport: ProductionProviderTransport = {
@@ -139,7 +248,7 @@ test("non-ALLOW repository rights fail closed before provider execution", async 
 
   const result = await routeProductionMediaGeneration({
     signed: signed(), secret, policy, rightsReceipt: reviewRequired, transport,
-    executionAdmission: admittedExecution
+    executionAdmission: admissionFor(policy, reviewRequired)
   });
 
   assert.equal(calls, 0);
@@ -168,7 +277,7 @@ test("production rights must explicitly record geographic and usage restriction 
 
   const result = await routeProductionMediaGeneration({
     signed: signed(), secret, policy, rightsReceipt: incompleteRights, transport,
-    executionAdmission: admittedExecution
+    executionAdmission: admissionFor(policy, incompleteRights)
   });
 
   assert.equal(calls, 0);
@@ -233,7 +342,7 @@ test("data-driven revocation blocks the exact provider model revision before exe
 
   const result = await routeProductionMediaGeneration({
     signed: signed(), secret, policy: revoked, rightsReceipt, transport,
-    executionAdmission: admittedExecution,
+    executionAdmission: admissionFor(revoked),
     now: new Date("2026-08-18T00:00:01.000Z")
   });
 
@@ -254,7 +363,7 @@ test("successful real-provider receipt binds exact identity and complete artifac
         asset: {
           mediaType: "image/webp",
           extension: "webp",
-          bytes: new TextEncoder().encode("production-fixture")
+          bytes: validWebp
         },
         providerRequestId: "provider-job-fixture-1",
         seed: 42,
@@ -279,7 +388,9 @@ test("successful real-provider receipt binds exact identity and complete artifac
     "service:fixture-provider"
   ]);
   assert.deepEqual(result.receipt.provider, policy.identity);
-  assert.equal(result.receipt.asset?.sha256, "06f4ac560ea7f02b07e7a162b13bc5978aa831a6d42c8cc6db205369ce96804c");
+  assert.equal(result.receipt.asset?.sha256, "05d3010ac1117dad75abd1617997d5d223ec88142422f6f8f123ed899cd434dc");
+  assert.match(result.receipt.admissionEvidence.admissionPacketSha256, /^[a-f0-9]{64}$/);
+  assert.equal(result.receipt.admissionEvidence.admissionAuthorityKeySha256, admissionAuthorityKeySha256);
   assert.equal(result.receipt.provenance?.providerRequestId, "provider-job-fixture-1");
   assert.equal(result.receipt.provenance?.seed, 42);
   assert.equal(result.receipt.provenance?.promptConfigurationSha256, result.receipt.configurationSha256);
@@ -302,7 +413,7 @@ test("transient provider outage retries within the policy bound and records the 
       calls += 1;
       if (attempt === 1) throw new ProductionProviderError("OUTAGE", "fixture provider unavailable");
       return {
-        asset: { mediaType: "image/webp", extension: "webp", bytes: new TextEncoder().encode("production-fixture") },
+        asset: { mediaType: "image/webp", extension: "webp", bytes: validWebp },
         providerRequestId: "provider-job-fixture-retry",
         seed: 42,
         postProcessing: []
@@ -312,7 +423,7 @@ test("transient provider outage retries within the policy bound and records the 
 
   const result = await routeProductionMediaGeneration({
     signed: signed(), secret, policy: retryPolicy, rightsReceipt, transport,
-    executionAdmission: admittedExecution,
+    executionAdmission: admissionFor(retryPolicy),
     sleep: async (milliseconds) => { slept.push(milliseconds); }
   });
 
@@ -373,7 +484,7 @@ test("provider timeout aborts each bounded attempt and fails deterministically",
 
   const result = await routeProductionMediaGeneration({
     signed: signed(), secret, policy: timeoutPolicy, rightsReceipt, transport,
-    executionAdmission: admittedExecution
+    executionAdmission: admissionFor(timeoutPolicy)
   });
 
   assert.equal(calls, 2);
@@ -424,11 +535,11 @@ test("rate-limit and quota exhaustion are deterministic preflight stops", async 
 
   const rateLimited = await routeProductionMediaGeneration({
     signed: signed(), secret, policy, rightsReceipt, transport,
-    executionAdmission: { ...admittedExecution, rateLimitRemaining: 0 }
+    executionAdmission: admissionFor(policy, rightsReceipt, request, { rateLimitRemaining: 0 })
   });
   const quotaExhausted = await routeProductionMediaGeneration({
     signed: signed(), secret, policy, rightsReceipt, transport,
-    executionAdmission: { ...admittedExecution, quotaUnitsRemaining: 0 }
+    executionAdmission: admissionFor(policy, rightsReceipt, request, { quotaUnitsRemaining: 0 })
   });
 
   assert.equal(calls, 0);
@@ -484,11 +595,10 @@ test("retries cannot exceed admitted rate-limit or quota capacity", async () => 
 
   const result = await routeProductionMediaGeneration({
     signed: signed(), secret, policy, rightsReceipt, transport,
-    executionAdmission: {
-      ...admittedExecution,
+    executionAdmission: admissionFor(policy, rightsReceipt, request, {
       rateLimitRemaining: 1,
       quotaUnitsRemaining: 1
-    }
+    })
   });
 
   assert.equal(calls, 1);

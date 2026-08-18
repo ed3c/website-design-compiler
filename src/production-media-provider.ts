@@ -1,6 +1,12 @@
 import type { MediaAdapter, MediaAsset, MediaKind, SignedMediaRequest } from "./media-router.js";
 import { canonicalMediaValue, sha256, verifyMediaRequest } from "./media-router.js";
 import type { RepositoryClearanceReceipt } from "./repository-rights-clearance.js";
+import {
+  productionAdmissionPacketSha256,
+  validateProductionAdmissionPacket,
+  type ProductionAdmissionAuthority,
+  type ProductionAdmissionPacket
+} from "./production-provider-admission.js";
 
 export interface ProductionProviderIdentity {
   providerId: string;
@@ -79,15 +85,6 @@ function providerFailureReason(error: unknown, timeoutMs: number): string {
   return reasons[error.code];
 }
 
-export interface ProductionExecutionAdmission {
-  humanAdmission: "ADMITTED" | "NEEDS_HUMAN_ADMIT";
-  credentials: "AVAILABLE" | "ABSENT";
-  budget: "AUTHORIZED" | "NOT_AUTHORIZED";
-  admissionReceiptId?: string;
-  rateLimitRemaining: number;
-  quotaUnitsRemaining: number;
-}
-
 export interface ProductionProviderReceipt {
   schema: "website-design-compiler/production-provider-receipt/v1";
   gate: "PRODUCTION_PROVIDER";
@@ -102,6 +99,8 @@ export interface ProductionProviderReceipt {
   attempts: number;
   admissionEvidence: {
     humanAdmissionReceiptId: string | "ABSENT";
+    admissionPacketSha256: string | "ABSENT";
+    admissionAuthorityKeySha256: string | "ABSENT";
     repositoryRightsGeneratedAt: string;
     rightsSubjectIds: string[];
     rightsSubjects: Array<{
@@ -294,7 +293,8 @@ export async function routeProductionMediaGeneration(args: {
   policy: ProductionProviderPolicy;
   rightsReceipt: RepositoryClearanceReceipt;
   transport: ProductionProviderTransport;
-  executionAdmission?: ProductionExecutionAdmission;
+  executionAdmission?: ProductionAdmissionPacket;
+  admissionAuthorities?: readonly ProductionAdmissionAuthority[];
   now?: Date;
   sleep?: (milliseconds: number) => Promise<void>;
   cancelled?: () => boolean;
@@ -317,6 +317,15 @@ export async function routeProductionMediaGeneration(args: {
     args.policy.rights.generatedOutput.subjectId,
     args.policy.rights.hostedService.subjectId
   ];
+  const requestSha256 = sha256(canonicalMediaValue(request));
+  const providerIdentitySha256 = sha256(canonicalMediaValue(args.policy.identity));
+  const modelIdentitySha256 = sha256(canonicalMediaValue({
+    modelId: args.policy.identity.modelId,
+    modelRevision: args.policy.identity.modelRevision,
+    kind: args.policy.identity.kind
+  }));
+  const policySha256 = sha256(canonicalMediaValue(args.policy));
+  const rightsReceiptSha256 = sha256(canonicalMediaValue(args.rightsReceipt));
   const base: ProductionProviderReceipt = {
     schema: "website-design-compiler/production-provider-receipt/v1",
     gate: "PRODUCTION_PROVIDER",
@@ -325,13 +334,19 @@ export async function routeProductionMediaGeneration(args: {
     productionReleaseEligible: false,
     requestId: safeReceiptOpaque(request.requestId),
     provider: receiptProvider,
-    requestSha256: sha256(canonicalMediaValue(request)),
+    requestSha256,
     promptSha256: sha256(request.prompt),
     configurationSha256: sha256(canonicalMediaValue({ prompt: request.prompt, parameters: request.parameters })),
     attempts: 0,
     admissionEvidence: {
-      humanAdmissionReceiptId: args.executionAdmission?.admissionReceiptId
-        ? safeReceiptOpaque(args.executionAdmission.admissionReceiptId)
+      humanAdmissionReceiptId: args.executionAdmission?.admissionId
+        ? safeReceiptOpaque(args.executionAdmission.admissionId)
+        : "ABSENT",
+      admissionPacketSha256: args.executionAdmission
+        ? productionAdmissionPacketSha256(args.executionAdmission)
+        : "ABSENT",
+      admissionAuthorityKeySha256: args.executionAdmission && /^[a-f0-9]{64}$/.test(args.executionAdmission.authorityKeySha256)
+        ? args.executionAdmission.authorityKeySha256
         : "ABSENT",
       repositoryRightsGeneratedAt: isIsoTimestamp(args.rightsReceipt.generatedAt)
         ? args.rightsReceipt.generatedAt
@@ -352,8 +367,8 @@ export async function routeProductionMediaGeneration(args: {
             : "ABSENT"
         };
       }),
-      credentials: args.executionAdmission?.credentials ?? "ABSENT",
-      budget: args.executionAdmission?.budget ?? "NOT_AUTHORIZED"
+      credentials: args.executionAdmission?.credentials === "AVAILABLE" ? "AVAILABLE" : "ABSENT",
+      budget: args.executionAdmission?.budget === "AUTHORIZED" ? "AUTHORIZED" : "NOT_AUTHORIZED"
     },
     reason: "production provider requires human admission, available credentials, and authorized budget"
   };
@@ -371,15 +386,30 @@ export async function routeProductionMediaGeneration(args: {
   }
 
   const admission = args.executionAdmission;
-  if (
-    !admission ||
-    admission.humanAdmission !== "ADMITTED" ||
-    !admission.admissionReceiptId ||
-    !isSafeOpaqueId(admission.admissionReceiptId) ||
-    admission.credentials !== "AVAILABLE" ||
-    admission.budget !== "AUTHORIZED"
-  ) {
+  if (!admission) {
     return { receipt: base };
+  }
+  const admissionErrors = validateProductionAdmissionPacket({
+    packet: admission,
+    expected: {
+      requestSha256,
+      providerIdentitySha256,
+      modelIdentitySha256,
+      policySha256,
+      rightsReceiptSha256
+    },
+    authorities: args.admissionAuthorities ?? [],
+    now: args.now ?? new Date()
+  });
+  if (admissionErrors.length > 0) {
+    return {
+      receipt: {
+        ...base,
+        overall: "FAIL",
+        admissionState: "DENIED",
+        reason: `invalid production admission: ${admissionErrors.join("; ")}`
+      }
+    };
   }
 
   if (!verifyMediaRequest(args.signed, args.secret)) {
