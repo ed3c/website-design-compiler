@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
@@ -21,13 +21,14 @@ import {
 
 const git = { sha: "a".repeat(40), ref: "refs/heads/main" };
 const hash = "b".repeat(64);
+const minimalInputSha256 = "c34276f1658079b8444b338b5628f5cdeb168c0c8d510e43acd2f38182a60ce4";
 const states = { check: "PASS" };
 
 function validReceipts(): Record<string, Record<string, unknown>> {
   return {
     runtime: {
       schema: "website-design-compiler/runtime-receipt/v1", overall: "PASS", git,
-      project: "fixture", generatedAt: "2026-08-18T00:00:00.000Z", inputSha256: hash,
+      project: "minimal-showcase", generatedAt: "2026-08-18T00:00:00.000Z", inputSha256: minimalInputSha256,
       runtime: { node: "v22", platform: "darwin", arch: "arm64" },
       stages: [
         { stage: "reference-intelligence", state: "PASS", reason: "executed", artifacts: ["reference-intelligence/reference-manifest.json"] },
@@ -168,7 +169,11 @@ async function writeCoreFixture(root: string): Promise<Record<string, unknown>> 
     const bytes = `${JSON.stringify(receipts[key], null, 2)}\n`;
     await writeFile(path, bytes, "utf8");
     if (key === "runtime") {
-      const rawInput = JSON.parse(await readFile(resolve("fixtures/minimal/compiler-input.json"), "utf8")) as unknown;
+      const inputBytes = await readFile(resolve("fixtures/minimal/compiler-input.json"));
+      const inputPath = join(root, "fixtures/minimal/compiler-input.json");
+      await mkdir(dirname(inputPath), { recursive: true });
+      await writeFile(inputPath, inputBytes);
+      const rawInput = JSON.parse(inputBytes.toString("utf8")) as unknown;
       const input = await validateCompilerInput(rawInput);
       const outputDirectory = dirname(path);
       await writeReferenceIntelligenceArtifacts(input, outputDirectory);
@@ -260,30 +265,92 @@ test("runtime evidence rejects one-byte proof reuse across governed stages", asy
   }
 });
 
+test("runtime evidence binds the governed input and rejects symlinked artifacts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-runtime-symlink-"));
+  const outside = await mkdtemp(join(tmpdir(), "wdc-runtime-outside-"));
+  try {
+    await writeCoreFixture(root);
+    const receiptPath = join(root, RELEASE_CHILD_SPECS.runtime.path);
+    const receipt = JSON.parse(await readFile(receiptPath, "utf8")) as Record<string, unknown>;
+    receipt.inputSha256 = hash;
+    await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    const inputMismatch = await readBoundReleaseEvidence(root, RELEASE_CHILD_SPECS.runtime.path, RELEASE_CHILD_SPECS.runtime.schema, git);
+    assert.equal(inputMismatch.state, "FAIL");
+    assert.match(inputMismatch.errors.join("; "), /inputSha256/);
+
+    receipt.inputSha256 = minimalInputSha256;
+    await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    const canonicalArtifact = join(root, "artifacts/runtime/minimal/frontend-builder/frontend-plan.json");
+    const outsideArtifact = join(outside, "frontend-plan.json");
+    await copyFile(canonicalArtifact, outsideArtifact);
+    await rm(canonicalArtifact);
+    await symlink(outsideArtifact, canonicalArtifact);
+    const symlinked = await readBoundReleaseEvidence(root, RELEASE_CHILD_SPECS.runtime.path, RELEASE_CHILD_SPECS.runtime.schema, git);
+    assert.equal(symlinked.state, "FAIL");
+    assert.match(symlinked.errors.join("; "), /symbolic link|outside/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
 test("premium PASS cannot be promoted without artifact readback", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-premium-artifacts-"));
   try {
     const spec = RELEASE_CAPABILITY_SPECS.premiumQuality;
     const categories = ["b2b-product", "editorial", "premium-consumer-brand", "motion-heavy-creative", "interactive-2d", "interactive-3d"];
-    const evaluations = categories.flatMap((category) => ["mobile", "desktop"].map((viewport) => ({
-      card: { category, viewport, score: 100, originalityAudit: { state: "PASS" } },
-      binding: { gitSha: git.sha, pageGraphSha256: hash, designTokensSha256: hash, screenshotSha256: hash },
-      decision: { overall: "PREMIUM_PASS", evidenceState: "PASS", structuralState: "PASS" },
-      suppliedReferenceAudit: { originalityState: "PASS", observedReferenceCount: 1 }
-    })));
+    const evaluations: Record<string, unknown>[] = [];
+    for (const category of categories) for (const viewport of ["mobile", "desktop"] as const) {
+      const project = viewport === "mobile" ? "mobile-chromium" : "desktop-chromium";
+      const observationPath = `artifacts/generated-pages/observations/${project}--${category}.json`;
+      const screenshotPath = `artifacts/generated-pages/screenshots/${project}--${category}.png`;
+      const observation = {
+        schema: "website-design-compiler/generated-page-visual-observation/v1", category, project,
+        viewport: { width: 1, height: 1 }, nodeCount: 1, sectionKinds: ["navigation"],
+        typography: { families: ["fixture"], headingToBodyRatio: 0, distinctHeadingSizes: 0 },
+        contrast: { minimumRatio: 0, sampleCount: 0 }, rhythm: { averageVerticalGap: 0, distinctBackgrounds: 0, sectionTransitions: 0 },
+        ctaCount: 0, clippedTextCount: 999
+      };
+      const observationBytes = Buffer.from(`${JSON.stringify(observation)}\n`);
+      const screenshotBytes = Buffer.from([1]);
+      await mkdir(dirname(join(root, observationPath)), { recursive: true });
+      await mkdir(dirname(join(root, screenshotPath)), { recursive: true });
+      await writeFile(join(root, observationPath), observationBytes);
+      await writeFile(join(root, screenshotPath), screenshotBytes);
+      evaluations.push({
+        card: { category, viewport, score: 100, originalityAudit: { state: "PASS" } },
+        binding: { schema: "website-design-compiler/design-quality-evidence/v2", category, viewport, gitSha: git.sha, pageGraphSha256: hash, designTokensSha256: hash, screenshotSha256: createHash("sha256").update(screenshotBytes).digest("hex"), graphSignature: "forged", screenshotPath },
+        decision: { overall: "PREMIUM_PASS", evidenceState: "PASS", structuralState: "PASS" },
+        suppliedReferenceAudit: { originalityState: "PASS", observedReferenceCount: 1 },
+        source: {
+          pageGraphPath: `artifacts/v2/design-quality/page-graphs/${category}.json`,
+          generatedPageReceiptPath: "artifacts/generated-pages/generated-page-browser-receipt.json",
+          semanticTokenReceiptPath: "artifacts/v2/semantic-design-tokens/receipt.json",
+          tokenArtifactId: category,
+          tokenPath: `artifacts/v2/semantic-design-tokens/${category}.json`,
+          visualDirectionReceiptPath: "artifacts/v2/visual-direction-search/receipt.json",
+          visualObservationPath: observationPath,
+          visualObservationSha256: createHash("sha256").update(observationBytes).digest("hex")
+        }
+      });
+    }
     const receipt = {
       schema: spec.schema, overall: "PASS", git,
       releaseProfile: { sha256: hash, requiredViewports: ["mobile", "desktop"], premiumQualityThreshold: 78, originalitySimilarityThreshold: 0.82, requireExactEvidenceBinding: true },
       categoryCount: 6, viewportCoverage: { mobile: 6, desktop: 6 }, exactHeadBound: true, allEvidenceBound: true, allStructuralPass: true, allOriginalityPass: true,
       premium: { state: "PASS", evaluations }
     };
+    const profilePath = join(root, "fixtures/v2/release-profiles/premium.json");
+    await mkdir(dirname(profilePath), { recursive: true });
+    await copyFile(resolve("fixtures/v2/release-profiles/premium.json"), profilePath);
     assert.equal(bindReleaseEvidence(receipt, spec.schema, git).state, "FAIL");
     const path = join(root, spec.path);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
     const result = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
     assert.equal(result.state, "FAIL");
-    assert.match(result.errors.join("; "), /artifact readback|source/);
+    assert.match(result.errors.join("; "), /not a PNG browser screenshot/);
+    assert.match(result.errors.join("; "), /card does not match current graph, observation, and profile/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -1,11 +1,22 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
-import { compileCompletePageGraph } from "./complete-page-graph.js";
+import { routeArtDirection } from "./art-direction.js";
+import { compileCompletePageGraph, type CompletePageGraph } from "./complete-page-graph.js";
+import type { CompilerInput } from "./contracts.js";
+import { evaluateDesignQuality, type OriginalitySubject, type QualityViewport, type VisualQualityObservation } from "./design-quality-eval.js";
+import { decidePremiumQuality, type DesignQualityEvidenceBinding, type ExpectedDesignQualityEvidence } from "./design-quality-evidence.js";
+import { buildFrontendPlan } from "./frontend-builder.js";
+import { buildGraphics2DPlan } from "./graphics-2d.js";
+import { buildGraphics3DPlan } from "./graphics-3d.js";
+import { buildMotionDirectorPlan } from "./motion-director.js";
+import { assertPngEvidence } from "./png-evidence.js";
+import { buildReferenceManifest } from "./reference-intelligence.js";
 import { compileAllSectionPageFixtures } from "./section-page-fixtures.js";
+import { validateCompilerInput } from "./validate.js";
 
 export type ReleaseInputState = "PASS" | "FAIL" | "NOT_IMPLEMENTED" | "NOT_EXERCISED" | "ABSENT" | "SKIPPED_BY_POLICY";
 
@@ -641,6 +652,29 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
   const errors: string[] = [];
   if (!Array.isArray(receipt.stages)) return errors;
   const receiptDirectory = dirname(resolve(root, receiptPath));
+  let canonicalReceiptDirectory: string;
+  try { canonicalReceiptDirectory = await realpath(receiptDirectory); }
+  catch { return ["runtime receipt directory is missing or unreadable"]; }
+  const expectedRuntimeArtifactBytes = new Map<string, Buffer>();
+  try {
+    const rawInput = JSON.parse(await readFile(resolve(root, "fixtures/minimal/compiler-input.json"), "utf8")) as unknown;
+    const input: CompilerInput = await validateCompilerInput(rawInput);
+    const inputSha256 = createHash("sha256").update(JSON.stringify(input)).digest("hex");
+    if (receipt.inputSha256 !== inputSha256) errors.push("runtime receipt inputSha256 does not match the governed minimal compiler input");
+    if (receipt.project !== input.project) errors.push("runtime receipt project does not match the governed minimal compiler input");
+    if (!sameMembers(receipt.stages.map((stage) => isRecord(stage) ? String(stage.stage) : ""), input.requestedStages)) errors.push("runtime stages do not match the governed minimal compiler input");
+    const manifest = await buildReferenceManifest(input);
+    const observedReferenceCount = manifest.entries.filter((entry) => entry.captureState === "PASS").length;
+    if (!input.artDirection) throw new Error("governed minimal input lacks art direction");
+    expectedRuntimeArtifactBytes.set("reference-intelligence/reference-manifest.json", Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
+    expectedRuntimeArtifactBytes.set("art-direction/design-read.json", Buffer.from(`${JSON.stringify(routeArtDirection(input, input.artDirection, observedReferenceCount), null, 2)}\n`));
+    expectedRuntimeArtifactBytes.set("frontend-builder/frontend-plan.json", Buffer.from(`${JSON.stringify(buildFrontendPlan(input), null, 2)}\n`));
+    expectedRuntimeArtifactBytes.set("motion-director/motion-plan.json", Buffer.from(`${JSON.stringify(buildMotionDirectorPlan(input), null, 2)}\n`));
+    expectedRuntimeArtifactBytes.set("graphics-2d/graphics-2d-plan.json", Buffer.from(`${JSON.stringify(buildGraphics2DPlan(), null, 2)}\n`));
+    expectedRuntimeArtifactBytes.set("graphics-3d/graphics-3d-plan.json", Buffer.from(`${JSON.stringify(buildGraphics3DPlan(), null, 2)}\n`));
+  } catch {
+    errors.push("governed minimal compiler input is missing or invalid");
+  }
   const observedArtifacts = new Set<string>();
   for (const [stageIndex, stage] of receipt.stages.entries()) {
     if (!isRecord(stage) || stage.state !== "PASS" || !Array.isArray(stage.artifacts)) continue;
@@ -662,8 +696,17 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
       if (observedArtifacts.has(artifact)) errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] reuses an artifact declared by another stage`);
       observedArtifacts.add(artifact);
       try {
-        const bytes = await readFile(absolutePath);
+        const canonicalPath = await realpath(absolutePath);
+        const expectedCanonicalPath = resolve(canonicalReceiptDirectory, artifact);
+        const canonicalTraversal = relative(canonicalReceiptDirectory, canonicalPath);
+        if (canonicalTraversal.split(/[\\/]/)[0] === ".." || isAbsolute(canonicalTraversal) || canonicalPath !== expectedCanonicalPath) {
+          errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] resolves through a symbolic link or outside the runtime directory`);
+          continue;
+        }
+        const bytes = await readFile(canonicalPath);
         if (bytes.length === 0) errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is empty`);
+        const expectedBytes = expectedRuntimeArtifactBytes.get(artifact);
+        if (expectedBytes && !bytes.equals(expectedBytes)) errors.push(`stages[${stageIndex}] canonical artifact does not match current compiler output`);
         if (artifactSpec?.path === artifact && artifactSpec.schema !== null) {
           try {
             const value = JSON.parse(bytes.toString("utf8")) as unknown;
@@ -683,6 +726,9 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
 async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Promise<string[]> {
   if (receipt.overall !== "PASS") return [];
   const errors: string[] = [];
+  let canonicalRoot: string;
+  try { canonicalRoot = await realpath(root); }
+  catch { return ["release workspace is missing or unreadable"]; }
   const readArtifact = async (path: unknown, label: string): Promise<{ bytes: Buffer; value: unknown } | null> => {
     if (typeof path !== "string" || path.length === 0 || isAbsolute(path)) {
       errors.push(`${label} is not a safe relative path`);
@@ -695,7 +741,14 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
       return null;
     }
     try {
-      const bytes = await readFile(absolutePath);
+      const canonicalPath = await realpath(absolutePath);
+      const expectedCanonicalPath = resolve(canonicalRoot, path);
+      const canonicalTraversal = relative(canonicalRoot, canonicalPath);
+      if (canonicalTraversal.split(/[\\/]/)[0] === ".." || isAbsolute(canonicalTraversal) || canonicalPath !== expectedCanonicalPath) {
+        errors.push(`${label} resolves through a symbolic link or outside the workspace`);
+        return null;
+      }
+      const bytes = await readFile(canonicalPath);
       if (bytes.length === 0) {
         errors.push(`${label} is empty`);
         return null;
@@ -714,7 +767,7 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
   const sha256 = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");
   const expectedGraphs = new Map(compileAllSectionPageFixtures().map((page) => {
     const graph = compileCompletePageGraph(page);
-    return [graph.category, Buffer.from(JSON.stringify(graph))] as const;
+    return [graph.category, { graph, bytes: Buffer.from(JSON.stringify(graph)) }] as const;
   }));
   const releaseProfile = isRecord(receipt.releaseProfile) ? receipt.releaseProfile : null;
   const profile = await readArtifact("fixtures/v2/release-profiles/premium.json", "release profile");
@@ -748,10 +801,10 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
 
     const graph = await readArtifact(source.pageGraphPath, `${label}.pageGraph`);
     const graphValue = isRecord(graph?.value) ? graph.value : null;
-    const expectedGraphBytes = typeof card.category === "string" ? expectedGraphs.get(card.category) : undefined;
+    const expectedGraph = typeof card.category === "string" ? expectedGraphs.get(card.category) : undefined;
     if (source.pageGraphPath !== `artifacts/v2/design-quality/page-graphs/${String(card.category)}.json`) errors.push(`${label}.pageGraph path is not canonical`);
     if (graph && sha256(graph.bytes) !== binding.pageGraphSha256) errors.push(`${label}.pageGraph SHA-256 mismatch`);
-    if (!graph || !expectedGraphBytes || !graph.bytes.equals(expectedGraphBytes)) errors.push(`${label}.pageGraph does not match current compiler output`);
+    if (!graph || !expectedGraph || !graph.bytes.equals(expectedGraph.bytes)) errors.push(`${label}.pageGraph does not match current compiler output`);
     if (!graphValue || graphValue.schema !== "website-design-compiler/page-graph/v2" || graphValue.category !== card.category || graphValue.signature !== binding.graphSignature || !Array.isArray(graphValue.nodes) || graphValue.nodes.length < 5) errors.push(`${label}.pageGraph identity is invalid`);
 
     const tokens = await readArtifact(source.tokenPath, `${label}.designTokens`);
@@ -767,6 +820,13 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
     const observationValue = isRecord(observation?.value) ? observation.value : null;
     const expectedProject = card.viewport === "mobile" ? "mobile-chromium" : "desktop-chromium";
     if (!observationValue || observationValue.category !== card.category || observationValue.project !== expectedProject) errors.push(`${label}.visualObservation identity mismatch`);
+    const viewport = isRecord(observationValue?.viewport) ? observationValue.viewport : null;
+    if (screenshot && viewport && typeof viewport.width === "number" && typeof viewport.height === "number") {
+      try { assertPngEvidence(screenshot.bytes, { width: viewport.width, maximumWidth: Math.ceil(viewport.width * 4), minimumHeight: viewport.height, viewport: `${String(card.category)}/${String(card.viewport)}` }); }
+      catch (error) { errors.push(`${label}.screenshot ${error instanceof Error ? error.message : "failed PNG validation"}`); }
+    } else if (screenshot) {
+      errors.push(`${label}.screenshot lacks a bound browser viewport`);
+    }
 
     const generatedEvidence = Array.isArray(generatedReceipt?.evidence) ? generatedReceipt.evidence.find((entry) => isRecord(entry) && entry.category === card.category && entry.project === expectedProject) : null;
     if (!isRecord(generatedEvidence) || `artifacts/generated-pages/${String(generatedEvidence.path)}` !== binding.screenshotPath || generatedEvidence.sha256 !== binding.screenshotSha256 || `artifacts/generated-pages/${String(generatedEvidence.observationPath)}` !== source.visualObservationPath || generatedEvidence.observationSha256 !== source.visualObservationSha256) errors.push(`${label} does not match generated-page browser evidence`);
@@ -774,6 +834,33 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
     if (!isRecord(tokenEntry) || tokenEntry.state !== "PASS") errors.push(`${label} does not match semantic-token evidence`);
     const visualEntry = Array.isArray(visualReceipt?.categories) ? visualReceipt.categories.find((entry) => isRecord(entry) && entry.id === card.category) : null;
     if (!isRecord(visualEntry) || JSON.stringify(visualEntry) !== JSON.stringify(evaluationValue.suppliedReferenceAudit)) errors.push(`${label} does not match visual-direction evidence`);
+
+    if (expectedGraph && observationValue && (card.viewport === "mobile" || card.viewport === "desktop") && releaseProfile && profileValue) {
+      const originalityCorpus: OriginalitySubject[] = [...expectedGraphs.values()]
+        .filter((candidate) => candidate.graph.category !== expectedGraph.graph.category)
+        .map((candidate) => ({ id: candidate.graph.category, signature: candidate.graph.signature }));
+      const recomputedCard = evaluateDesignQuality(
+        expectedGraph.graph as CompletePageGraph,
+        card.viewport as QualityViewport,
+        Number(profileValue.premiumQualityThreshold),
+        [],
+        originalityCorpus,
+        Number(profileValue.originalitySimilarityThreshold),
+        observationValue as unknown as VisualQualityObservation
+      );
+      if (JSON.stringify(recomputedCard) !== JSON.stringify(card)) errors.push(`${label}.card does not match current graph, observation, and profile`);
+      const expectedEvidence: ExpectedDesignQualityEvidence = {
+        category: expectedGraph.graph.category,
+        viewport: card.viewport as QualityViewport,
+        pageGraphSha256: String(binding.pageGraphSha256),
+        designTokensSha256: String(binding.designTokensSha256),
+        screenshotSha256: String(binding.screenshotSha256),
+        gitSha: String(receiptGit?.sha),
+        graphSignature: expectedGraph.graph.signature
+      };
+      const recomputedDecision = decidePremiumQuality(recomputedCard, binding as unknown as DesignQualityEvidenceBinding, expectedEvidence, Number(profileValue.premiumQualityThreshold));
+      if (JSON.stringify(recomputedDecision) !== JSON.stringify(evaluationValue.decision)) errors.push(`${label}.decision does not match recomputed premium evidence`);
+    }
   }
   return errors;
 }
