@@ -1,17 +1,24 @@
 import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { evaluateMediaRuntimeBudget } from "../../src/media-runtime-budget.js";
 import { validateAgainstSchema } from "../../src/validate.js";
+import { exactGitIdentity } from "./evidence-git.js";
 
 const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
 
 test("generated pages execute bounded media strategies and deterministic fallbacks",async({page},testInfo)=>{
   test.skip(testInfo.project.name!=="desktop-chromium","one browser lane owns the aggregate media runtime receipt");
-  type RuntimeMetric={sectionId:string;renderer:string;state:string;budget:{maxBytes:number;maxDpr:number;maxTriangles:number;maxDrawCalls:number};observed:{transferBytes:number;textureCount:number;textureBytes:number;dpr:number;triangles:number;drawCalls:number};withinBudget:boolean};
+  await page.setViewportSize({width:1440,height:500});
+  type RuntimeGate="PASS"|"FAIL";
+  type ResourceTimingObservation={state:"OBSERVED"|"UNSUPPORTED";entryCount:number;initiatorTypes:string[];transferBytes:number};
+  type LazyObservation={priority:string;beforeState:string;initiallyIntersecting:boolean;afterState:string;activation:string;deferred:boolean};
+  type RuntimeMetric={sectionId:string;renderer:string;state:string;budget:{maxBytes:number;maxDpr:number;maxTriangles:number;maxDrawCalls:number};observed:{transferBytes:number;textureCount:number;textureBytes:number;dpr:number;triangles:number;drawCalls:number};resourceTiming:ResourceTimingObservation;lazy:LazyObservation;gates:{resourceTiming:RuntimeGate;bytes:RuntimeGate;dpr:RuntimeGate;triangles:RuntimeGate;drawCalls:RuntimeGate};withinBudget:boolean};
   const observations=[] as Array<{category:string;strategy:string;requestedRenderers:string[];runtimeStates:string[];runtimeMetrics:RuntimeMetric[]}>;
   let providerFallback=true;
   let semanticOwnership=true;
   let observedBudgets=true;
+  let resourceTimingObserved=true;
   let observedDeferredActivation=false;
   for(const category of categories){
     const response=await page.goto(`/benchmarks/${category}`,{waitUntil:"networkidle"});
@@ -27,31 +34,48 @@ test("generated pages execute bounded media strategies and deterministic fallbac
       const stage=stages.nth(index);
       const requested=await stage.getAttribute("data-media-requested-renderer");
       const lazyPriority=await stage.getAttribute("data-media-lazy-priority");
+      const before=await stage.evaluate((element)=>{const rect=element.getBoundingClientRect();return{state:element.getAttribute("data-media-runtime-state")??"PENDING",intersecting:rect.bottom>=0&&rect.top<=window.innerHeight};});
+      if(lazyPriority==="viewport"&&!before.intersecting&&(requested==="pixi"||requested==="three"))await expect(stage).toHaveAttribute("data-media-runtime-state","PENDING");
       if(lazyPriority==="viewport")await stage.scrollIntoViewIfNeeded();
       await expect(stage).toHaveAttribute("data-media-runtime-state",/ACTIVE|DOM_FALLBACK/,{timeout:20_000});
       const activation=await stage.getAttribute("data-media-activation");
-      observedDeferredActivation=observedDeferredActivation||activation==="viewport"||activation==="idle"||activation==="idle-timeout";
+      const afterState=await stage.getAttribute("data-media-runtime-state")??"PENDING";
+      const deferred=lazyPriority==="viewport"&&!before.intersecting&&before.state==="PENDING"&&activation==="viewport"&&afterState==="ACTIVE";
+      observedDeferredActivation=observedDeferredActivation||deferred;
       const budget={maxBytes:Number(await stage.getAttribute("data-media-max-bytes")),maxDpr:Number(await stage.getAttribute("data-media-max-dpr")),maxTriangles:Number(await stage.getAttribute("data-media-max-triangles")),maxDrawCalls:Number(await stage.getAttribute("data-media-max-draw-calls"))};
       semanticOwnership=semanticOwnership&&await stage.locator("xpath=ancestor::*[@data-page-node][1]").locator("[data-governed-section]").count()>=1;
       if(requested==="image"||requested==="video"){
         providerFallback=providerFallback&&(await stage.getAttribute("data-media-provider-state"))==="PROVIDER_NOT_ADMITTED"&&(await stage.getAttribute("data-media-runtime-state"))==="DOM_FALLBACK"&&(await stage.locator("img,video,canvas").count())===0;
       }
-      let observed={transferBytes:0,textureCount:0,textureBytes:0,dpr:0,triangles:0,drawCalls:0};
+      const resourceTiming=await stage.evaluate((element):ResourceTimingObservation=>{
+        if(typeof performance.getEntriesByType!=="function")return{state:"UNSUPPORTED",entryCount:0,initiatorTypes:[],transferBytes:0};
+        const urls=new Set(Array.from(element.querySelectorAll<HTMLImageElement|HTMLVideoElement|HTMLSourceElement>("img,video,source")).flatMap((asset)=>{
+          if(asset instanceof HTMLImageElement)return[asset.currentSrc||asset.src].filter(Boolean);
+          if(asset instanceof HTMLVideoElement)return[asset.currentSrc||asset.src,asset.poster].filter(Boolean).map((value)=>new URL(value,document.baseURI).href);
+          return[asset.src].filter(Boolean).map((value)=>new URL(value,document.baseURI).href);
+        }));
+        const entries=(performance.getEntriesByType("resource") as PerformanceResourceTiming[]).filter((entry)=>urls.has(entry.name));
+        const transferBytes=entries.reduce((sum,entry)=>sum+(entry.transferSize||entry.encodedBodySize||0),0);
+        return{state:"OBSERVED",entryCount:entries.length,initiatorTypes:[...new Set(entries.map((entry)=>entry.initiatorType))].sort(),transferBytes};
+      });
+      let observed={transferBytes:resourceTiming.transferBytes,textureCount:0,textureBytes:0,dpr:0,triangles:0,drawCalls:0};
       if(requested==="pixi"&&(await stage.getAttribute("data-media-runtime-state"))==="ACTIVE"){
         const pixi=stage.locator("[data-graphics-state]");
         await expect(pixi).toHaveAttribute("data-graphics-state","ready",{timeout:20_000});
         await expect(pixi).not.toHaveAttribute("data-runtime-draw-calls","NOT_EXERCISED");
-        observed={transferBytes:0,textureCount:0,textureBytes:Number(await pixi.getAttribute("data-runtime-texture-bytes")),dpr:Number(await pixi.getAttribute("data-resolution")),triangles:0,drawCalls:Number(await pixi.getAttribute("data-runtime-draw-calls"))};
+        observed={...observed,textureBytes:Number(await pixi.getAttribute("data-runtime-texture-bytes")),dpr:Number(await pixi.getAttribute("data-resolution")),drawCalls:Number(await pixi.getAttribute("data-runtime-draw-calls"))};
       }
       if(requested==="three"&&(await stage.getAttribute("data-media-runtime-state"))==="ACTIVE"){
         const three=stage.locator("[data-graphics3d-state]");
         await expect(three).toHaveAttribute("data-graphics3d-state","ready",{timeout:20_000});
         await expect(three).not.toHaveAttribute("data-graphics3d-draw-calls","NOT_EXERCISED",{timeout:20_000});
-        observed={transferBytes:0,textureCount:Number(await three.getAttribute("data-graphics3d-texture-count")),textureBytes:Number(await three.getAttribute("data-graphics3d-texture-bytes")),dpr:Number(await three.getAttribute("data-graphics3d-dpr")),triangles:Number(await three.getAttribute("data-graphics3d-triangles")),drawCalls:Number(await three.getAttribute("data-graphics3d-draw-calls"))};
+        observed={...observed,textureCount:Number(await three.getAttribute("data-graphics3d-texture-count")),textureBytes:Number(await three.getAttribute("data-graphics3d-texture-bytes")),dpr:Number(await three.getAttribute("data-graphics3d-dpr")),triangles:Number(await three.getAttribute("data-graphics3d-triangles")),drawCalls:Number(await three.getAttribute("data-graphics3d-draw-calls"))};
       }
-      const withinBudget=Object.values(observed).every(Number.isFinite)&&observed.transferBytes+observed.textureBytes<=budget.maxBytes&&observed.dpr<=budget.maxDpr&&observed.triangles<=budget.maxTriangles&&observed.drawCalls<=budget.maxDrawCalls;
+      const evaluation=evaluateMediaRuntimeBudget(budget,{...observed,resourceTimingObserved:resourceTiming.state==="OBSERVED"});
+      const withinBudget=evaluation.overall==="PASS";
       observedBudgets=observedBudgets&&withinBudget;
-      runtimeMetrics.push({sectionId:await stage.getAttribute("data-orchestrated-media")??"missing",renderer:requested??"missing",state:await stage.getAttribute("data-media-runtime-state")??"PENDING",budget,observed,withinBudget});
+      resourceTimingObserved=resourceTimingObserved&&evaluation.gates.resourceTiming==="PASS";
+      runtimeMetrics.push({sectionId:await stage.getAttribute("data-orchestrated-media")??"missing",renderer:requested??"missing",state:afterState,budget,observed,resourceTiming,lazy:{priority:lazyPriority??"missing",beforeState:before.state,initiallyIntersecting:before.intersecting,afterState,activation:activation??"missing",deferred},gates:evaluation.gates,withinBudget});
     }
     observations.push({category,strategy,requestedRenderers,runtimeStates:await stages.evaluateAll((entries)=>entries.map((entry)=>entry.getAttribute("data-media-runtime-state")??"PENDING")),runtimeMetrics});
   }
@@ -86,11 +110,12 @@ test("generated pages execute bounded media strategies and deterministic fallbac
     threeRuntime:threeRuntime?"PASS" as const:"FAIL" as const,
     forcedFailureFallback:forced2dPass&&forced3dPass?"PASS" as const:"FAIL" as const,
     lazyLoading:lazyLoading?"PASS" as const:"FAIL" as const,
+    resourceTiming:resourceTimingObserved?"PASS" as const:"FAIL" as const,
     observedBudgets:observedBudgets?"PASS" as const:"FAIL" as const,
     semanticOwnership:semanticOwnership?"PASS" as const:"FAIL" as const
   };
   const overall=Object.values(gates).every((state)=>state==="PASS")?"PASS" as const:"FAIL" as const;
-  const receipt={schema:"website-design-compiler/media-orchestration-browser-receipt/v2",overall,git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"},categories:observations,gates};
+  const receipt={schema:"website-design-compiler/media-orchestration-browser-receipt/v2",overall,git:exactGitIdentity(),categories:observations,gates};
   await validateAgainstSchema(receipt,"media-orchestration-browser-receipt.schema.json");
   const outputDirectory=join(process.cwd(),"artifacts","media-orchestration");
   await mkdir(outputDirectory,{recursive:true});

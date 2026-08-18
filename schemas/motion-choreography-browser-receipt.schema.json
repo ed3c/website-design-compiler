@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/motion-choreography-browser-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "git", "categories", "gates"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/motion-choreography-browser-receipt/v2" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "git": { "$ref": "#/$defs/git" },
+    "categories": {
+      "type": "array", "minItems": 6, "maxItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["category", "budget", "observed", "animatedProperties", "gates", "overall"],
+        "properties": {
+          "category": { "type": "string", "minLength": 1 },
+          "budget": { "$ref": "#/$defs/budget" },
+          "observed": { "$ref": "#/$defs/observed" },
+          "animatedProperties": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "gates": { "$ref": "#/$defs/runtimeGates" },
+          "overall": { "enum": ["PASS", "FAIL"] }
+        }
+      }
+    },
+    "gates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["coherence", "reducedMotionFallback", "primaryInteractionUnblocked"],
+      "properties": {
+        "coherence": { "enum": ["PASS", "FAIL"] },
+        "reducedMotionFallback": { "enum": ["PASS", "FAIL"] },
+        "primaryInteractionUnblocked": { "enum": ["PASS", "FAIL"] }
+      }
+    }
+  },
+  "$defs": {
+    "git": {
+      "type": "object", "additionalProperties": false, "required": ["sha", "tree", "ref"],
+      "properties": {
+        "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "tree": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "ref": { "type": "string", "pattern": "^refs/[A-Za-z0-9._/-]+$" }
+      }
+    },
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxConcurrent", "maxEffectMs", "maxTotalMs", "maxLongTaskMs", "maxLayoutShift", "layoutPropertiesAllowed"],
+      "properties": {
+        "maxConcurrent": { "type": "number", "minimum": 0 }, "maxEffectMs": { "type": "number", "minimum": 0 }, "maxTotalMs": { "type": "number", "minimum": 0 },
+        "maxLongTaskMs": { "type": "number", "minimum": 0 }, "maxLayoutShift": { "type": "number", "minimum": 0 }, "layoutPropertiesAllowed": { "const": false }
+      }
+    },
+    "observed": {
+      "type": "object", "additionalProperties": false,
+      "required": ["activeEffects", "peakConcurrent", "mountedEffects", "routeListeners", "intersectionObservers", "styleObservers", "activeTimelines", "routeCleanupCount", "unmountCleanupCount", "plannedTotalMs", "maxPlannedEffectMs", "layoutPropertiesAnimated", "maxLongTaskMs", "layoutShift", "longTaskObserverSupported", "layoutShiftObserverSupported", "expectedEffectCount"],
+      "properties": {
+        "activeEffects": { "type": "integer", "minimum": 0 }, "peakConcurrent": { "type": "integer", "minimum": 0 }, "mountedEffects": { "type": "integer", "minimum": 0 },
+        "routeListeners": { "type": "integer", "minimum": 0 }, "intersectionObservers": { "type": "integer", "minimum": 0 }, "styleObservers": { "type": "integer", "minimum": 0 }, "activeTimelines": { "type": "integer", "minimum": 0 },
+        "routeCleanupCount": { "type": "integer", "minimum": 0 }, "unmountCleanupCount": { "type": "integer", "minimum": 0 }, "plannedTotalMs": { "type": "number", "minimum": 0 }, "maxPlannedEffectMs": { "type": "number", "minimum": 0 },
+        "layoutPropertiesAnimated": { "type": "boolean" },
+        "maxLongTaskMs": { "type": "number", "minimum": 0 }, "layoutShift": { "type": "number", "minimum": 0 }, "longTaskObserverSupported": { "type": "boolean" }, "layoutShiftObserverSupported": { "type": "boolean" }, "expectedEffectCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "runtimeGates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["concurrencyBudget", "effectDurationBudget", "totalDurationBudget", "longTaskBudget", "layoutBudget", "routeChangeCleanup", "unmountCleanup", "listenerCardinality", "observerCardinality", "timelineCardinality"],
+      "properties": {
+        "concurrencyBudget": { "enum": ["PASS", "FAIL"] }, "effectDurationBudget": { "enum": ["PASS", "FAIL"] }, "totalDurationBudget": { "enum": ["PASS", "FAIL"] },
+        "longTaskBudget": { "enum": ["PASS", "FAIL"] }, "layoutBudget": { "enum": ["PASS", "FAIL"] }, "routeChangeCleanup": { "enum": ["PASS", "FAIL"] }, "unmountCleanup": { "enum": ["PASS", "FAIL"] },
+        "listenerCardinality": { "enum": ["PASS", "FAIL"] }, "observerCardinality": { "enum": ["PASS", "FAIL"] }, "timelineCardinality": { "enum": ["PASS", "FAIL"] }
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 import { gsap } from "gsap";
 import { motion, useAnimationControls } from "motion/react";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { GovernedSection } from "./governed-section";
 import { MediaOrchestrationStage } from "./media-orchestration-stage";
 import type { ProjectedNode } from "./generated-page";
@@ -11,7 +11,11 @@ type ViewportName="mobile"|"tablet"|"desktop";
 type MotionRuntimeState="PENDING"|"ACTIVE"|"SETTLED"|"VISIBLE_NO_MOTION"|"CLEANED";
 
 type RuntimeWindow=typeof window&{
-  __wdcGeneratedMotion?:{active:number;peak:number;layoutPropertiesAnimated:boolean};
+  __wdcGeneratedMotion?:{
+    active:number;peak:number;mountedEffects:number;routeListeners:number;intersectionObservers:number;styleObservers:number;activeTimelines:number;
+    routeCleanupCount:number;unmountCleanupCount:number;plannedTotalMs:number;maxPlannedEffectMs:number;
+    layoutPropertiesAnimated:boolean;animatedProperties:string[];registeredEffectIds:string[];
+  };
 };
 
 const MAX_CONCURRENT=3;
@@ -20,8 +24,23 @@ let activeEffects=0;
 
 function motionMetrics(){
   const runtimeWindow=window as RuntimeWindow;
-  runtimeWindow.__wdcGeneratedMotion??={active:0,peak:0,layoutPropertiesAnimated:false};
+  runtimeWindow.__wdcGeneratedMotion??={active:0,peak:0,mountedEffects:0,routeListeners:0,intersectionObservers:0,styleObservers:0,activeTimelines:0,routeCleanupCount:0,unmountCleanupCount:0,plannedTotalMs:0,maxPlannedEffectMs:0,layoutPropertiesAnimated:false,animatedProperties:[],registeredEffectIds:[]};
   return runtimeWindow.__wdcGeneratedMotion;
+}
+
+const COMPOSITOR_STYLE_PROPERTIES=new Set(["opacity","transform","translate","scale","rotate","will-change","transform-origin"]);
+function styleMap(value:string|null):Map<string,string>{const probe=document.createElement("div");if(value)probe.setAttribute("style",value);return new Map(Array.from(probe.style).map((property)=>[property,probe.style.getPropertyValue(property)]));}
+function recordStyleMutations(element:HTMLElement,records:MutationRecord[]):void{
+  const metrics=motionMetrics();
+  for(const record of records){
+    const previous=styleMap(record.oldValue);
+    const current=styleMap(element.getAttribute("style"));
+    for(const property of new Set([...previous.keys(),...current.keys()])){
+      if(previous.get(property)===current.get(property))continue;
+      if(!metrics.animatedProperties.includes(property))metrics.animatedProperties.push(property);
+      if(!property.startsWith("--")&&!COMPOSITOR_STYLE_PROPERTIES.has(property))metrics.layoutPropertiesAnimated=true;
+    }
+  }
 }
 
 async function acquireMotionSlot(signal:AbortSignal):Promise<()=>void>{
@@ -84,43 +103,92 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     return()=>{for(const query of queries)query.removeEventListener("change",update);};
   },[]);
 
-  const settle=useCallback(()=>{
-    controls.set({opacity:1,transform:"none"});
-    setRuntimeState("CLEANED");
-    setCleanupObserved(true);
-  },[controls]);
-
   useEffect(()=>{
     const element=hostRef.current;
     if(!element)return;
+    const metrics=motionMetrics();
+    metrics.mountedEffects+=1;
+    if(!metrics.registeredEffectIds.includes(node.motionHook.engine+":"+node.id)){
+      metrics.registeredEffectIds.push(node.motionHook.engine+":"+node.id);
+      metrics.plannedTotalMs+=node.motionHook.durationMs+node.motionHook.delayMs;
+      metrics.maxPlannedEffectMs=Math.max(metrics.maxPlannedEffectMs,node.motionHook.durationMs);
+    }
     const controller=new AbortController();
     let release:undefined|(()=>void);
     let context:gsap.Context|undefined;
     let intersection:IntersectionObserver|undefined;
+    let styleObserver:MutationObserver|undefined;
+    let routeListenerRegistered=false;
+    let intersectionRegistered=false;
+    let styleObserverRegistered=false;
+    let timelineRegistered=false;
+    let resourcesCleaned=false;
+    let routeCleanupRecorded=false;
+    let unmountCleanupRecorded=false;
     const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const coarse=window.matchMedia("(pointer: coarse)").matches;
     element.dataset.reducedMotion=String(reduced);
     element.dataset.coarsePointer=String(coarse);
 
-    const cleanup=()=>{
-      controller.abort();
+    const removeRouteListener=()=>{
+      if(!routeListenerRegistered)return;
+      window.removeEventListener("wdc:generated-motion:route-change",onRouteChange);
+      routeListenerRegistered=false;
+      metrics.routeListeners=Math.max(0,metrics.routeListeners-1);
+    };
+    const disconnectIntersection=()=>{
+      if(!intersectionRegistered)return;
       intersection?.disconnect();
+      intersectionRegistered=false;
+      metrics.intersectionObservers=Math.max(0,metrics.intersectionObservers-1);
+    };
+    const disconnectStyleObserver=()=>{
+      if(!styleObserverRegistered)return;
+      styleObserver?.disconnect();
+      styleObserverRegistered=false;
+      metrics.styleObservers=Math.max(0,metrics.styleObservers-1);
+    };
+    const releaseTimeline=()=>{
+      if(!timelineRegistered)return;
+      timelineRegistered=false;
+      metrics.activeTimelines=Math.max(0,metrics.activeTimelines-1);
+    };
+    const cleanupResources=(reason:"route-change"|"unmount")=>{
+      if(reason==="route-change"&&!routeCleanupRecorded){routeCleanupRecorded=true;metrics.routeCleanupCount+=1;}
+      if(reason==="unmount"&&!unmountCleanupRecorded){unmountCleanupRecorded=true;metrics.unmountCleanupCount+=1;metrics.mountedEffects=Math.max(0,metrics.mountedEffects-1);}
+      if(resourcesCleaned)return;
+      resourcesCleaned=true;
+      controller.abort();
+      controls.stop();
+      disconnectIntersection();
+      disconnectStyleObserver();
       context?.revert();
+      releaseTimeline();
       release?.();
       release=undefined;
       element.style.opacity="1";
       element.style.transform="none";
-      setRuntimeState("CLEANED");
-      setCleanupObserved(true);
+      if(reason==="route-change"){
+        setRuntimeState("CLEANED");
+        setCleanupObserved(true);
+      }
     };
-    window.addEventListener("wdc:generated-motion:route-change",cleanup);
+    const onRouteChange=()=>{removeRouteListener();cleanupResources("route-change");};
+    window.addEventListener("wdc:generated-motion:route-change",onRouteChange);
+    routeListenerRegistered=true;
+    metrics.routeListeners+=1;
 
     if(reduced||node.motionHook.engine==="none"||(coarse&&node.motionHook.mobile==="disabled")){
       element.style.opacity="1";
       element.style.transform="none";
       setRuntimeState("VISIBLE_NO_MOTION");
-      return()=>{window.removeEventListener("wdc:generated-motion:route-change",cleanup);cleanup();};
+      return()=>{removeRouteListener();cleanupResources("unmount");};
     }
+
+    styleObserver=new MutationObserver((records)=>recordStyleMutations(element,records));
+    styleObserver.observe(element,{attributes:true,attributeFilter:["style"],attributeOldValue:true});
+    styleObserverRegistered=true;
+    metrics.styleObservers+=1;
 
     const run=async()=>{
       release=await acquireMotionSlot(controller.signal);
@@ -130,9 +198,11 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
         controls.set({opacity:0.72,y:coarse?4:10});
         await controls.start({opacity:1,y:0,transition:{duration:node.motionHook.durationMs/1000,delay:node.motionHook.delayMs/1000,ease:[0.22,1,0.36,1]}});
       }else{
+        timelineRegistered=true;
+        metrics.activeTimelines+=1;
         context=gsap.context(()=>{
           gsap.fromTo(element,{opacity:0.78,y:coarse?4:12},{opacity:1,y:0,duration:node.motionHook.durationMs/1000,delay:node.motionHook.delayMs/1000,ease:"power2.out",overwrite:"auto",onComplete:()=>{
-            release?.();release=undefined;setRuntimeState("SETTLED");
+            release?.();release=undefined;releaseTimeline();setRuntimeState("SETTLED");
           }});
         },element);
         return;
@@ -142,10 +212,12 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     };
     const start=()=>void run().catch((error:unknown)=>{if(!(error instanceof DOMException&&error.name==="AbortError"))throw error;});
     if(node.motionHook.trigger==="scroll-progress"&&"IntersectionObserver" in window){
-      intersection=new IntersectionObserver((entries)=>{if(entries.some((entry)=>entry.isIntersecting)){intersection?.disconnect();start();}},{rootMargin:"120px"});
+      intersection=new IntersectionObserver((entries)=>{if(entries.some((entry)=>entry.isIntersecting)){disconnectIntersection();start();}},{rootMargin:"120px"});
       intersection.observe(element);
+      intersectionRegistered=true;
+      metrics.intersectionObservers+=1;
     }else start();
-    return()=>{window.removeEventListener("wdc:generated-motion:route-change",cleanup);cleanup();};
+    return()=>{removeRouteListener();cleanupResources("unmount");};
   },[controls,node.motionHook]);
 
   const styles={

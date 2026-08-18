@@ -201,7 +201,10 @@ const metricEvidence = {
   sharedBindings: ["artifacts/runtime/shared-binding-receipt.json"],
   responsiveCompositionQuality:["artifacts/v2/responsive-composition/receipt.json","artifacts/generated-pages/generated-page-browser-receipt.json"],
   motionChoreographyQuality:["artifacts/v2/motion-choreography/receipt.json","artifacts/motion-choreography/browser-runtime-receipt.json"],
+  motionCoherence:["artifacts/v2/motion-choreography/receipt.json","artifacts/motion-choreography/browser-runtime-receipt.json"],
+  motionAccessibility:["artifacts/v2/motion-choreography/receipt.json","artifacts/motion-choreography/browser-runtime-receipt.json"],
   mediaStrategyFit:["artifacts/v2/media-orchestration/receipt.json","artifacts/media-orchestration/browser-runtime-receipt.json"],
+  mediaNecessity:["artifacts/v2/media-orchestration/receipt.json","artifacts/media-orchestration/browser-runtime-receipt.json"],
   designQualityPremium:["artifacts/v2/design-quality/design-quality-eval-receipt.json"]
 };
 
@@ -238,7 +241,9 @@ const receipt = {
   scopeNotes: {
     benchmarkProvenanceCompleteness: "PASS applies to the deterministic Arena provenance fixture only; repository-wide rights clearance remains outside this claim.",
     keyboardCompletion: "The browser runtime test contract explicitly exercises Tab focus followed by the primary button action; project PASS plus retained Playwright report/trace is the runtime evidence boundary.",
-    mediaStrategyFit: "The Arena metric requires both the compiler strategy receipt and a separate browser receipt proving lazy activation, bounded Pixi/Three execution, provider fallback and forced media-off behavior."
+    motionChoreography: "Coherence and accessibility are scored independently; generic browser PASS cannot substitute for either scoped gate set.",
+    mediaStrategyFit: "Fit requires strategy diversity plus observed lazy, Resource Timing, budget and fallback evidence; it is independent from necessity.",
+    mediaNecessity: "Necessity requires deliberate no-media coverage and semantic DOM ownership rather than rewarding maximal rich-media use."
   }
 };
 

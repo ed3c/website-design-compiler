@@ -5,7 +5,7 @@ if(!Number.isInteger(browserPort)||browserPort<1024||browserPort>65535)throw new
 
 export default defineConfig({
   testDir:"./tests/browser",
-  testMatch:["runtime.spec.ts","media-orchestration.spec.ts","webgpu.spec.ts"],
+  testMatch:["runtime.spec.ts","motion-choreography.spec.ts","media-orchestration.spec.ts","webgpu.spec.ts"],
   workers:1,
   outputDir:"artifacts/browser-qa/test-results-runtime",
   reporter:[["json",{outputFile:"artifacts/browser-qa/playwright-runtime-report.json"}],["line"]],

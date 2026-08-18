@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { GovernedSectionKind } from "./governed-section";
 import type { ProjectedMediaHook } from "./media-orchestration-stage";
 import { GeneratedSectionStage } from "./generated-section-stage";
@@ -21,7 +24,13 @@ export type ProjectedPageGraph={
 };
 
 export function GeneratedPage({graph}: {graph:ProjectedPageGraph}){
-  return <main className="wdc-shell" data-generated-page={graph.category} data-page-readiness={graph.readiness} data-graph-signature={graph.signature}>
-    {graph.nodes.map((node)=><GeneratedSectionStage key={node.id} node={node}/>)}
+  const [mounted,setMounted]=useState(true);
+  useEffect(()=>{
+    const unmount=()=>setMounted(false);
+    window.addEventListener("wdc:generated-page:unmount",unmount);
+    return()=>window.removeEventListener("wdc:generated-page:unmount",unmount);
+  },[]);
+  return <main className="wdc-shell" data-generated-page={graph.category} data-page-mounted={String(mounted)} data-page-readiness={graph.readiness} data-graph-signature={graph.signature}>
+    {mounted?graph.nodes.map((node)=><GeneratedSectionStage key={node.id} node={node}/>):null}
   </main>;
 }

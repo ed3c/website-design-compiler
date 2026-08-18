@@ -5,7 +5,7 @@ import { compileResponsiveSectionPolicy } from "./responsive-composition";
 export type MotionPurpose="orient"|"reveal-causality"|"confirm-action"|"spatial-continuity"|"emphasize-hierarchy"|"express-brand";
 export type MotionEngine="motion"|"gsap"|"none";
 export interface ChoreographyEffect { id:string; sectionId:string; kind:SectionKind; purpose:MotionPurpose; target:"section"|"content"|"media"|"interaction"; trigger:"enter"|"interaction"|"scroll-progress"|"route-change"; engine:MotionEngine; durationMs:number; delayMs:number; easing:string; interruption:"cancel-and-settle"|"resume-safe"; mobile:"full"|"simplified"|"disabled"; reducedMotion:"instant"|"disabled"; blocksPrimaryInteraction:false; layoutProperties:false; fallback:"static-visible"|"instant-state"; cleanup:"on-unmount-and-route-change"; }
-export interface MotionChoreographyPlan { schema:"website-design-compiler/motion-choreography/v2"; category:string; effects:ChoreographyEffect[]; budget:{maxConcurrent:3;maxEffectMs:700;maxTotalMs:number;layoutPropertiesAllowed:false}; totalDurationMs:number; scrollLinkedCount:number; engineRouting:{motion:number;gsap:number;none:number}; }
+export interface MotionChoreographyPlan { schema:"website-design-compiler/motion-choreography/v2"; category:string; effects:ChoreographyEffect[]; budget:{maxConcurrent:3;maxEffectMs:700;maxTotalMs:number;maxLongTaskMs:50;maxLayoutShift:0;layoutPropertiesAllowed:false}; totalDurationMs:number; scrollLinkedCount:number; engineRouting:{motion:number;gsap:number;none:number}; }
 
 function purposeFor(kind:SectionKind):MotionPurpose{
   if(kind==="navigation"||kind==="footer")return"orient";
@@ -28,7 +28,7 @@ export function compileMotionChoreography(page:SectionPageSource):MotionChoreogr
   });
   const totalDurationMs=effects.reduce((sum,effect)=>sum+effect.durationMs+effect.delayMs,0);
   const engineRouting={motion:effects.filter((e)=>e.engine==="motion").length,gsap:effects.filter((e)=>e.engine==="gsap").length,none:effects.filter((e)=>e.engine==="none").length};
-  return{schema:"website-design-compiler/motion-choreography/v2",category:page.category,effects,budget:{maxConcurrent:3,maxEffectMs:700,maxTotalMs:Math.max(4000,effects.length*900),layoutPropertiesAllowed:false},totalDurationMs,scrollLinkedCount:effects.filter((e)=>e.trigger==="scroll-progress").length,engineRouting};
+  return{schema:"website-design-compiler/motion-choreography/v2",category:page.category,effects,budget:{maxConcurrent:3,maxEffectMs:700,maxTotalMs:Math.max(4000,effects.length*900),maxLongTaskMs:50,maxLayoutShift:0,layoutPropertiesAllowed:false},totalDurationMs,scrollLinkedCount:effects.filter((e)=>e.trigger==="scroll-progress").length,engineRouting};
 }
 export function validateMotionChoreography(plan:MotionChoreographyPlan):string[]{
   const errors:string[]=[];

@@ -24,8 +24,8 @@
       }
     },
     "budget": {
-      "type": "object", "additionalProperties": false, "required": ["maxConcurrent", "maxEffectMs", "maxTotalMs", "layoutPropertiesAllowed"],
-      "properties": { "maxConcurrent": { "const": 3 }, "maxEffectMs": { "const": 700 }, "maxTotalMs": { "type": "integer", "minimum": 1 }, "layoutPropertiesAllowed": { "const": false } }
+      "type": "object", "additionalProperties": false, "required": ["maxConcurrent", "maxEffectMs", "maxTotalMs", "maxLongTaskMs", "maxLayoutShift", "layoutPropertiesAllowed"],
+      "properties": { "maxConcurrent": { "const": 3 }, "maxEffectMs": { "const": 700 }, "maxTotalMs": { "type": "integer", "minimum": 1 }, "maxLongTaskMs": { "const": 50 }, "maxLayoutShift": { "const": 0 }, "layoutPropertiesAllowed": { "const": false } }
     },
     "totalDurationMs": { "type": "integer", "minimum": 0 }, "scrollLinkedCount": { "type": "integer", "minimum": 0 },
     "engineRouting": { "type": "object", "additionalProperties": false, "required": ["motion", "gsap", "none"], "properties": { "motion": { "type": "integer", "minimum": 0 }, "gsap": { "type": "integer", "minimum": 0 }, "none": { "type": "integer", "minimum": 0 } } }
