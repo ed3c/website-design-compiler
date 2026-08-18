@@ -12,6 +12,8 @@ test("injected transport exercises controls but cannot impersonate live PASS",as
   const receipt=await verifyLiveReferences(admit,injected);
   assert.equal(receipt.overall,"NOT_EXERCISED");
   assert.ok(receipt.targets.every((target)=>target.state==="PASS"));
+  assert.deepEqual(receipt.targets[0]?.facts,["document title: Evidence","h1 headings: Observed","main elements: 1"]);
+  assert.equal(receipt.targets[0]?.facts.includes("live reference capture failed"),false);
   assert.match(receipt.promotionBlockedReason??"",/cannot promote live capability/);
   await validateAgainstSchema({...receipt,git:{sha:"a".repeat(40),ref:"refs/heads/test"}},"live-reference-receipt.schema.json");
 });

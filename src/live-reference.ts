@@ -67,7 +67,7 @@ function safeUrl(value:string):URL{
   return url;
 }
 function safeReason(error:unknown):string{
-  const message=error instanceof Error?error.message:"live reference capture failed";
+  const message=typeof error==="string"?error:error instanceof Error?error.message:"live reference capture failed";
   return message.replace(/https?:\/\/\S+/gi,"[redacted-url]").replace(/\/(?:Users|private|home|tmp)\/\S+/g,"[redacted-path]").replace(/(?:token|secret|password|cookie|authorization)\s*[=:]\s*\S+/gi,"[redacted-credential]").slice(0,300);
 }
 export function assertPublicLiveReceipt(receipt:LiveReferenceReceipt):void{
