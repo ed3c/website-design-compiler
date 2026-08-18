@@ -11,7 +11,7 @@
     "requestBinding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["requestId", "kind", "modelId", "requestSha256", "promptSha256", "configurationSha256", "parameters", "optimization"],
+      "required": ["requestId", "kind", "modelId", "requestSha256", "promptSha256", "configurationSha256", "assetValidation"],
       "properties": {
         "requestId": { "$ref": "#/$defs/opaqueId" },
         "kind": { "$ref": "#/$defs/kind" },
@@ -19,18 +19,14 @@
         "requestSha256": { "$ref": "#/$defs/sha256" },
         "promptSha256": { "$ref": "#/$defs/sha256" },
         "configurationSha256": { "$ref": "#/$defs/sha256" },
-        "parameters": {
-          "type": "object",
-          "maxProperties": 64,
-          "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$" },
-          "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
-        },
-        "optimization": {
+        "assetValidation": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["target", "maxBytes"],
+          "required": ["width", "height", "seedSha256", "maxBytes"],
           "properties": {
-            "target": { "const": "web" },
+            "width": { "oneOf": [{ "type": "integer", "minimum": 1, "maximum": 16384 }, { "type": "null" }] },
+            "height": { "oneOf": [{ "type": "integer", "minimum": 1, "maximum": 16384 }, { "type": "null" }] },
+            "seedSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
             "maxBytes": { "type": "integer", "minimum": 1, "maximum": 33554432 }
           }
         }

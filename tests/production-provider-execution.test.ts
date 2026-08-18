@@ -25,7 +25,7 @@ const request: MediaRequest = {
   kind: "image",
   modelId: "fixture-model",
   prompt: "A neutral geometric product scene",
-  parameters: { width: 16, height: 12, seed: 42 },
+  parameters: { width: 16, height: 12, seed: 42, privateNote: "do-not-persist" },
   optimization: { target: "web", maxBytes: 65_536 }
 };
 const policy: ProductionProviderPolicy = {
@@ -144,6 +144,7 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
   assert.match(result.status.executionReceiptSha256, /^[a-f0-9]{64}$/);
   assert.equal(result.status.assetSha256, result.receipt.asset?.sha256);
   assert.doesNotMatch(JSON.stringify(result.status), /fixture-provider-token|fixture-request-secret/);
+  assert.doesNotMatch(JSON.stringify(result.executionEvidence), /do-not-persist|privateNote|neutral geometric product scene/i);
   const executionInputBytes=serializeProductionProviderExecutionEvidence(result.executionEvidence);
   assert.equal(result.receipt.executionInputSha256,sha256(executionInputBytes));
   assert.deepEqual(validateProductionProviderExecutionEvidence(result.executionEvidence,rightsReceipt),[]);

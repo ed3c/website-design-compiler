@@ -39,8 +39,12 @@ export interface ProductionProviderExecutionEvidence {
     requestSha256: string;
     promptSha256: string;
     configurationSha256: string;
-    parameters: SignedMediaRequest["request"]["parameters"];
-    optimization: SignedMediaRequest["request"]["optimization"];
+    assetValidation: {
+      width: number | null;
+      height: number | null;
+      seedSha256: string | "ABSENT";
+      maxBytes: number;
+    };
   };
   policy: ProductionProviderPolicy;
   adapter: HttpProductionProviderAdapterConfig;
@@ -88,8 +92,12 @@ export function buildProductionProviderExecutionEvidence(args: {
       requestSha256: sha256(canonicalMediaValue(request)),
       promptSha256: sha256(request.prompt),
       configurationSha256: sha256(canonicalMediaValue({ prompt: request.prompt, parameters: request.parameters })),
-      parameters: request.parameters,
-      optimization: request.optimization
+      assetValidation: {
+        width: typeof request.parameters.width === "number" ? request.parameters.width : null,
+        height: typeof request.parameters.height === "number" ? request.parameters.height : null,
+        seedSha256: request.parameters.seed === undefined ? "ABSENT" : sha256(canonicalMediaValue(request.parameters.seed)),
+        maxBytes: request.optimization.maxBytes
+      }
     },
     policy: args.policy,
     adapter: args.config.adapter,
@@ -114,10 +122,10 @@ export function validateProductionProviderExecutionEvidence(value: unknown, righ
   if (!isIsoTimestamp(value.executedAt)) errors.push("production execution inputs executedAt is invalid");
   const git = isRecord(value.git) && exactKeys(value.git, ["sha", "ref"]) ? value.git : null;
   if (!git || typeof git.sha !== "string" || !/^[a-f0-9]{40}$/.test(git.sha) || typeof git.ref !== "string" || !git.ref.startsWith("refs/")) errors.push("production execution Git subject is malformed");
-  const requestBinding = isRecord(value.requestBinding) && exactKeys(value.requestBinding, ["requestId", "kind", "modelId", "requestSha256", "promptSha256", "configurationSha256", "parameters", "optimization"]) ? value.requestBinding : null;
-  const parameters = requestBinding && isRecord(requestBinding.parameters) ? requestBinding.parameters : null;
-  const optimization = requestBinding && isRecord(requestBinding.optimization) ? requestBinding.optimization : null;
-  if (!requestBinding || typeof requestBinding.requestId !== "string" || typeof requestBinding.modelId !== "string" || !["image", "video", "3d"].includes(String(requestBinding.kind)) || !["requestSha256", "promptSha256", "configurationSha256"].every((key) => typeof requestBinding[key] === "string" && /^[a-f0-9]{64}$/.test(String(requestBinding[key]))) || !parameters || Object.keys(parameters).length > 64 || Object.values(parameters).some((entry) => !["string", "number", "boolean"].includes(typeof entry) || (typeof entry === "number" && !Number.isFinite(entry))) || !optimization || !exactKeys(optimization, ["target", "maxBytes"]) || optimization.target !== "web" || !Number.isSafeInteger(optimization.maxBytes) || Number(optimization.maxBytes) < 1 || Number(optimization.maxBytes) > 33_554_432) errors.push("production execution request binding is malformed");
+  const requestBinding = isRecord(value.requestBinding) && exactKeys(value.requestBinding, ["requestId", "kind", "modelId", "requestSha256", "promptSha256", "configurationSha256", "assetValidation"]) ? value.requestBinding : null;
+  const assetValidation = requestBinding && isRecord(requestBinding.assetValidation) && exactKeys(requestBinding.assetValidation, ["width", "height", "seedSha256", "maxBytes"]) ? requestBinding.assetValidation : null;
+  const dimensionIsValid = (entry: unknown) => entry === null || (Number.isSafeInteger(entry) && Number(entry) >= 1 && Number(entry) <= 16_384);
+  if (!requestBinding || typeof requestBinding.requestId !== "string" || typeof requestBinding.modelId !== "string" || !["image", "video", "3d"].includes(String(requestBinding.kind)) || !["requestSha256", "promptSha256", "configurationSha256"].every((key) => typeof requestBinding[key] === "string" && /^[a-f0-9]{64}$/.test(String(requestBinding[key]))) || !assetValidation || !dimensionIsValid(assetValidation.width) || !dimensionIsValid(assetValidation.height) || (assetValidation.seedSha256 !== "ABSENT" && (typeof assetValidation.seedSha256 !== "string" || !/^[a-f0-9]{64}$/.test(assetValidation.seedSha256))) || !Number.isSafeInteger(assetValidation.maxBytes) || Number(assetValidation.maxBytes) < 1 || Number(assetValidation.maxBytes) > 33_554_432) errors.push("production execution request binding is malformed");
   const policy = isRecord(value.policy) ? value.policy as unknown as ProductionProviderPolicy : null;
   const adapter = isRecord(value.adapter) ? value.adapter as unknown as HttpProductionProviderAdapterConfig : null;
   const packet = isRecord(value.admissionPacket) ? value.admissionPacket as unknown as ProductionAdmissionPacket : null;
