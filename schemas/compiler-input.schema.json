@@ -18,6 +18,12 @@
         "objective": { "type": "string", "minLength": 1 }
       }
     },
+    "hardConstraints": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
     "references": {
       "type": "array",
       "items": {
@@ -26,7 +32,20 @@
         "required": ["kind", "value"],
         "properties": {
           "kind": { "enum": ["url", "image", "video", "html"] },
-          "value": { "type": "string", "minLength": 1 }
+          "value": { "type": "string", "minLength": 1 },
+          "visualFingerprint": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schema", "captureState", "referenceValueSha256", "capturedArtifactSha256", "evidenceSha256", "dimensions"],
+            "properties": {
+              "schema": { "const": "website-design-compiler/observed-visual-fingerprint/v1" },
+              "captureState": { "const": "PASS" },
+              "referenceValueSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "capturedArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "evidenceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "dimensions": { "$ref": "#/$defs/visualDirectionDimensions" }
+            }
+          }
         }
       },
       "default": []
@@ -45,6 +64,24 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "visualDirectionDimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typography", "typeContrast", "density", "grid", "surface", "colorStrategy", "mediaStrategy", "motionIntensity", "signatureInteraction"],
+      "properties": {
+        "typography": { "enum": ["neo-grotesk", "editorial-serif", "humanist-sans", "display-contrast"] },
+        "typeContrast": { "enum": ["restrained", "balanced", "dramatic"] },
+        "density": { "enum": ["airy", "balanced", "dense"] },
+        "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
+        "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
+        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+        "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
+        "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
+        "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }
+      }
     }
   }
 }

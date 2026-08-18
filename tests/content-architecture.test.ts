@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
-import { compileContentArchitecture } from "../src/content-architecture.js";
+import { compileContentArchitecture, writeContentArchitecturePlan } from "../src/content-architecture.js";
 import { compileInformationArchitecture } from "../src/information-architecture.js";
 import { buildPageArchitecturePlan } from "../src/page-architect.js";
 
@@ -76,11 +79,51 @@ test("copy longer than its responsive budget becomes NEEDS_INPUT rather than ove
   assert.equal(headline?.publishable, false);
 });
 
-test("page architect directly carries content contract readiness and fields", () => {
-  const plan = buildPageArchitecturePlan(input("product-landing"));
+test("a planning objective never becomes publishable headline, product, task, or CTA copy", () => {
+  const objective = "increase qualified demo requests by explaining governed compilation";
+  const content = compileContentArchitecture(input("product-landing", objective));
+  const objectiveBackedSlots = new Set([
+    "headline",
+    "value-proposition",
+    "product-description",
+    "task",
+    "primary-action",
+    "primary-action-label",
+    "cta-label",
+    "scene-purpose",
+    "interaction-purpose"
+  ]);
+  const fields = content.sections.flatMap((section) => section.fields).filter((field) => objectiveBackedSlots.has(field.slot));
+
+  assert.ok(fields.length > 0);
+  assert.ok(fields.every((field) => field.state === "NEEDS_INPUT"));
+  assert.ok(fields.every((field) => field.value === null && !field.publishable));
+  assert.ok(fields.every((field) => field.sourceType === "placeholder_required"));
+  assert.equal(content.sections.flatMap((section) => section.fields).some((field) => field.value === "Explore the product"), false);
+});
+
+test("writer classifies missing authoring inputs as ABSENT runtime evidence", async () => {
+  const outputDirectory = await mkdtemp(join(tmpdir(), "wdc-content-architecture-"));
+  try {
+    const result = await writeContentArchitecturePlan(input("product-landing"), outputDirectory);
+    assert.equal(result.state, "ABSENT");
+    assert.match(result.reason, /authoring inputs/i);
+    assert.equal(result.artifacts.length, 1);
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
+  }
+});
+
+test("page architect carries the full content contract without dropping provenance or policy", () => {
+  const compilerInput = input("product-landing");
+  const content = compileContentArchitecture(compilerInput);
+  const plan = buildPageArchitecturePlan(compilerInput);
   const proof = plan.sectionIntents.find((section) => section.id === "proof");
   const hero = plan.sectionIntents.find((section) => section.id === "hero");
+  const contentHero = content.sections.find((section) => section.sectionId === "hero");
+  const { state: heroState, ...projectedHero } = hero?.contentContract ?? { state: "NEEDS_INPUT" as const };
   assert.equal(proof?.contentContract.state, "NEEDS_INPUT");
   assert.equal(proof?.contentContract.fields[0]?.publishable, false);
-  assert.equal(hero?.contentContract.fields.some((field) => field.publishable), true);
+  assert.equal(heroState, "NEEDS_INPUT");
+  assert.deepEqual(projectedHero, contentHero);
 });

@@ -21,7 +21,7 @@ for (const benchmark of matrix.categories) {
   };
   const search = searchVisualDirections(input);
   await validateAgainstSchema(search, "visual-direction-search-v2.schema.json");
-  const designSystem = buildDesignSystemPlan(input);
+  const designSystem = buildDesignSystemPlan(input, search);
   await validateAgainstSchema(designSystem, "design-system-plan.schema.json");
   const uniqueSignatures = new Set(search.candidates.map((candidate) => candidate.signature)).size;
   const selectedCount = search.candidates.filter((candidate) => candidate.state === "SELECTED").length;
@@ -30,7 +30,7 @@ for (const benchmark of matrix.categories) {
   const deterministic = JSON.stringify(search) === JSON.stringify(searchVisualDirections(input));
   const seededDeterministic = JSON.stringify(searchVisualDirections(input, "arena-v2")) === JSON.stringify(searchVisualDirections(input, "arena-v2"));
   const selected = search.candidates.find((candidate) => candidate.id === search.selectedCandidateId)!;
-  const state = search.candidateCount >= 3 && uniqueSignatures >= 3 && selectedCount === 1 && rejectedHaveReasons && downstreamWinnerMatch && deterministic && seededDeterministic ? "PASS" : "FAIL";
+  const state = search.candidateCount >= 3 && uniqueSignatures >= 3 && search.diversity.state === "PASS" && selectedCount === 1 && rejectedHaveReasons && downstreamWinnerMatch && deterministic && seededDeterministic ? "PASS" : "FAIL";
   categories.push({
     id: benchmark.id,
     state,
@@ -42,6 +42,9 @@ for (const benchmark of matrix.categories) {
     selectedDifferentiation: selected.score.differentiation,
     selectedReadability: selected.score.readability,
     selectedOriginalityDistance: selected.score.originalityDistance,
+    originalityState: search.originality.state,
+    observedReferenceCount: search.originality.observedReferenceCount,
+    minimumPairwiseDistance: search.diversity.minimumPairwiseDistance,
     selectedResponsiveRobustness: selected.score.responsiveRobustness,
     rejectedHaveReasons,
     downstreamWinnerMatch,

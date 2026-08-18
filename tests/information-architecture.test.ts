@@ -57,3 +57,18 @@ test("mobile information priority is explicit", () => {
   const plan = compileInformationArchitecture(input("interactive 3d showcase"));
   assert.deepEqual(plan.navigation.mobilePriority, ["primary-action", "primary-content", "supporting-content"]);
 });
+
+test("section readiness and evidence are bound to the content each section needs", () => {
+  const plan = compileInformationArchitecture(input("b2b product landing"));
+  const navigation = plan.sections.find((section) => section.id === "navigation");
+  const hero = plan.sections.find((section) => section.id === "hero");
+  const footer = plan.sections.find((section) => section.id === "footer");
+
+  assert.equal(navigation?.status, "NEEDS_INPUT");
+  assert.deepEqual(navigation?.missingContent, ["primary-action-label"]);
+  assert.equal(hero?.status, "NEEDS_INPUT");
+  assert.deepEqual(hero?.missingContent, ["headline", "primary-action"]);
+  assert.equal(footer?.status, "READY");
+  assert.deepEqual(footer?.missingContent, []);
+  assert.notDeepEqual(navigation?.evidence, hero?.evidence);
+});
