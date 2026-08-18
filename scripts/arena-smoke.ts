@@ -36,7 +36,7 @@ function benchmarkAuthoredContent(slot: string, benchmarkId: string) {
   const excerpt = `Synthetic Arena evidence for ${slot}`;
   const needsEvidence = slot === "proof-items";
   return {
-    value: `Synthetic benchmark ${slot}`,
+    value: `Benchmark ${slot}`,
     source: { kind: "benchmark-fixture" as const, uri: source },
     ...(needsEvidence ? {
       evidence: {
