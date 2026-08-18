@@ -3,7 +3,7 @@
   "$id": "website-design-compiler/visual-direction-search/v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "seed", "inputSha256", "candidateCount", "selectedCandidateId", "selectedDirection", "candidates"],
+  "required": ["schema", "project", "seed", "inputSha256", "candidateCount", "selectedCandidateId", "selectedDirection", "originality", "candidates"],
   "properties": {
     "schema": { "const": "website-design-compiler/visual-direction-search/v2" },
     "project": { "type": "string", "minLength": 1 },
@@ -12,11 +12,34 @@
     "candidateCount": { "type": "integer", "minimum": 3 },
     "selectedCandidateId": { "type": "string", "minLength": 1 },
     "selectedDirection": { "$ref": "#/$defs/dimensions" },
+    "originality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumPairwiseDomainDistance", "referenceFingerprints", "candidatePairs"],
+      "properties": {
+        "minimumPairwiseDomainDistance": { "const": 3 },
+        "referenceFingerprints": { "type": "array", "items": { "$ref": "#/$defs/fingerprint" } },
+        "candidatePairs": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["first", "second", "domainDistance"],
+            "properties": {
+              "first": { "type": "string", "minLength": 1 },
+              "second": { "type": "string", "minLength": 1 },
+              "domainDistance": { "type": "integer", "minimum": 0, "maximum": 5 }
+            }
+          }
+        }
+      }
+    },
     "candidates": {
       "type": "array", "minItems": 3,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["id", "rank", "state", "dimensions", "score", "signature", "rejectionReasons"],
+        "required": ["id", "rank", "state", "dimensions", "score", "signature", "domainFingerprint", "minimumPairwiseDomainDistance", "rejectionReasons"],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
           "rank": { "type": "integer", "minimum": 1 },
@@ -24,12 +47,28 @@
           "dimensions": { "$ref": "#/$defs/dimensions" },
           "score": { "$ref": "#/$defs/score" },
           "signature": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "domainFingerprint": { "$ref": "#/$defs/fingerprint" },
+          "minimumPairwiseDomainDistance": { "type": "integer", "minimum": 0, "maximum": 5 },
           "rejectionReasons": { "type": "array", "items": { "type": "string", "minLength": 1 } }
         }
       }
     }
   },
   "$defs": {
+    "fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typography", "composition", "surface", "media", "motion", "combined"],
+      "properties": {
+        "typography": { "$ref": "#/$defs/hash" },
+        "composition": { "$ref": "#/$defs/hash" },
+        "surface": { "$ref": "#/$defs/hash" },
+        "media": { "$ref": "#/$defs/hash" },
+        "motion": { "$ref": "#/$defs/hash" },
+        "combined": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "dimensions": {
       "type": "object", "additionalProperties": false,
       "required": ["typography", "typeContrast", "density", "grid", "surface", "colorStrategy", "mediaStrategy", "motionIntensity", "signatureInteraction"],

@@ -40,20 +40,44 @@
           "contentContract": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["state", "fields"],
+            "required": ["state", "localePolicy", "fields", "quality"],
             "properties": {
               "state": { "enum": ["READY", "NEEDS_INPUT"] },
+              "localePolicy": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sourceLocale", "localizationReady"],
+                "properties": { "sourceLocale": { "const": "en" }, "localizationReady": { "const": true } }
+              },
               "fields": {
                 "type": "array",
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["slot", "state", "publishable"],
+                  "required": ["slot", "state", "sourceType", "value", "publishable", "provenance", "lengthBudget"],
                   "properties": {
                     "slot": { "type": "string", "minLength": 1 },
                     "state": { "enum": ["READY", "NEEDS_INPUT", "FORBIDDEN"] },
-                    "publishable": { "type": "boolean" }
+                    "sourceType": { "enum": ["observed_fact", "user_supplied_claim", "derived_copy", "placeholder_required", "forbidden_invention"] },
+                    "value": { "type": ["string", "null"] },
+                    "publishable": { "type": "boolean" },
+                    "provenance": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                    "lengthBudget": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["maxCharacters"],
+                      "properties": { "maxCharacters": { "type": "integer", "minimum": 1 } }
+                    }
                   }
+                }
+              },
+              "quality": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["forbiddenPhraseHits", "repeatedPublishableValues"],
+                "properties": {
+                  "forbiddenPhraseHits": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+                  "repeatedPublishableValues": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
                 }
               }
             }

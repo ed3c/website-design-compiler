@@ -6,7 +6,7 @@ import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js
 import { writeDesignContracts } from "./design-contracts.js";
 import { writeInformationArchitecturePlan } from "./information-architecture.js";
 import { writeContentArchitecturePlan } from "./content-architecture.js";
-import { writeVisualDirectionSearch } from "./visual-direction-search.js";
+import { searchVisualDirections, writeVisualDirectionSearch } from "./visual-direction-search.js";
 import { writeSemanticDesignTokens } from "./semantic-design-tokens.js";
 import { writeDesignSystemPlan } from "./design-system-compiler.js";
 import { writePageArchitecturePlan } from "./page-architect.js";
@@ -28,9 +28,11 @@ async function main(): Promise<void> {
     if (input.requestedStages.includes("art-direction")) await writeDesignContracts(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("information-architecture")) await writeInformationArchitecturePlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("content-architecture")) await writeContentArchitecturePlan(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("visual-direction-search")) await writeVisualDirectionSearch(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("semantic-design-tokens")) await writeSemanticDesignTokens(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("design-system-compiler")) await writeDesignSystemPlan(input, resolvedOutputDirectory);
+    const consumesVisualSearch=input.requestedStages.some((stage)=>["visual-direction-search","semantic-design-tokens","design-system-compiler"].includes(stage));
+    const visualSearch=consumesVisualSearch?searchVisualDirections(input):null;
+    if (input.requestedStages.includes("visual-direction-search")) await writeVisualDirectionSearch(visualSearch!, resolvedOutputDirectory);
+    if (input.requestedStages.includes("semantic-design-tokens")) await writeSemanticDesignTokens(input,visualSearch!, resolvedOutputDirectory);
+    if (input.requestedStages.includes("design-system-compiler")) await writeDesignSystemPlan(input,visualSearch!, resolvedOutputDirectory);
     if (input.requestedStages.includes("page-architect")) await writePageArchitecturePlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("frontend-builder")) await writeFrontendPlan(input, resolvedOutputDirectory);
     if (input.requestedStages.includes("motion-director")) await writeMotionDirectorPlan(input, resolvedOutputDirectory);

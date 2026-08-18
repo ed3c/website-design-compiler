@@ -1,5 +1,5 @@
 import { SECTION_KINDS, type SectionKind } from "./section-grammar";
-import type { SectionPageFixture } from "./section-page-fixtures";
+import type { SectionPageSource } from "./section-page-source.js";
 
 export type LayoutMode="stack"|"split"|"grid"|"inline"|"stage"|"list";
 export type Density="compact"|"comfortable"|"spacious";
@@ -20,7 +20,7 @@ export function compileResponsiveSectionPolicy(kind:SectionKind):ResponsiveSecti
 }
 export function compileResponsiveRegistry():ResponsiveSectionPolicy[]{return SECTION_KINDS.map(compileResponsiveSectionPolicy);}
 export interface ResponsivePageGraph { schema:"website-design-compiler/responsive-page-graph/v2";category:string;semanticOrder:string[];mobile:Array<{id:string;kind:SectionKind;composition:ViewportComposition}>;tablet:Array<{id:string;kind:SectionKind;composition:ViewportComposition}>;desktop:Array<{id:string;kind:SectionKind;composition:ViewportComposition}>; }
-export function compileResponsivePageGraph(page:SectionPageFixture):ResponsivePageGraph{
+export function compileResponsivePageGraph(page:SectionPageSource):ResponsivePageGraph{
   const semanticOrder=page.sections.map((section)=>section.id);
   const map=(viewport:"mobile"|"tablet"|"desktop")=>page.sections.map((section)=>({id:section.id,kind:section.kind,composition:compileResponsiveSectionPolicy(section.kind)[viewport]}));
   return{schema:"website-design-compiler/responsive-page-graph/v2",category:page.category,semanticOrder,mobile:map("mobile"),tablet:map("tablet"),desktop:map("desktop")};

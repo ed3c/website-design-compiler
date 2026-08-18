@@ -30,10 +30,21 @@ export type ArtDirectorAuthority = "anthropic-frontend-design" | "google-stitch"
 
 export interface CompilerReference { kind: "url" | "image" | "video" | "html"; value: string; }
 
+export interface CompilerBriefSourceEvidence {
+  inputSha256: string;
+  fields: {
+    pageType: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+    audience: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+    objective: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+  };
+}
+
 export interface CompilerInput {
   schema: "website-design-compiler/input/v1";
   project: string;
   brief: { pageType: string; audience: string; objective: string; };
+  hardConstraints?: string[];
+  briefSourceEvidence?: CompilerBriefSourceEvidence;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];

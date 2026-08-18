@@ -6,20 +6,57 @@
   --wdc-color-accent: oklch(0.42 0.18 255);
   --wdc-color-on-accent: oklch(0.985 0.006 250);
   --wdc-color-focus: oklch(0.50 0.20 255);
+  --wdc-color-contrast-policy: WCAG_AA_TEXT;
+  --wdc-contrast-text-background: 16.57;
+  --wdc-contrast-muted-background: 7.75;
+  --wdc-contrast-on-accent: 8.13;
+  --wdc-contrast-focus-background: 5.78;
   --wdc-font-display: "Georgia", system-ui, sans-serif;
   --wdc-font-body: "Inter", system-ui, sans-serif;
-  --wdc-space-xs: 8px;
-  --wdc-space-sm: 16px;
-  --wdc-space-md: 28px;
-  --wdc-space-lg: 44px;
-  --wdc-space-xl: 72px;
+  --wdc-font-display-weight: 700;
+  --wdc-font-display-line-height: 1.08;
+  --wdc-font-display-letter-spacing: -0.025em;
+  --wdc-font-body-weight: 400;
+  --wdc-font-body-line-height: 1.7;
+  --wdc-font-body-measure: 68ch;
+  --wdc-type-scale-0: 12px; --wdc-type-scale-1: 14px; --wdc-type-scale-2: 17px; --wdc-type-scale-3: 24px; --wdc-type-scale-4: 40px; --wdc-type-scale-5: 64px;
+  --wdc-space-0: 4px;
+  --wdc-space-1: 8px;
+  --wdc-space-2: 16px;
+  --wdc-space-3: 28px;
+  --wdc-space-4: 44px;
+  --wdc-space-5: 72px;
+  --wdc-space-6: 112px;
+  --wdc-space-xs: var(--wdc-space-1);
+  --wdc-space-sm: var(--wdc-space-2);
+  --wdc-space-md: var(--wdc-space-3);
+  --wdc-space-lg: var(--wdc-space-4);
+  --wdc-space-xl: var(--wdc-space-5);
+  --wdc-radius-sm: 4px;
   --wdc-radius-md: 8px;
   --wdc-radius-lg: 16px;
+  --wdc-radius-pill: 999px;
+  --wdc-border-width: 1px;
+  --wdc-border-style: solid;
+  --wdc-border-color: oklch(0.955 0.012 250);
+  --wdc-elevation-low: 0 1px 3px rgb(0 0 0 / 0.08);
+  --wdc-elevation-high: 0 18px 48px rgb(0 0 0 / 0.14);
   --wdc-motion-fast: 120ms;
   --wdc-motion-base: 180ms;
+  --wdc-motion-slow: 280ms;
+  --wdc-media-treatment: editorial-media;
+  --wdc-media-gradient-policy: warm-editorial;
+  --wdc-media-blur-max: 24px;
+  --wdc-media-noise-opacity-max: 0.06;
+  --wdc-focus-ring: 3px;
+  --wdc-focus-offset: 2px;
+  --wdc-raw-value-bypass: 0;
+  --wdc-breakpoint-mobile: 0px;
+  --wdc-breakpoint-tablet: 768px;
+  --wdc-breakpoint-desktop: 1200px;
   --wdc-container-max: 1200px;
   --wdc-grid-columns: 12;
   --wdc-gutter: 40px;
 }
-@media (max-width: 1199px) { :root { --wdc-container-max: 880px; --wdc-grid-columns: 8; --wdc-gutter: 28px; } }
-@media (max-width: 767px) { :root { --wdc-container-max: 560px; --wdc-grid-columns: 4; --wdc-gutter: 16px; } }
+@media (max-width: 1199px) { :root { --wdc-container-max: 880px; --wdc-grid-columns: 8; --wdc-gutter: 28px; --wdc-type-scale-0: 12px; --wdc-type-scale-1: 14px; --wdc-type-scale-2: 16px; --wdc-type-scale-3: 22px; --wdc-type-scale-4: 34px; --wdc-type-scale-5: 52px; } }
+@media (max-width: 767px) { :root { --wdc-container-max: 560px; --wdc-grid-columns: 4; --wdc-gutter: 16px; --wdc-type-scale-0: 12px; --wdc-type-scale-1: 14px; --wdc-type-scale-2: 16px; --wdc-type-scale-3: 20px; --wdc-type-scale-4: 28px; --wdc-type-scale-5: 40px; } }

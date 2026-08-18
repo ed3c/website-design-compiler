@@ -76,19 +76,20 @@ function maxCharactersFor(slot: string): number {
   return 280;
 }
 
-function safeDerivedValue(slot: string, input: CompilerInput, section: IaSection): string | null {
+function safeSuppliedValue(slot: string, input: CompilerInput): string | null {
   if (slot === "brand-or-project-name" || slot === "project-name") return input.project;
-  if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task") return input.brief.objective;
-  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return "Explore the product";
-  if (slot === "scene-purpose" || slot === "interaction-purpose") return section.purpose;
+  if (
+    input.briefSourceEvidence?.fields.objective.sourceExcerpt &&
+    (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task" || slot === "dek")
+  ) return input.brief.objective;
   return null;
 }
 
-function provenanceFor(slot: string, input: CompilerInput, section: IaSection): string[] {
+function provenanceFor(slot: string, input: CompilerInput): string[] {
   if (slot === "brand-or-project-name" || slot === "project-name") return [`compiler.project:${input.project}`];
-  if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task") return [`brief.objective:${input.brief.objective}`];
-  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return [`brief.objective:${input.brief.objective}`, `ia.section:${section.id}`];
-  if (slot === "scene-purpose" || slot === "interaction-purpose") return [`ia.section:${section.id}`, ...section.evidence];
+  if (input.briefSourceEvidence?.fields.objective.sourceExcerpt && (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task" || slot === "dek")) {
+    return [`brief-input:${input.briefSourceEvidence.inputSha256}#objective`];
+  }
   return [];
 }
 
@@ -128,7 +129,7 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     };
   }
 
-  const value = safeDerivedValue(slot, input, section);
+  const value = safeSuppliedValue(slot, input);
   if (!value || value.length > maxCharacters) {
     return {
       slot,
@@ -136,7 +137,7 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
       sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: provenanceFor(slot, input, section),
+      provenance: provenanceFor(slot, input),
       lengthBudget: { maxCharacters }
     };
   }
@@ -144,10 +145,10 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   return {
     slot,
     state: "READY",
-    sourceType: "derived_copy",
+    sourceType: "user_supplied_claim",
     value,
     publishable: true,
-    provenance: provenanceFor(slot, input, section),
+    provenance: provenanceFor(slot, input),
     lengthBudget: { maxCharacters }
   };
 }

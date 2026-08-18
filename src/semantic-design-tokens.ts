@@ -1,13 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
-import { searchVisualDirections } from "./visual-direction-search.js";
+import { visualDirectionSha256, type VisualDirectionSearchReceipt } from "./visual-direction-search.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface SemanticDesignTokensV2 {
   schema: "website-design-compiler/semantic-design-tokens/v2";
   project: string;
   sourceVisualDirection: string;
+  sourceVisualDirectionReceiptSha256:string;
   color: {
     mode: "light";
     background: string;
@@ -84,8 +85,10 @@ export function contrastRatio(a: string, b: string): number {
   return Number(((high + 0.05) / (low + 0.05)).toFixed(2));
 }
 
-export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesignTokensV2 {
-  const visual = searchVisualDirections(input);
+export function compileSemanticDesignTokens(input: CompilerInput,visual:VisualDirectionSearchReceipt): SemanticDesignTokensV2 {
+  if(visual.project!==input.project||visual.inputSha256!==visualDirectionSha256(input))throw new Error("semantic tokens require the exact visual-direction receipt for this compiler input");
+  const selectedCandidate=visual.candidates.find((candidate)=>candidate.id===visual.selectedCandidateId&&candidate.state==="SELECTED");
+  if(!selectedCandidate||JSON.stringify(selectedCandidate.dimensions)!==JSON.stringify(visual.selectedDirection))throw new Error("visual-direction selected candidate identity drift");
   const selected = visual.selectedDirection;
   const palette = PALETTES[stableIndex(`${input.brief.pageType}:${selected.colorStrategy}`, PALETTES.length)]!;
   const editorial = selected.density === "airy";
@@ -100,6 +103,7 @@ export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesig
     schema: "website-design-compiler/semantic-design-tokens/v2",
     project: input.project,
     sourceVisualDirection: visual.selectedCandidateId,
+    sourceVisualDirectionReceiptSha256:visualDirectionSha256(visual),
     color: { mode: "light", ...palette, onAccent, contrastPolicy: "WCAG_AA_TEXT", contrastEvidence: { textOnBackground, mutedTextOnBackground, onAccentOnAccent, focusOnBackground, minimumText: 4.5, minimumFocus: 3 } },
     typography: {
       display: { family: displayFamily, fallback: ["system-ui", "sans-serif"], weight: selected.typeContrast === "dramatic" ? 700 : 600, lineHeight: 1.08, letterSpacingEm: -0.025 },
@@ -124,21 +128,33 @@ export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesig
 
 export function projectSemanticTokensToCss(tokens: SemanticDesignTokensV2): string {
   const s = tokens.spacingPx;
+  const scale=(values:number[])=>values.map((value,index)=>`--wdc-type-scale-${index}: ${value}px;`).join(" ");
   return [
     ":root {",
     `  --wdc-color-background: ${tokens.color.background};`, `  --wdc-color-surface: ${tokens.color.surface};`, `  --wdc-color-text-primary: ${tokens.color.text};`, `  --wdc-color-text-muted: ${tokens.color.mutedText};`, `  --wdc-color-accent: ${tokens.color.accent};`, `  --wdc-color-on-accent: ${tokens.color.onAccent};`, `  --wdc-color-focus: ${tokens.color.focus};`,
+    `  --wdc-color-contrast-policy: ${tokens.color.contrastPolicy};`, `  --wdc-contrast-text-background: ${tokens.color.contrastEvidence.textOnBackground};`, `  --wdc-contrast-muted-background: ${tokens.color.contrastEvidence.mutedTextOnBackground};`, `  --wdc-contrast-on-accent: ${tokens.color.contrastEvidence.onAccentOnAccent};`, `  --wdc-contrast-focus-background: ${tokens.color.contrastEvidence.focusOnBackground};`,
     `  --wdc-font-display: ${JSON.stringify(tokens.typography.display.family)}, ${tokens.typography.display.fallback.join(", ")};`, `  --wdc-font-body: ${JSON.stringify(tokens.typography.body.family)}, ${tokens.typography.body.fallback.join(", ")};`,
-    `  --wdc-space-xs: ${s[1]}px;`, `  --wdc-space-sm: ${s[2]}px;`, `  --wdc-space-md: ${s[3]}px;`, `  --wdc-space-lg: ${s[4]}px;`, `  --wdc-space-xl: ${s[5]}px;`,
-    `  --wdc-radius-md: ${tokens.radiiPx.md}px;`, `  --wdc-radius-lg: ${tokens.radiiPx.lg}px;`, `  --wdc-motion-fast: ${tokens.motionMs.fast}ms;`, `  --wdc-motion-base: ${tokens.motionMs.base}ms;`,
+    `  --wdc-font-display-weight: ${tokens.typography.display.weight};`, `  --wdc-font-display-line-height: ${tokens.typography.display.lineHeight};`, `  --wdc-font-display-letter-spacing: ${tokens.typography.display.letterSpacingEm}em;`,
+    `  --wdc-font-body-weight: ${tokens.typography.body.weight};`, `  --wdc-font-body-line-height: ${tokens.typography.body.lineHeight};`, `  --wdc-font-body-measure: ${tokens.typography.body.measureCh}ch;`,
+    `  ${scale(tokens.typography.scalePx.desktop)}`,
+    ...s.map((value,index)=>`  --wdc-space-${index}: ${value}px;`),
+    `  --wdc-space-xs: var(--wdc-space-1);`, `  --wdc-space-sm: var(--wdc-space-2);`, `  --wdc-space-md: var(--wdc-space-3);`, `  --wdc-space-lg: var(--wdc-space-4);`, `  --wdc-space-xl: var(--wdc-space-5);`,
+    `  --wdc-radius-sm: ${tokens.radiiPx.sm}px;`, `  --wdc-radius-md: ${tokens.radiiPx.md}px;`, `  --wdc-radius-lg: ${tokens.radiiPx.lg}px;`, `  --wdc-radius-pill: ${tokens.radiiPx.pill}px;`,
+    `  --wdc-border-width: ${tokens.border.widthPx}px;`, `  --wdc-border-style: ${tokens.border.style};`, `  --wdc-border-color: ${tokens.border.color};`,
+    `  --wdc-elevation-low: ${tokens.elevation.low};`, `  --wdc-elevation-high: ${tokens.elevation.high};`,
+    `  --wdc-motion-fast: ${tokens.motionMs.fast}ms;`, `  --wdc-motion-base: ${tokens.motionMs.base}ms;`, `  --wdc-motion-slow: ${tokens.motionMs.slow}ms;`,
+    `  --wdc-media-treatment: ${tokens.media.treatment};`, `  --wdc-media-gradient-policy: ${tokens.media.gradientPolicy};`, `  --wdc-media-blur-max: ${tokens.media.blurMaxPx}px;`, `  --wdc-media-noise-opacity-max: ${tokens.media.noiseOpacityMax};`,
+    `  --wdc-focus-ring: ${tokens.interaction.focusRingPx}px;`, `  --wdc-focus-offset: ${tokens.interaction.focusOffsetPx}px;`, `  --wdc-raw-value-bypass: 0;`,
+    `  --wdc-breakpoint-mobile: ${tokens.layout.breakpointsPx.mobile}px;`, `  --wdc-breakpoint-tablet: ${tokens.layout.breakpointsPx.tablet}px;`, `  --wdc-breakpoint-desktop: ${tokens.layout.breakpointsPx.desktop}px;`,
     `  --wdc-container-max: ${tokens.layout.containerMaxPx.desktop}px;`, `  --wdc-grid-columns: ${tokens.layout.columns.desktop};`, `  --wdc-gutter: ${tokens.layout.gutterPx.desktop}px;`, "}",
-    `@media (max-width: 1199px) { :root { --wdc-container-max: ${tokens.layout.containerMaxPx.tablet}px; --wdc-grid-columns: ${tokens.layout.columns.tablet}; --wdc-gutter: ${tokens.layout.gutterPx.tablet}px; } }`,
-    `@media (max-width: 767px) { :root { --wdc-container-max: ${tokens.layout.containerMaxPx.mobile}px; --wdc-grid-columns: ${tokens.layout.columns.mobile}; --wdc-gutter: ${tokens.layout.gutterPx.mobile}px; } }`,
+    `@media (max-width: 1199px) { :root { --wdc-container-max: ${tokens.layout.containerMaxPx.tablet}px; --wdc-grid-columns: ${tokens.layout.columns.tablet}; --wdc-gutter: ${tokens.layout.gutterPx.tablet}px; ${scale(tokens.typography.scalePx.tablet)} } }`,
+    `@media (max-width: 767px) { :root { --wdc-container-max: ${tokens.layout.containerMaxPx.mobile}px; --wdc-grid-columns: ${tokens.layout.columns.mobile}; --wdc-gutter: ${tokens.layout.gutterPx.mobile}px; ${scale(tokens.typography.scalePx.mobile)} } }`,
     ""
   ].join("\n");
 }
 
-export async function writeSemanticDesignTokens(input: CompilerInput, outputDirectory: string): Promise<string[]> {
-  const tokens = compileSemanticDesignTokens(input);
+export async function writeSemanticDesignTokens(input: CompilerInput,visual:VisualDirectionSearchReceipt, outputDirectory: string): Promise<string[]> {
+  const tokens = compileSemanticDesignTokens(input,visual);
   await validateAgainstSchema(tokens, "semantic-design-tokens-v2.schema.json");
   const directory = join(outputDirectory, "semantic-design-tokens");
   await mkdir(directory, { recursive: true });

@@ -1,8 +1,9 @@
 import { SECTION_CONTRACTS, validateSectionInstance, type SectionFieldContract, type SectionInstance, type SectionKind } from "./section-grammar";
+import type { SectionPageSource } from "./section-page-source.js";
 
 export const SECTION_PAGE_CATEGORIES = ["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
 export type SectionPageCategory=(typeof SECTION_PAGE_CATEGORIES)[number];
-export interface SectionPageFixture { schema:"website-design-compiler/section-page-fixture/v2"; category:SectionPageCategory; sections:SectionInstance[]; }
+export interface SectionPageFixture extends SectionPageSource { schema:"website-design-compiler/section-page-fixture/v2"; category:SectionPageCategory; sections:SectionInstance[]; }
 
 const PAGE_GRAMMARS:Record<SectionPageCategory,readonly SectionKind[]>={
   "b2b-product":["navigation","hero","feature-grid","proof-cloud","comparison","cta","footer"],

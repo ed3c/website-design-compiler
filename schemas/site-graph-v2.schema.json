@@ -1,0 +1,12 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema","$id":"website-design-compiler/site-graph/v2","type":"object","additionalProperties":false,
+  "required":["schema","project","readiness","missingEvidence","source","routes","sharedChrome","contracts","signature"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/site-graph/v2"},"project":{"type":"string","minLength":1},"readiness":{"enum":["READY","NEEDS_INPUT"]},"missingEvidence":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "source":{"type":"object","additionalProperties":false,"required":["mode","artifacts"],"properties":{"mode":{"enum":["FIXTURE","PRODUCTION"]},"artifacts":{"type":"object","additionalProperties":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}},
+    "routes":{"type":"array","minItems":2,"items":{"type":"object","additionalProperties":false,"required":["route","page"],"properties":{"route":{"type":"string","pattern":"^/(?:[a-z0-9-]+)?$"},"page":{"type":"object"}}}},
+    "sharedChrome":{"type":"object","additionalProperties":false,"required":["consistencyKey","navigationKind","footerKind"],"properties":{"consistencyKey":{"type":"string","minLength":1},"navigationKind":{"const":"navigation"},"footerKind":{"const":"footer"}}},
+    "contracts":{"type":"object","additionalProperties":false,"required":["uniqueRoutes","sharedChromeRequired","pageGraphSchema"],"properties":{"uniqueRoutes":{"const":true},"sharedChromeRequired":{"const":true},"pageGraphSchema":{"const":"website-design-compiler/page-graph/v2"}}},
+    "signature":{"type":"string","pattern":"^[a-f0-9]{64}$"}
+  }
+}
