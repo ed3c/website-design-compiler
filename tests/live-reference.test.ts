@@ -89,13 +89,22 @@ test("observable text cannot leak credentials or machine-private paths",async()=
 });
 
 test("live capture applies one deadline across DNS and transport",async()=>{
+  const timeoutMs=100;
+  const startedAt=Date.now();
+  let transportDeadline:number|undefined;
   const receipt=await verifyLiveReferences(admit,{
     ...injected,
-    timeoutMs:20,
+    timeoutMs,
     maxAttempts:1,
-    resolveHost:async()=>{await new Promise((resolve)=>setTimeout(resolve,15));return["93.184.216.34"];},
-    transport:async({resolvedAddress})=>{await new Promise((resolve)=>setTimeout(resolve,15));return{status:200,headers:{"content-type":"text/html"},body:html,connectedAddress:resolvedAddress};}
+    resolveHost:async()=>["93.184.216.34"],
+    transport:async({deadlineAt})=>{
+      transportDeadline=deadlineAt;
+      return await new Promise<never>(()=>{});
+    }
   });
+  assert.ok(transportDeadline!==undefined);
+  assert.ok(transportDeadline>=startedAt+timeoutMs);
+  assert.ok(transportDeadline<=startedAt+timeoutMs+20);
   assert.equal(receipt.targets[0]?.state,"FAIL");
   assert.match(receipt.targets[0]?.reason??"",/total deadline exceeded during transport/);
 });

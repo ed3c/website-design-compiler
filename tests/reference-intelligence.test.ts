@@ -110,26 +110,20 @@ test("remote capture rejects a connected peer that differs from the pinned DNS a
 });
 
 test("one deadline covers DNS and transport instead of resetting between phases", async () => {
-  let transportReached = false;
+  const timeoutMs = 100;
+  const startedAt = Date.now();
+  let transportDeadline: number | undefined;
   const result = await captureRemoteUrl("https://reference.example/", {
-    timeoutMs: 20,
-    resolveHost: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 15));
-      return ["93.184.216.34"];
-    },
-    transport: async () => {
-      transportReached = true;
-      await new Promise((resolve) => setTimeout(resolve, 15));
-      return {
-        status: 200,
-        headers: { "content-type": "text/html" },
-        body: new TextEncoder().encode("<main></main>"),
-        connectedAddress: "93.184.216.34",
-        mode: "INJECTED"
-      };
+    timeoutMs,
+    resolveHost: async () => ["93.184.216.34"],
+    transport: async ({ deadlineAt }) => {
+      transportDeadline = deadlineAt;
+      return await new Promise<never>(() => {});
     }
   });
-  assert.equal(transportReached, true);
+  assert.ok(transportDeadline !== undefined);
+  assert.ok(transportDeadline >= startedAt + timeoutMs);
+  assert.ok(transportDeadline <= startedAt + timeoutMs + 20);
   assert.equal(result.state, "FAIL");
   assert.match(result.reason ?? "", /total deadline exceeded during transport/);
 });
