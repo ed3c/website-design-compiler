@@ -21,7 +21,9 @@ for(const category of categories)test(`${category} emits browser-derived visual 
   }
   await page.evaluate(()=>window.scrollTo(0,0));
   await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
-  await expect(root.locator("[data-page-node]").first()).toHaveAttribute("data-motion-runtime","CLEANED");
+  const pageNodes=root.locator("[data-page-node]");
+  const pageNodeCount=await pageNodes.count();
+  await expect(root.locator("[data-page-node][data-motion-runtime='CLEANED']")).toHaveCount(pageNodeCount);
 
   const outputRoot=join(process.cwd(),"artifacts","design-quality-browser");
   const screenshotDirectory=join(outputRoot,"screenshots");
