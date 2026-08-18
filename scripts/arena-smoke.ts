@@ -33,17 +33,18 @@ function passIf(condition: boolean, absent = false): EvidenceState {
 
 function benchmarkAuthoredContent(slot: string, benchmarkId: string) {
   const source = `fixture://arena/${benchmarkId}/${slot}`;
-  const excerpt = `Synthetic Arena evidence for ${slot}`;
+  const value = `Benchmark ${slot}`;
+  const excerpt = `Synthetic Arena evidence states: ${value}`;
   const needsEvidence = slot === "proof-items";
   return {
-    value: `Benchmark ${slot}`,
+    value,
     source: { kind: "benchmark-fixture" as const, uri: source },
     ...(needsEvidence ? {
       evidence: {
         kind: "source-excerpt" as const,
         source,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${excerpt}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex")
       }
     } : {})
   };

@@ -29,16 +29,17 @@ function input(pageType: string, objective = "explain the governed product and p
 
 function authored(slot: string, withEvidence = slot === "proof-items") {
   const source = `fixture://content/${slot}`;
-  const excerpt = `Evidence for ${slot}`;
+  const value = `Approved ${slot}`;
+  const excerpt = `Evidence states: ${value}`;
   return {
-    value: `Approved ${slot}`,
+    value,
     source: { kind: "benchmark-fixture" as const, uri: source },
     ...(withEvidence ? {
       evidence: {
         kind: "source-excerpt" as const,
         source,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${excerpt}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex")
       }
     } : {})
   };
@@ -179,6 +180,25 @@ test("proof copy without source evidence cannot self-promote to publishable", ()
   assert.equal(proof?.state, "NEEDS_INPUT");
   assert.equal(proof?.publishable, false);
   assert.deepEqual(proof?.provenance, ["policy.evidence-required:proof-items"]);
+});
+
+test("proof evidence must bind the exact claim, source URI, and excerpt bytes", () => {
+  const compilerInput = input("product-landing");
+  const valid = authored("proof-items");
+  const cases = [
+    { ...valid, value: "Unrelated 99% growth claim" },
+    { ...valid, evidence: { ...valid.evidence!, source: "fixture://content/unrelated" } },
+    { ...valid, evidence: { ...valid.evidence!, excerpt: "Evidence for an unrelated claim" } }
+  ];
+  for (const proofEntry of cases) {
+    const content = compileContentArchitecture({
+      ...compilerInput,
+      authoredContent: { "proof-items": proofEntry }
+    });
+    const proof = content.sections.find((section) => section.sectionId === "proof")?.fields[0];
+    assert.equal(proof?.state, "NEEDS_INPUT");
+    assert.equal(proof?.publishable, false);
+  }
 });
 
 test("page architect carries the full content contract without dropping provenance or policy", () => {

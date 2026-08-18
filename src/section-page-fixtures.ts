@@ -372,16 +372,17 @@ function benchmarkValue(category: ArenaCategory, slot: string): string {
 
 function benchmarkAuthoredContent(category: ArenaCategory, slot: string): AuthoredContentEntry {
   const source = `fixture://section-page/${category}/${slot}`;
-  const excerpt = `Synthetic section-page evidence for ${slot}`;
+  const value = benchmarkValue(category, slot);
+  const excerpt = `Synthetic section-page evidence states: ${value}`;
   return {
-    value: benchmarkValue(category, slot),
+    value,
     source: { kind: "benchmark-fixture", uri: source },
     ...(slot === "proof-items" ? {
       evidence: {
         kind: "source-excerpt",
         source,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${excerpt}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex")
       }
     } : {})
   };

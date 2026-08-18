@@ -92,16 +92,20 @@ function ctaRole(section: IaSection): "PRIMARY" | "SECONDARY" | "NONE" {
   return "NONE";
 }
 
-function evidenceSha256(source: string, excerpt: string): string {
-  return createHash("sha256").update(`${source}\0${excerpt}`).digest("hex");
+function evidenceSha256(source: string, excerpt: string, value: string): string {
+  return createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex");
 }
 
 function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>): ContentFieldContract {
   const maxCharacters = maxCharactersFor(slot);
   const authored = input.authoredContent?.[slot];
+  const authoredValue = authored?.value;
   const evidence = authored?.evidence;
   const evidenceVerified = evidence !== undefined &&
-    evidence.sha256 === evidenceSha256(evidence.source, evidence.excerpt);
+    authored !== undefined &&
+    evidence.source === authored.source.uri &&
+    evidence.excerpt.toLocaleLowerCase("en").includes(authored.value.toLocaleLowerCase("en")) &&
+    evidence.sha256 === evidenceSha256(evidence.source, evidence.excerpt, authored.value);
   if ((forbidden.has(slot) || EVIDENCE_REQUIRED_SLOTS.has(slot)) && !evidenceVerified) {
     return {
       slot,
@@ -114,7 +118,6 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     };
   }
 
-  const authoredValue = authored?.value;
   const projectValue = slot === "brand-or-project-name" || slot === "project-name" ? input.project : undefined;
   const value = authoredValue ?? projectValue;
   if (!value || value.length > maxCharacters) {
@@ -132,7 +135,7 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   return {
     slot,
     state: "READY",
-    sourceType: evidenceVerified ? "observed_fact" : "user_supplied_claim",
+    sourceType: "user_supplied_claim",
     value,
     publishable: true,
     provenance: authored
