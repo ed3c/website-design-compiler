@@ -2,7 +2,7 @@
   "schema": "procedural-shadow-context-capsule/v1",
   "capsule_id": "wdc-final-convergence-human-gates",
   "checkpoint": "convergence-human-gate-handoff",
-  "context_digest": "38fc0390f8eca42a58ff5d291d553c4235adb7aaf4fab17b050936d1a2b4a755",
+  "context_digest": "5d41a39c830820c42c8045dc9ba44880a2869ff2e6857fc9038d5920c343b1b3",
   "expires_at_checkpoint": "convergence-human-gate-handoff",
   "procedures": [
     {
@@ -22,7 +22,7 @@
       "criticality": "must",
       "source": {
         "repository": "ed3c/website-design-compiler",
-        "ref": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "ref": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "path": "docs/issues/29-reference-browser-admission.md",
         "content_sha256": "a7baf06100f133792daba31c9c0ba1ce813c1ff2fd05fb33e9dc7d4b1c146122"
       },
@@ -34,7 +34,7 @@
       "criticality": "must",
       "source": {
         "repository": "ed3c/website-design-compiler",
-        "ref": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "ref": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "path": "docs/issues/31-generated-page-browser-admission.md",
         "content_sha256": "29b842faf65416c7e836e51f4a14fb562da8056fbf5cbda4a299eac070148acf"
       },
@@ -46,7 +46,7 @@
       "criticality": "must",
       "source": {
         "repository": "ed3c/website-design-compiler",
-        "ref": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "ref": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "path": "docs/issues/30-storybook-visual-admission.md",
         "content_sha256": "65ba962f75a4f91337f1284601246d7a6b4f2db6159ca395911d838bd05c3812"
       },
@@ -58,7 +58,7 @@
       "criticality": "must",
       "source": {
         "repository": "ed3c/website-design-compiler",
-        "ref": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "ref": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "path": "AGENTS.md",
         "content_sha256": "cc00bdc163bc5bc37261dd91e1e1ef6a158230c1839ad1afffddb5a3fa45bb0f"
       },
@@ -70,7 +70,7 @@
       "criticality": "must",
       "source": {
         "repository": "ed3c/website-design-compiler",
-        "ref": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "ref": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "path": "docs/issues/22-live-reference.md",
         "content_sha256": "a4ea059730967fd18d56b2bf2ffbbc5b1226d81680437fd80bbeec7537b9b906"
       },
@@ -82,7 +82,7 @@
       "criticality": "must",
       "source": {
         "repository": "ed3c/website-design-compiler",
-        "ref": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "ref": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "path": "src/production-media-provider.ts",
         "content_sha256": "574df164e1653d75f0969127daed2f083737a0729e8cd0c7595a9d8398b2321a"
       },

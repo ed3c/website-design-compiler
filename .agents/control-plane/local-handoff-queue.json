@@ -2,8 +2,8 @@
   "schema_version": "agentic-tech-lead/local-handoff-queue/v1",
   "subject": {
     "repository": "ed3c/website-design-compiler",
-    "commit": "bd23505a44500c0d87d538934e166425fb5cdd2f",
-    "tree": "4ff3985c881089857ca396f0a25833517aeb0821",
+    "commit": "522964631f965546d5f41b8d21eb22a687dbb36e",
+    "tree": "3f1917068dc9e236dc2db0a7bf56e6bb80b7fa48",
     "rollback_commit": "974e16e0cff87b298621dc24219d92be718f6978"
   },
   "authority": {
@@ -33,7 +33,7 @@
       "state": "ACTIVE",
       "entry": {
         "predecessor": null,
-        "required_subject_commit": "bd23505a44500c0d87d538934e166425fb5cdd2f",
+        "required_subject_commit": "522964631f965546d5f41b8d21eb22a687dbb36e",
         "required_capabilities": [
           "human:repository-administrator",
           "local:chromium",
