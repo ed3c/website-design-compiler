@@ -1,0 +1,12 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
+import { compileMediaOrchestration, validateMediaOrchestration } from "../src/media-orchestration.js";
+import { validateAgainstSchema } from "../src/validate.js";
+const plans=compileAllSectionPageFixtures().map(compileMediaOrchestration);
+await Promise.all(plans.map((plan)=>validateAgainstSchema(plan,"media-orchestration-v2.schema.json")));
+const validations=plans.map((plan)=>({category:plan.category,errors:validateMediaOrchestration(plan),richMediaCount:plan.richMediaCount,gpuCount:plan.gpuCount,providerBlockedCount:plan.providerBlockedCount,strategySignature:plan.strategySignature}));
+const renderers=new Set(plans.flatMap((plan)=>plan.decisions.map((decision)=>decision.renderer)));
+const overall=plans.length===6&&new Set(plans.map((plan)=>plan.strategySignature)).size===6&&validations.every((entry)=>entry.errors.length===0)&&["dom","image","video","pixi","three"].every((renderer)=>renderers.has(renderer as never))?"PASS":"FAIL";
+const receipt={schema:"website-design-compiler/media-orchestration-receipt/v2",overall,pageCount:plans.length,uniqueStrategyCount:new Set(plans.map((plan)=>plan.strategySignature)).size,rendererCoverage:[...renderers].sort(),productionProviderState:"NOT_ADMITTED",validations,plans};
+const dir=resolve("artifacts/v2/media-orchestration");await mkdir(dir,{recursive:true});await writeFile(resolve(dir,"receipt.json"),`${JSON.stringify(receipt,null,2)}\n`);console.log(JSON.stringify({overall,pageCount:plans.length,rendererCoverage:[...renderers].sort(),productionProviderState:"NOT_ADMITTED"}));if(overall!=="PASS")process.exitCode=1;

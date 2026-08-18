@@ -1,0 +1,33 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"website-design-compiler/design-quality-release-profile/v3",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","id","premiumQualityThreshold","originalitySimilarityThreshold","requiredViewports","requireExactEvidenceBinding","evaluator","calibrationReceipt"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/design-quality-release-profile/v3"},
+    "id":{"type":"string","minLength":1},
+    "premiumQualityThreshold":{"type":"number","minimum":78,"maximum":100},
+    "originalitySimilarityThreshold":{"type":"number","minimum":0.82,"maximum":1},
+    "requiredViewports":{"type":"array","const":["mobile","desktop"]},
+    "requireExactEvidenceBinding":{"const":true},
+    "evaluator":{
+      "type":"object","additionalProperties":false,
+      "required":["schema","scoreModel","structuralSimilarity","visualSimilarity"],
+      "properties":{
+        "schema":{"const":"website-design-compiler/design-quality-evaluator-config/v3"},
+        "scoreModel":{"const":"runtime-evidence-weighted/v3"},
+        "structuralSimilarity":{"const":"ordered-page-graph/v1"},
+        "visualSimilarity":{"const":"calibrated-visual/v1"}
+      }
+    },
+    "calibrationReceipt":{
+      "type":"object","additionalProperties":false,
+      "required":["path","schema"],
+      "properties":{
+        "path":{"const":"artifacts/v3/design-quality-calibration/design-quality-calibration-receipt.json"},
+        "schema":{"const":"website-design-compiler/design-quality-calibration-receipt/v2"}
+      }
+    }
+  }
+}

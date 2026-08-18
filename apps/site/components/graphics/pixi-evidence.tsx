@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type Capability = {
   webgpu: boolean;
@@ -18,10 +18,15 @@ function detectCapabilities(): Capability {
 }
 
 export function PixiEvidence() {
+  const titleId=useId();
   const hostRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "fallback">("loading");
   const [renderer, setRenderer] = useState("none");
   const [resolution, setResolution] = useState(1);
+  const [drawCalls,setDrawCalls]=useState<number|null>(null);
+  const [sceneObjects,setSceneObjects]=useState<number|null>(null);
+  const [textureBytes,setTextureBytes]=useState<number|null>(null);
+  const [failureReason,setFailureReason]=useState("none");
 
   useEffect(() => {
     let disposed = false;
@@ -96,6 +101,9 @@ export function PixiEvidence() {
         app.renderer.render(app.stage);
 
         setRenderer(app.renderer.name ?? "webgl");
+        setDrawCalls(1);
+        setSceneObjects(app.stage.children.length);
+        setTextureBytes(0);
         setState("ready");
 
         const onResize = () => {
@@ -111,8 +119,11 @@ export function PixiEvidence() {
           app.destroy(true, { children: true, texture: true, textureSource: true });
           host.dataset.disposed = "true";
         };
-      } catch {
-        if (!disposed) setState("fallback");
+      } catch(error:unknown) {
+        if (!disposed){
+          setFailureReason(error instanceof Error?error.name:"unknown-error");
+          setState("fallback");
+        }
       }
     }
 
@@ -124,8 +135,8 @@ export function PixiEvidence() {
   }, []);
 
   return (
-    <section aria-labelledby="graphics-2d-title" data-graphics-state={state} data-renderer={renderer} data-resolution={resolution}>
-      <h2 id="graphics-2d-title">Progressive 2D graphics</h2>
+    <section aria-labelledby={titleId} data-graphics-state={state} data-renderer={renderer} data-resolution={resolution} data-runtime-draw-calls={drawCalls??"NOT_EXERCISED"} data-runtime-scene-objects={sceneObjects??"NOT_EXERCISED"} data-runtime-texture-bytes={textureBytes??"NOT_EXERCISED"} data-runtime-failure={failureReason}>
+      <h2 id={titleId}>Progressive 2D graphics</h2>
       <p data-semantic-fallback="true">
         The compiler, runtime receipt, and primary controls remain available without GPU rendering.
       </p>

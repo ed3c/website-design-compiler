@@ -1,0 +1,19 @@
+{
+  "schema": "website-design-compiler/brief-input/v2",
+  "project": "v2-brief-ready",
+  "briefText": "Page type: b2b product landing\nAudience: design engineering teams evaluating governed website generation\nObjective: explain the product clearly and drive teams to inspect the compiler contract\nMust preserve semantic HTML and reduced-motion support.\nDo not invent customer logos, testimonials, metrics, or pricing.",
+  "hardConstraints": [
+    "Do not change repository visibility or ownership."
+  ],
+  "requestedStages": [
+    "reference-intelligence",
+    "art-direction",
+    "information-architecture",
+    "content-architecture",
+    "visual-direction-search",
+    "design-system-compiler",
+    "page-architect",
+    "frontend-builder",
+    "release-receipt"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "binding": "repository-control-plane",
+  "content_sha256": "904c24814f602d4e1ef4852583dcbcf979e5a6571ae7aca03450d5a53ff788cf",
+  "registry_sha256": "b02bea2cd6cccf97769696205398e4da349ac984240027c1836ec6de65e3594c",
+  "repo_owned": [],
+  "requirements_sha256": "f526ed0f91cc3a45c5077fe58a4b5eaa5e41f1a778fb6fa969cac9a9b8e1e175",
+  "schema": "shared-skills/consumer-binding/v1",
+  "skills": [
+    {
+      "content_sha256": "1131a6462735888b91dabc8f5fbe61dafabecc86eae4eb62094f7efbed4276d2",
+      "entrypoint": "skills/agentic-tech-lead-orchestration/SKILL.md",
+      "name": "agentic-tech-lead-orchestration"
+    },
+    {
+      "content_sha256": "7d25bd05ee7e59da222c0e463ebfc9ccd69baa60efa201108e1ab2c75ee1b7e6",
+      "entrypoint": "skills/dual-forge-repository-loop/SKILL.md",
+      "name": "dual-forge-repository-loop"
+    },
+    {
+      "content_sha256": "64b4108189c67f04c232be41d710631258ec5d1fb871e1beccc4cb1048299803",
+      "entrypoint": "skills/git-town-stacked-pr-worker/SKILL.md",
+      "name": "git-town-stacked-pr-worker"
+    },
+    {
+      "content_sha256": "514d3123c3335f7250a390d04c3a0dffe196e010672b627658410a33be74189a",
+      "entrypoint": "skills/procedural-shadow-runtime/SKILL.md",
+      "name": "procedural-shadow-runtime"
+    },
+    {
+      "content_sha256": "69d053c576c246a22f9233d0bf2611ff0db67ddadfe7d113ffedb1f67ba98f7c",
+      "entrypoint": "skills/shared-skills-infra/SKILL.md",
+      "name": "shared-skills-infra"
+    },
+    {
+      "content_sha256": "e4ff17289279dfcf0a11f351657df637cfd456e213c0d4e47a3ca8281d00e0c9",
+      "entrypoint": "skills/spatial-loop-systems-engineering/SKILL.md",
+      "name": "spatial-loop-systems-engineering"
+    }
+  ],
+  "source": {
+    "commit": "fad02756797c1d0948507fc9edbef7931ead3f1d",
+    "repository": "https://github.com/ed3c/skills-shared",
+    "tree": "e793c67d27ea159915c1301033b286a8c6dad373"
+  },
+  "surfaces": {
+    "claude": ".claude/skills",
+    "codex": ".agents/skills"
+  }
+}

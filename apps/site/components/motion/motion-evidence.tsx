@@ -45,7 +45,16 @@ export function MotionEvidence() {
       );
     }, element);
 
-    return () => context.revert();
+    const cleanup = () => {
+      context.revert();
+      element.dataset.gsapActive = "false";
+      element.dataset.routeCleanupObserved = "true";
+    };
+    window.addEventListener("wdc:motion:route-change", cleanup);
+    return () => {
+      window.removeEventListener("wdc:motion:route-change", cleanup);
+      cleanup();
+    };
   }, []);
 
   return (

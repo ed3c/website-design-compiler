@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/webgpu-runtime-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "rendererOutcome", "git", "selected", "fallbacks"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/webgpu-runtime-receipt/v1" },
+    "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+    "rendererOutcome": { "enum": ["WEBGPU_PASS", "WEBGL_FALLBACK", "STATIC_FALLBACK", "NOT_EXERCISED"] },
+    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } },
+    "selected": {
+      "type": "object", "additionalProperties": false, "required": ["state", "renderer", "reason", "capabilities", "runtime"],
+      "properties": {
+        "state": { "enum": ["WEBGPU_PASS", "WEBGL_FALLBACK", "STATIC_FALLBACK", "NOT_EXERCISED"] },
+        "renderer": { "enum": ["webgpu", "webgl", "static", "none"] }, "reason": { "type": "string" },
+        "capabilities": { "type": "object", "additionalProperties": false, "required": ["webgpu", "webgl"], "properties": { "webgpu": { "type": "boolean" }, "webgl": { "type": "boolean" } } },
+        "runtime": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object", "additionalProperties": false, "required": ["state", "identity", "budget"],
+              "properties": {
+                "state": { "const": "WEBGPU_PASS" },
+                "identity": {
+                  "type": "object", "additionalProperties": false, "required": ["adapter", "renderer", "rendererVersion", "tslModule", "adapterInfo", "features", "limits"],
+                  "properties": {
+                    "adapter": { "const": "navigator.gpu" }, "renderer": { "const": "three.WebGPURenderer" },
+                    "rendererVersion": { "const": "0.184.0" }, "tslModule": { "const": "three/tsl@0.184.0" },
+                    "adapterInfo": {
+                      "type": "object", "additionalProperties": false, "required": ["state", "sha256"],
+                      "properties": { "state": { "enum": ["REPORTED", "UNREPORTED"] }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+                    },
+                    "features": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9-]+$" } },
+                    "limits": {
+                      "type": "object", "additionalProperties": false,
+                      "required": ["maxTextureDimension2D", "maxBindGroups", "maxBufferSize"],
+                      "properties": {
+                        "maxTextureDimension2D": { "type": ["integer", "null"], "minimum": 1 },
+                        "maxBindGroups": { "type": ["integer", "null"], "minimum": 1 },
+                        "maxBufferSize": { "type": ["integer", "null"], "minimum": 1 }
+                      }
+                    }
+                  }
+                },
+                "budget": {
+                  "type": "object", "additionalProperties": false, "required": ["dpr", "drawCalls", "triangles", "textureBytes", "framesRendered", "frameLoop"],
+                  "properties": {
+                    "dpr": { "type": "number", "exclusiveMinimum": 0, "maximum": 1.75 },
+                    "drawCalls": { "type": "integer", "minimum": 0, "maximum": 8 },
+                    "triangles": { "type": "integer", "minimum": 0, "maximum": 2500 },
+                    "textureBytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+                    "framesRendered": { "const": 1 }, "frameLoop": { "const": "demand" }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "fallbacks": {
+      "type": "object", "additionalProperties": false, "required": ["initializationFailure", "totalGpuFailure", "deviceLoss"],
+      "properties": { "initializationFailure": { "enum": ["PASS", "NOT_EXERCISED"] }, "totalGpuFailure": { "const": "PASS" }, "deviceLoss": { "enum": ["PASS", "NOT_EXERCISED"] } }
+    }
+  }
+}

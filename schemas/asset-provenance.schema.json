@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/asset-provenance.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "assets"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/asset-provenance/v1" },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "licenseExpression", "provenance", "attributionRequired"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^apps/site/public/[A-Za-z0-9._/-]+$" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "licenseExpression": { "type": "string", "minLength": 1, "not": { "const": "REPO_ORIGINAL" } },
+          "provenance": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "source"],
+                "properties": {
+                  "kind": { "const": "AUTHORED" },
+                  "source": { "type": "string", "pattern": "^git:[a-f0-9]{40}:[A-Za-z0-9._/-]+$" }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "source"],
+                "properties": {
+                  "kind": { "enum": ["LICENSED", "PUBLIC_DOMAIN"] },
+                  "source": { "type": "string", "pattern": "^https://[^\\s?#]+(?:/[^\\s?#]*)?#sha256=[a-f0-9]{64}$" }
+                }
+              }
+            ]
+          },
+          "attributionRequired": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

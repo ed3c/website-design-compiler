@@ -1,10 +1,5 @@
 export const EVIDENCE_STATES = [
-  "PASS",
-  "FAIL",
-  "ABSENT",
-  "NOT_IMPLEMENTED",
-  "NOT_EXERCISED",
-  "SKIPPED_BY_POLICY"
+  "PASS", "FAIL", "ABSENT", "NOT_IMPLEMENTED", "NOT_EXERCISED", "SKIPPED_BY_POLICY"
 ] as const;
 
 export type EvidenceState = (typeof EVIDENCE_STATES)[number];
@@ -12,6 +7,10 @@ export type EvidenceState = (typeof EVIDENCE_STATES)[number];
 export const PIPELINE_STAGES = [
   "reference-intelligence",
   "art-direction",
+  "information-architecture",
+  "content-architecture",
+  "visual-direction-search",
+  "semantic-design-tokens",
   "design-system-compiler",
   "page-architect",
   "frontend-builder",
@@ -29,44 +28,44 @@ export const PIPELINE_STAGES = [
 export type PipelineStageName = (typeof PIPELINE_STAGES)[number];
 export type ArtDirectorAuthority = "anthropic-frontend-design" | "google-stitch" | "taste-skill" | "repo-native";
 
-export interface CompilerReference {
-  kind: "url" | "image" | "video" | "html";
-  value: string;
+export interface CompilerReference { kind: "url" | "image" | "video" | "html"; value: string; }
+
+export interface CompilerBriefSourceEvidence {
+  inputSha256: string;
+  fields: {
+    pageType: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+    audience: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+    objective: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+  };
+}
+
+export type CompilerContentValue = string | string[];
+export interface CompilerContentEvidence {
+  schema: "website-design-compiler/content-evidence/v1";
+  source: "USER_SUPPLIED";
+  sections: Record<string, Record<string, CompilerContentValue>>;
 }
 
 export interface CompilerInput {
   schema: "website-design-compiler/input/v1";
   project: string;
-  brief: {
-    pageType: string;
-    audience: string;
-    objective: string;
-  };
+  brief: { pageType: string; audience: string; objective: string; };
+  hardConstraints?: string[];
+  briefSourceEvidence?: CompilerBriefSourceEvidence;
+  contentEvidence?: CompilerContentEvidence;
   references?: CompilerReference[];
-  artDirection?: {
-    primary: ArtDirectorAuthority[];
-    reviewers?: ArtDirectorAuthority[];
-  };
+  artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];
 }
 
-export interface StageEvidence {
-  stage: string;
-  state: EvidenceState;
-  reason: string;
-  artifacts: string[];
-}
+export interface StageEvidence { stage: string; state: EvidenceState; reason: string; artifacts: string[]; }
 
 export interface RuntimeReceipt {
   schema: "website-design-compiler/runtime-receipt/v1";
   project: string;
   generatedAt: string;
   inputSha256: string;
-  runtime: {
-    node: string;
-    platform: string;
-    arch: string;
-  };
+  runtime: { node: string; platform: string; arch: string; };
   stages: StageEvidence[];
   overall: EvidenceState;
 }

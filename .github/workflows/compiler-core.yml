@@ -27,7 +27,29 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      - name: Verify v2 natural-language brief normalization and IA compilation
+        run: pnpm v2:brief-ia
+      - name: Verify six natural-language v2 benchmark briefs
+        run: pnpm v2:brief-benchmarks
+      - name: Verify six-category claim-safe content architecture
+        run: pnpm v2:content-architecture
+      - name: Verify deterministic multi-candidate visual direction search
+        run: pnpm v2:visual-directions
+      - name: Verify concrete semantic tokens and production projection drift
+        run: pnpm v2:semantic-tokens
+      - name: Verify governed rich section grammar
+        run: pnpm v2:section-grammar
+      - name: Verify responsive composition policies and six page graphs
+        run: pnpm v2:responsive-composition
+      - name: Verify page-level motion choreography and accessibility fallbacks
+        run: pnpm v2:motion-choreography
+      - name: Verify bounded media and graphics orchestration strategy
+        run: pnpm v2:media-orchestration
+      - name: Verify complete governed page graph compilation
+        run: pnpm v2:complete-page-graph
       - run: pnpm provenance:fixture
+      - name: Verify repository-wide rights clearance
+        run: pnpm rights:clearance
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
       - run: pnpm showcase:compile
@@ -36,6 +58,8 @@ jobs:
         run: pnpm external-skills:receipt
       - name: Verify deterministic authenticated media worker
         run: pnpm media:fixture
+      - name: Record fail-closed production provider admission status
+        run: pnpm media:production-status
       - name: Verify governed Puck authoring projection
         run: pnpm authoring:receipt
       - name: Verify Payload CMS draft/published persistence and auth boundary
@@ -47,7 +71,7 @@ jobs:
       - run: pnpm browser:typecheck
       - run: pnpm storybook:typecheck
       - run: pnpm arena:typecheck
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install chromium
       - name: Verify deterministic reference image/video decode evidence
         run: pnpm reference:media-fixture
       - name: Verify browser-derived reference layout/typography/responsive evidence
@@ -57,7 +81,8 @@ jobs:
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
-      - name: Run Storybook, browser, accessibility-performance, arena, and release gates
+      - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
+        id: runtime-gates
         run: |
           set +e
           pnpm storybook:build
@@ -70,20 +95,64 @@ jobs:
           qa_status=$?
           pnpm browser:receipt
           browser_receipt_status=$?
+          pnpm generated-pages:receipt
+          generated_pages_status=$?
+          pnpm site-graphs:browser-receipt
+          site_graphs_status=$?
+          pnpm v3:design-quality-calibration
+          design_quality_calibration_status=$?
+          pnpm v3:design-quality
+          design_quality_status=$?
           pnpm quality:receipt
           quality_status=$?
+          pnpm arena:ia-metrics
+          arena_ia_status=$?
           pnpm arena:smoke
           arena_status=$?
           pnpm release:receipt
           release_status=$?
-          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+          echo "storybook_build_status=$storybook_build_status" >> "$GITHUB_OUTPUT"
+          echo "storybook_qa_status=$storybook_qa_status" >> "$GITHUB_OUTPUT"
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$site_graphs_status" -ne 0 ] || [ "$design_quality_calibration_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
+      - name: Upload Ubuntu Storybook golden screenshot candidate
+        id: storybook-golden-screenshots
+        if: always() && steps.runtime-gates.outputs.storybook_build_status == '0' && steps.runtime-gates.outputs.storybook_qa_status == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/storybook/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
+      - name: Bind Storybook golden candidate to uploaded screenshot artifact
+        id: storybook-golden-candidate
+        if: always() && steps.storybook-golden-screenshots.outputs.artifact-id != ''
+        env:
+          STORYBOOK_SCREENSHOT_ARTIFACT_ID: ${{ steps.storybook-golden-screenshots.outputs.artifact-id }}
+          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          STORYBOOK_BUILD_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_build_status }}
+          STORYBOOK_QA_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_qa_status }}
+        run: pnpm storybook:golden-candidate
+      - name: Upload review-required Storybook golden candidate manifest
+        if: always() && steps.storybook-golden-candidate.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-golden-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/storybook/golden-candidate.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify canonical v2 release policy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pnpm release:v2
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
+            artifacts/v2/
+            artifacts/v3/
+            artifacts/rights-clearance/
             artifacts/runtime/minimal/runtime-receipt.json
             artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
             artifacts/runtime/minimal/reference-intelligence/reference-analysis.md
@@ -111,10 +180,15 @@ jobs:
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
             artifacts/browser-qa/playwright-report.json
+            artifacts/browser-qa/playwright-runtime-report.json
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
+            artifacts/graphics-3d/
+            artifacts/generated-pages/
+            artifacts/media-orchestration/
             artifacts/accessibility-performance/
             artifacts/arena/
             artifacts/release/release-gate-receipt.json
+            artifacts/release-v2/release-policy-v2-receipt.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: warn

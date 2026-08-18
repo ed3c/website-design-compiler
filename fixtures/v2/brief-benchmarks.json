@@ -1,0 +1,32 @@
+[
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-b2b",
+    "briefText": "Page type: b2b product landing\nAudience: enterprise software buyers\nObjective: explain governed website generation and drive product evaluation\nMust preserve semantic HTML.\nDo not invent testimonials, metrics, customer logos, or pricing."
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-editorial",
+    "briefText": "Page type: editorial feature\nAudience: long-form readers\nObjective: prioritize reading hierarchy and evidence-backed narrative\nMust support reduced motion.\nDo not invent authors, publications, metrics, or pricing."
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-premium",
+    "briefText": "Page type: premium consumer brand site\nAudience: high-intent consumer buyers\nObjective: present a distinctive premium product story with a clear action\nMust preserve accessible commerce actions.\nDo not invent customer logos, testimonials, metrics, or pricing."
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-motion",
+    "briefText": "Page type: motion-heavy creative site\nAudience: creative technology audiences\nObjective: create a paced interactive narrative without blocking the primary action\nMust support reduced motion.\nNever make motion required for comprehension."
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-2d",
+    "briefText": "Page type: interactive 2d experience\nAudience: interactive product visitors\nObjective: demonstrate a 2D experience while preserving semantic fallbacks\nMust preserve semantic HTML.\nNever require canvas for primary content."
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-3d",
+    "briefText": "Page type: interactive 3d showcase\nAudience: spatial-interface visitors\nObjective: demonstrate a governed 3D experience with a clear fallback path\nMust support reduced motion.\nNever require WebGL for primary content."
+  }
+]

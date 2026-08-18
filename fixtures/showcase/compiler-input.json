@@ -6,19 +6,16 @@
     "audience": "design engineering teams evaluating governed agentic website delivery",
     "objective": "show a complete evidence-first path from neutral reference grammar through governed UI, optional motion and graphics, and release receipts"
   },
-  "references": [
-    {
-      "kind": "html",
-      "value": "<!doctype html><html><head><title>Neutral evidence fixture</title></head><body><nav><a href='/evidence'>Evidence</a></nav><main><h1>Verifiable interface delivery</h1><section><h2>Governed contracts</h2><p>Original neutral reference copy.</p></section></main></body></html>"
-    }
-  ],
-  "artDirection": {
-    "primary": ["repo-native"],
-    "reviewers": ["anthropic-frontend-design"]
-  },
+  "references": [{
+    "kind": "html",
+    "value": "<!doctype html><html><head><title>Neutral evidence fixture</title></head><body><nav><a href='/evidence'>Evidence</a></nav><main><h1>Verifiable interface delivery</h1><section><h2>Governed contracts</h2><p>Original neutral reference copy.</p></section></main></body></html>"
+  }],
+  "artDirection": { "primary": ["repo-native"], "reviewers": ["anthropic-frontend-design"] },
   "requestedStages": [
     "reference-intelligence",
     "art-direction",
+    "visual-direction-search",
+    "semantic-design-tokens",
     "design-system-compiler",
     "page-architect",
     "frontend-builder",

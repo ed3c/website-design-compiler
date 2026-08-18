@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/rights-waivers.schema.json",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["subjectId", "owner", "rationale", "scope", "expiresAt"],
+    "properties": {
+      "subjectId": { "type": "string", "pattern": "^(package|asset|font|model|generated-output|service):\\S{1,240}$" },
+      "owner": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._@/-]{2,127}$" },
+      "rationale": { "type": "string", "minLength": 12, "maxLength": 500, "pattern": "^[^\\r\\n\\u0000]+$" },
+      "scope": { "type": "string", "pattern": "^subject:(package|asset|font|model|generated-output|service):\\S{1,240}$" },
+      "expiresAt": { "type": "string", "format": "date-time" }
+    }
+  }
+}

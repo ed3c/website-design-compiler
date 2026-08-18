@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/semantic-design-tokens/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "sourceVisualDirection", "sourceVisualDirectionReceiptSha256", "color", "typography", "layout", "spacingPx", "radiiPx", "border", "elevation", "motionMs", "media", "interaction"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/semantic-design-tokens/v2" },
+    "project": { "type": "string", "minLength": 1 },
+    "sourceVisualDirection": { "type": "string", "minLength": 1 },
+    "sourceVisualDirectionReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "color": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "background", "surface", "text", "mutedText", "accent", "onAccent", "focus", "contrastPolicy", "contrastEvidence"],
+      "properties": {
+        "mode": { "enum": ["light", "dark"] },
+        "background": { "$ref": "#/$defs/oklch" }, "surface": { "$ref": "#/$defs/oklch" }, "text": { "$ref": "#/$defs/oklch" }, "mutedText": { "$ref": "#/$defs/oklch" }, "accent": { "$ref": "#/$defs/oklch" }, "onAccent": { "$ref": "#/$defs/oklch" }, "focus": { "$ref": "#/$defs/oklch" },
+        "contrastPolicy": { "const": "WCAG_AA_TEXT" },
+        "contrastEvidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["textOnBackground", "mutedTextOnBackground", "onAccentOnAccent", "focusOnBackground", "minimumText", "minimumFocus"],
+          "properties": {
+            "textOnBackground": { "type": "number", "minimum": 4.5 },
+            "mutedTextOnBackground": { "type": "number", "minimum": 4.5 },
+            "onAccentOnAccent": { "type": "number", "minimum": 4.5 },
+            "focusOnBackground": { "type": "number", "minimum": 3 },
+            "minimumText": { "const": 4.5 }, "minimumFocus": { "const": 3 }
+          }
+        }
+      }
+    },
+    "typography": {
+      "type": "object", "additionalProperties": false,
+      "required": ["display", "body", "scalePx"],
+      "properties": {
+        "display": { "$ref": "#/$defs/displayType" },
+        "body": { "$ref": "#/$defs/bodyType" },
+        "scalePx": { "$ref": "#/$defs/viewportNumberArrays" }
+      }
+    },
+    "layout": {
+      "type": "object", "additionalProperties": false,
+      "required": ["breakpointsPx", "containerMaxPx", "columns", "gutterPx"],
+      "properties": {
+        "breakpointsPx": { "$ref": "#/$defs/breakpoints" },
+        "containerMaxPx": { "$ref": "#/$defs/viewportNumbers" },
+        "columns": { "$ref": "#/$defs/viewportIntegers" },
+        "gutterPx": { "$ref": "#/$defs/viewportNumbers" }
+      }
+    },
+    "spacingPx": { "type": "array", "minItems": 7, "items": { "type": "number", "minimum": 0 } },
+    "radiiPx": { "type": "object", "additionalProperties": false, "required": ["sm", "md", "lg", "pill"], "properties": { "sm": { "type": "number", "minimum": 0 }, "md": { "type": "number", "minimum": 0 }, "lg": { "type": "number", "minimum": 0 }, "pill": { "const": 999 } } },
+    "border": { "type": "object", "additionalProperties": false, "required": ["widthPx", "style", "color"], "properties": { "widthPx": { "const": 1 }, "style": { "const": "solid" }, "color": { "$ref": "#/$defs/oklch" } } },
+    "elevation": { "type": "object", "additionalProperties": false, "required": ["low", "high"], "properties": { "low": { "type": "string", "minLength": 1 }, "high": { "type": "string", "minLength": 1 } } },
+    "motionMs": { "type": "object", "additionalProperties": false, "required": ["fast", "base", "slow"], "properties": { "fast": { "type": "number", "minimum": 0 }, "base": { "type": "number", "minimum": 0 }, "slow": { "type": "number", "minimum": 0 } } },
+    "media": { "type": "object", "additionalProperties": false, "required": ["treatment", "gradientPolicy", "blurMaxPx", "noiseOpacityMax"], "properties": { "treatment": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] }, "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] }, "blurMaxPx": { "type": "number", "minimum": 0 }, "noiseOpacityMax": { "type": "number", "minimum": 0, "maximum": 1 } } },
+    "interaction": { "type": "object", "additionalProperties": false, "required": ["focusRingPx", "focusOffsetPx", "rawValueBypass"], "properties": { "focusRingPx": { "const": 3 }, "focusOffsetPx": { "const": 2 }, "rawValueBypass": { "const": false } } }
+  },
+  "$defs": {
+    "oklch": { "type": "string", "pattern": "^oklch\\([0-9.]+ [0-9.]+ [0-9.]+\\)$" },
+    "displayType": { "type": "object", "additionalProperties": false, "required": ["family", "fallback", "weight", "lineHeight", "letterSpacingEm"], "properties": { "family": { "type": "string", "minLength": 1 }, "fallback": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }, "weight": { "type": "integer", "minimum": 1 }, "lineHeight": { "type": "number", "exclusiveMinimum": 0 }, "letterSpacingEm": { "type": "number" } } },
+    "bodyType": { "type": "object", "additionalProperties": false, "required": ["family", "fallback", "weight", "lineHeight", "measureCh"], "properties": { "family": { "type": "string", "minLength": 1 }, "fallback": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }, "weight": { "type": "integer", "minimum": 1 }, "lineHeight": { "type": "number", "exclusiveMinimum": 0 }, "measureCh": { "type": "number", "exclusiveMinimum": 0 } } },
+    "viewportNumbers": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "type": "number", "minimum": 0 }, "tablet": { "type": "number", "minimum": 0 }, "desktop": { "type": "number", "minimum": 0 } } },
+    "viewportIntegers": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "type": "integer", "minimum": 1 }, "tablet": { "type": "integer", "minimum": 1 }, "desktop": { "type": "integer", "minimum": 1 } } },
+    "viewportNumberArrays": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } }, "tablet": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } }, "desktop": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } } } },
+    "breakpoints": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "const": 0 }, "tablet": { "const": 768 }, "desktop": { "const": 1200 } } }
+  }
+}

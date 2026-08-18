@@ -3,7 +3,7 @@
   "$id": "https://ed3c.github.io/website-design-compiler/schemas/page-architecture-plan.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "pageType", "primaryObjective", "semanticLandmarks", "sections", "optionalEnhancements"],
+  "required": ["schema", "project", "pageType", "primaryObjective", "semanticLandmarks", "sections", "sectionIntents", "optionalEnhancements"],
   "properties": {
     "schema": { "const": "website-design-compiler/page-architecture-plan/v1" },
     "project": { "type": "string", "minLength": 1 },
@@ -19,6 +19,71 @@
           "role": { "enum": ["hero", "runtime-evidence", "progressive-enhancement"] },
           "required": { "type": "boolean" },
           "componentIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    },
+    "sectionIntents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "purpose", "priority", "status", "requiredContent", "fallback", "contentContract"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 },
+          "priority": { "enum": ["PRIMARY", "SECONDARY", "SUPPORTING"] },
+          "status": { "enum": ["READY", "NEEDS_INPUT"] },
+          "requiredContent": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "fallback": { "type": "string", "minLength": 1 },
+          "contentContract": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "localePolicy", "fields", "quality"],
+            "properties": {
+              "state": { "enum": ["READY", "NEEDS_INPUT"] },
+              "localePolicy": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sourceLocale", "localizationReady"],
+                "properties": { "sourceLocale": { "const": "en" }, "localizationReady": { "const": true } }
+              },
+              "fields": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["slot", "state", "sourceType", "value", "publishable", "provenance", "lengthBudget"],
+                  "properties": {
+                    "slot": { "type": "string", "minLength": 1 },
+                    "state": { "enum": ["READY", "NEEDS_INPUT", "FORBIDDEN"] },
+                    "sourceType": { "enum": ["observed_fact", "user_supplied_claim", "derived_copy", "placeholder_required", "forbidden_invention"] },
+                    "value": {},
+                    "publishable": { "type": "boolean" },
+                    "provenance": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                    "lengthBudget": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["maxCharacters"],
+                      "properties": { "maxCharacters": { "type": "integer", "minimum": 1 } }
+                    }
+                  },
+                  "allOf": [{ "if": { "properties": { "slot": { "enum": ["feature-items", "proof-items", "related-items", "story-beats"] } }, "required": ["slot"] }, "then": { "properties": { "value": { "oneOf": [{ "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 1 } }, { "type": "null" }] } } }, "else": { "properties": { "value": { "type": ["string", "null"] } } } }]
+                }
+              },
+              "quality": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["forbiddenPhraseHits", "repeatedPublishableValues"],
+                "properties": {
+                  "forbiddenPhraseHits": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+                  "repeatedPublishableValues": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+                }
+              }
+            }
+          }
         }
       }
     },

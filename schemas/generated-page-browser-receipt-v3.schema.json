@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://example.invalid/website-design-compiler/generated-page-browser-receipt-v3.schema.json",
+  "type":"object","additionalProperties":false,"required":["schema","overall","git","expected","observed","evidence","qualityEvidence","missing"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/generated-page-browser-receipt/v3"},"overall":{"enum":["PASS","FAIL"]},
+    "git":{"type":"object","additionalProperties":false,"required":["sha","ref"],"properties":{"sha":{"type":"string","minLength":1},"ref":{"type":"string","minLength":1}}},
+    "expected":{"type":"object","additionalProperties":false,"required":["categories","projects","screenshots","qualityObservations"],"properties":{"categories":{"const":6},"projects":{"const":3},"screenshots":{"const":18},"qualityObservations":{"const":12}}},
+    "observed":{"type":"object","additionalProperties":false,"required":["categories","projects","screenshots","distinctHashes","qualityObservations"],"properties":{"categories":{"type":"integer","minimum":0},"projects":{"type":"integer","minimum":0},"screenshots":{"type":"integer","minimum":0},"distinctHashes":{"type":"integer","minimum":0},"qualityObservations":{"type":"integer","minimum":0}}},
+    "evidence":{"type":"array","maxItems":18,"items":{"type":"object","additionalProperties":false,"required":["category","project","path","sha256"],"properties":{"category":{"type":"string","minLength":1},"project":{"type":"string","minLength":1},"path":{"type":"string","pattern":"^screenshots/[^/]+\\.png$"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}},
+    "qualityEvidence":{"type":"array","maxItems":12,"items":{"type":"object","additionalProperties":false,"required":["category","project","viewport","path","sha256","screenshotSha256"],"properties":{"category":{"type":"string","minLength":1},"project":{"enum":["desktop-chromium","mobile-chromium"]},"viewport":{"enum":["desktop","mobile"]},"path":{"type":"string","pattern":"^\\.\\./design-quality-browser/[^/]+\\.json$"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"screenshotSha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}},
+    "missing":{"type":"array","items":{"type":"string","minLength":1}}
+  }
+}

@@ -18,6 +18,31 @@
         "objective": { "type": "string", "minLength": 1 }
       }
     },
+    "hardConstraints": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "briefSourceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputSha256", "fields"],
+      "properties": {
+        "inputSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "fields": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pageType", "audience", "objective"],
+          "properties": {
+            "pageType": { "$ref": "#/$defs/sourceField" },
+            "audience": { "$ref": "#/$defs/sourceField" },
+            "objective": { "$ref": "#/$defs/sourceField" }
+          }
+        }
+      }
+    },
+    "contentEvidence": { "$ref": "#/$defs/contentEvidence" },
     "references": {
       "type": "array",
       "items": {
@@ -45,6 +70,42 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "dependentRequired": { "contentEvidence": ["briefSourceEvidence"] },
+  "$defs": {
+    "sourceField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "sourceExcerpt"],
+      "properties": {
+        "state": { "enum": ["EXPLICIT", "INFERRED"] },
+        "sourceExcerpt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "contentEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "source", "sections"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/content-evidence/v1" },
+        "source": { "const": "USER_SUPPLIED" },
+        "sections": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "$ref": "#/$defs/contentValue" }
+          }
+        }
+      }
+    },
+    "contentValue": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" },
+        { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" } }
+      ]
     }
   }
 }

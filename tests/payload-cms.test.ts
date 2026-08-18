@@ -4,13 +4,19 @@ import authoringFixture from "../apps/site/generated/showcase-authoring-data.jso
 import {
   CMS_LOCALES,
   MediaAssets,
+  PageGraphs,
   Pages,
   PAYLOAD_VERSION,
   Users,
   authoringToPayloadLayout,
-  payloadLayoutToAuthoring
+  payloadLayoutToAuthoring,
+  validateStoredPageGraph,
+  validateStoredPageGraphFingerprint
 } from "../src/payload-cms.js";
 import { validateAuthoringData, type AuthoringData } from "../src/puck-authoring.js";
+import { compileCompletePageGraph } from "../src/complete-page-graph.js";
+import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
+import { pageGraphFingerprint, pageGraphToPuck,puckToPayload } from "../src/page-graph-roundtrip.js";
 
 test("Payload schema is pinned and owns pages, authenticated users, and provenance-linked media", () => {
   assert.equal(PAYLOAD_VERSION, "3.86.0");
@@ -19,6 +25,8 @@ test("Payload schema is pinned and owns pages, authenticated users, and provenan
   assert.ok(Users.auth);
   assert.equal(Pages.slug, "pages");
   assert.ok(Pages.versions);
+  assert.equal(PageGraphs.slug, "compiled-pages");
+  assert.ok(PageGraphs.versions);
   assert.equal(MediaAssets.slug, "media-assets");
 
   const mediaFieldNames = new Set(MediaAssets.fields.flatMap((field) => "name" in field && field.name ? [field.name] : []));
@@ -52,4 +60,12 @@ test("Payload section cannot bypass Puck recursive nesting constraint", () => {
     ], "invalid", "surface-default"),
     /not governed|cannot nest Section/
   );
+});
+
+test("Payload JSON validation reconstructs the canonical page graph before checking its signature",()=>{
+  const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
+  const payloadGraph = puckToPayload(pageGraphToPuck(graph));
+  assert.equal(validateStoredPageGraph(payloadGraph),true);
+  assert.equal(validateStoredPageGraphFingerprint(payloadGraph, pageGraphFingerprint(graph)), true);
+  assert.match(String(validateStoredPageGraphFingerprint(payloadGraph, "0".repeat(64))), /fingerprint drift/);
 });

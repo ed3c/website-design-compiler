@@ -1,0 +1,22 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { SECTION_CONTRACTS, SECTION_KINDS, sectionRegistryProjection } from "../src/section-grammar.js";
+import { projectSectionContracts, projectionDriftErrors } from "../src/section-projections.js";
+import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
+
+const outputDirectory=resolve("artifacts/v2/section-grammar");
+await mkdir(outputDirectory,{recursive:true});
+const registry=sectionRegistryProjection();
+const projections=projectSectionContracts();
+const driftErrors=projectionDriftErrors(projections);
+const pages=compileAllSectionPageFixtures();
+const graphSignatures=pages.map((page)=>page.sections.map((section)=>section.kind).join(">"));
+const evidenceRequired=SECTION_KINDS.filter((kind)=>SECTION_CONTRACTS[kind].claimPolicy==="EVIDENCE_REQUIRED");
+const overall=SECTION_KINDS.length>=15&&registry.length===SECTION_KINDS.length&&projections.length===SECTION_KINDS.length&&driftErrors.length===0&&pages.length===6&&new Set(graphSignatures).size===6&&registry.every((entry)=>entry.rawMarkupAllowed===false&&entry.tokenOwnership==="semantic-design-tokens/v2")?"PASS":"FAIL";
+const receipt={schema:"website-design-compiler/section-grammar-receipt/v2",overall,contractCount:SECTION_KINDS.length,evidenceRequired,driftErrors,projectionCoverage:{puck:projections.map((entry)=>entry.authoringType),payload:projections.map((entry)=>entry.payloadSlug),storybook:projections.flatMap((entry)=>entry.variantStories.map((story)=>story.storyId))},pageExpressibility:{categoryCount:pages.length,uniqueGraphCount:new Set(graphSignatures).size,graphSignatures},registry,projections,pages};
+await writeFile(resolve(outputDirectory,"registry.json"),`${JSON.stringify(registry,null,2)}\n`,"utf8");
+await writeFile(resolve(outputDirectory,"projections.json"),`${JSON.stringify(projections,null,2)}\n`,"utf8");
+await writeFile(resolve(outputDirectory,"page-fixtures.json"),`${JSON.stringify(pages,null,2)}\n`,"utf8");
+await writeFile(resolve(outputDirectory,"receipt.json"),`${JSON.stringify(receipt,null,2)}\n`,"utf8");
+console.log(JSON.stringify({overall,contractCount:SECTION_KINDS.length,projectionCount:projections.length,pageCount:pages.length,uniqueGraphCount:new Set(graphSignatures).size,evidenceRequiredCount:evidenceRequired.length,driftErrors}));
+if(overall!=="PASS")process.exitCode=1;

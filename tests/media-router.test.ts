@@ -56,9 +56,45 @@ test("deterministic mock worker emits reproducible hashed asset receipt", async 
   const first = await routeMediaGeneration({ signed: signed(), secret, policy, workers: { mock: worker } });
   const second = await routeMediaGeneration({ signed: signed(), secret, policy, workers: { mock: worker } });
   assert.equal(first.receipt.overall, "PASS");
+  assert.equal(first.receipt.gate, "DETERMINISTIC_MOCK");
+  assert.equal(first.receipt.productionReleaseEligible, false);
   assert.equal(first.receipt.asset?.sha256, second.receipt.asset?.sha256);
   assert.equal(first.receipt.model.versionOrCommit, "internal:mock-image-v1");
   assert.deepEqual(first.receipt.parameters, { seed: 1 });
+});
+
+test("deterministic mock gate refuses production adapters even when policy says ALLOW", async () => {
+  let calls = 0;
+  const productionPolicy: MediaModelPolicy = {
+    ...policy,
+    entries: [{
+      id: "fixture-production-image",
+      kind: "image",
+      adapter: "diffusers-image",
+      admission: "ALLOW",
+      versionOrCommit: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      provenanceSubjectId: "model:fixture-production-image",
+      outputTermsSubjectId: "generated-output:fixture-production-image"
+    }]
+  };
+  const productionRequest = { ...request, modelId: "fixture-production-image" };
+  const worker: MediaWorker = {
+    adapter: "diffusers-image",
+    async generate() {
+      calls += 1;
+      return { mediaType: "image/webp", extension: "webp", bytes: new Uint8Array([1]) };
+    }
+  };
+
+  const result = await routeMediaGeneration({
+    signed: signed(productionRequest), secret, policy: productionPolicy,
+    workers: { "diffusers-image": worker }
+  });
+
+  assert.equal(calls, 0);
+  assert.equal(result.receipt.overall, "FAIL");
+  assert.match(result.receipt.reason ?? "", /production provider route/);
+  assert.equal(result.receipt.productionReleaseEligible, false);
 });
 
 test("invalid authentication fails before worker execution", async () => {

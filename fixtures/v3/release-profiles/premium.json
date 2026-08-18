@@ -1,0 +1,18 @@
+{
+  "schema":"website-design-compiler/design-quality-release-profile/v3",
+  "id":"premium-web-v3",
+  "premiumQualityThreshold":78,
+  "originalitySimilarityThreshold":0.82,
+  "requiredViewports":["mobile","desktop"],
+  "requireExactEvidenceBinding":true,
+  "evaluator":{
+    "schema":"website-design-compiler/design-quality-evaluator-config/v3",
+    "scoreModel":"runtime-evidence-weighted/v3",
+    "structuralSimilarity":"ordered-page-graph/v1",
+    "visualSimilarity":"calibrated-visual/v1"
+  },
+  "calibrationReceipt":{
+    "path":"artifacts/v3/design-quality-calibration/design-quality-calibration-receipt.json",
+    "schema":"website-design-compiler/design-quality-calibration-receipt/v2"
+  }
+}
