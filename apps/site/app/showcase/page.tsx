@@ -21,7 +21,12 @@ function GovernedNode({ node }: { node: ComponentNode }) {
 
   const errors = validateSectionInstance(node.props);
   if (errors.length > 0) throw new Error(`Invalid governed showcase section ${node.id}: ${errors.join("; ")}`);
-  return <GovernedSection kind={node.props.kind} variant={node.props.variant} fields={node.props.props} />;
+  return <GovernedSection
+    kind={node.props.kind}
+    variant={node.props.variant}
+    fields={node.props.props}
+    headingLevel={node.props.kind === "hero" ? 2 : undefined}
+  />;
 }
 
 export default function ShowcasePage() {

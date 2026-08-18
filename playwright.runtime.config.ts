@@ -1,7 +1,7 @@
 import { defineConfig,devices } from "@playwright/test";
 
-const browserPort=Number(process.env.WDC_BROWSER_PORT??"3000");
-if(!Number.isInteger(browserPort)||browserPort<1024||browserPort>65535)throw new Error("WDC_BROWSER_PORT must be an unprivileged TCP port");
+const browserPort=Number(process.env.WDC_RUNTIME_BROWSER_PORT??process.env.WDC_BROWSER_PORT??"3200");
+if(!Number.isInteger(browserPort)||browserPort<1024||browserPort>65535)throw new Error("WDC_RUNTIME_BROWSER_PORT (or WDC_BROWSER_PORT fallback) must be an unprivileged TCP port");
 const webgpuLaunchArgs=process.platform==="linux"
   ?["--enable-unsafe-webgpu","--use-angle=vulkan","--enable-features=Vulkan","--disable-vulkan-surface"]
   :process.platform==="darwin"

@@ -7,6 +7,7 @@ export type GovernedSectionProps = {
   kind: GovernedSectionKind;
   variant: string;
   fields: SectionInstance["props"];
+  headingLevel?: 1 | 2;
 };
 
 type LinkValue = { label: string; href: string };
@@ -58,7 +59,7 @@ function MediaFrame({ value, label }: { value?: MediaValue; label: string }) {
   </div>;
 }
 
-export function GovernedSection({ kind, variant, fields }: GovernedSectionProps) {
+export function GovernedSection({ kind, variant, fields, headingLevel = 1 }: GovernedSectionProps) {
   const heading = text(fields.heading) ?? text(fields.headline) ?? kind.replaceAll("-", " ");
   const body = text(fields.body) ?? text(fields.description);
   const list = items(fields.items);
@@ -75,10 +76,11 @@ export function GovernedSection({ kind, variant, fields }: GovernedSectionProps)
   if (kind === "hero") {
     const primary = link(fields.primaryAction);
     const secondary = link(fields.secondaryAction);
+    const Heading = headingLevel === 1 ? "h1" : "h2";
     return <section className={`${styles.section} ${styles.hero}`} data-governed-section={kind} data-variant={variant}>
       <div className={styles.heroCopy}>
         <Kicker>{text(fields.eyebrow) ?? variant}</Kicker>
-        <h1>{heading}</h1>
+        <Heading>{heading}</Heading>
         {body ? <p className={styles.lede}>{body}</p> : null}
         <div className={styles.actions}>{primary ? <Action value={primary} /> : null}{secondary ? <Action value={secondary} tone="quiet" /> : null}</div>
       </div>

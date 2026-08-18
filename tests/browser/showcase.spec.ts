@@ -11,7 +11,9 @@ test("showcase renders governed compiler projection with graphics disabled", asy
   await page.goto("/showcase?graphics=off&graphics3d=off", { waitUntil: "networkidle" });
   const main = page.locator("main[data-showcase-project='evidence-first-showcase'][data-governed-renderer='nextjs-registry']");
   await expect(main).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Reference evidence becomes a governed");
+  await expect(page.getByRole("heading", { level: 2, name: "State the product promise and primary action." })).toBeVisible();
   await expect(page.locator("[data-frontend-component='rich-section']")).toHaveCount(6);
   await expect(page.locator("[data-governed-section='navigation']")).toBeVisible();
   await expect(page.locator("[data-governed-section='hero']")).toBeVisible();

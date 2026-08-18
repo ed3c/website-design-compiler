@@ -20,9 +20,13 @@ for(const category of categories)test(`${category} emits browser-derived visual 
     const media=mediaStages.nth(index);await media.scrollIntoViewIfNeeded();await expect(media).toHaveAttribute("data-media-runtime-state",/ACTIVE|DOM_FALLBACK/);
   }
   await page.evaluate(()=>window.scrollTo(0,0));
-  await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
   const pageNodes=root.locator("[data-page-node]");
   const pageNodeCount=await pageNodes.count();
+  await page.waitForFunction((count)=>{
+    const metrics=(window as typeof window&{__wdcGeneratedMotion?:{mountedEffects:number;routeListeners:number}}).__wdcGeneratedMotion;
+    return metrics?.mountedEffects===count&&metrics.routeListeners===count;
+  },pageNodeCount);
+  await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
   await expect(root.locator("[data-page-node][data-motion-runtime='CLEANED']")).toHaveCount(pageNodeCount);
 
   const outputRoot=join(process.cwd(),"artifacts","design-quality-browser");

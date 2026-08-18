@@ -61,7 +61,7 @@ test("generated motion records bounded performance and zero leaked resources aft
   }
 
   await page.emulateMedia({reducedMotion:"reduce"});
-  await page.goto("/benchmarks/motion-heavy?media=off&graphics=off&graphics3d=off",{waitUntil:"networkidle"});
+  await page.goto("/benchmarks/motion-heavy-creative?media=off&graphics=off&graphics3d=off",{waitUntil:"networkidle"});
   const reducedNodes=page.locator("[data-page-node]");
   await expect(reducedNodes.first()).toHaveAttribute("data-motion-runtime","VISIBLE_NO_MOTION");
   const reducedMotionFallback=await reducedNodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-motion-runtime")==="VISIBLE_NO_MOTION"&&getComputedStyle(entry).opacity==="1"));
