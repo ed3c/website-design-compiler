@@ -5,6 +5,7 @@ import { ARENA_CATEGORIES } from "../../src/arena.js";
 
 function measureGeneratedPageLayout(){
   const tolerance=1;
+  const minimumContentFillRatio=.9;
   const clips=(element:HTMLElement,axis:"x"|"y")=>{
     const style=getComputedStyle(element);
     const overflow=axis==="x"?style.overflowX:style.overflowY;
@@ -32,7 +33,7 @@ function measureGeneratedPageLayout(){
     const declaredColumns=Number(element.dataset.activeColumns);
     if(!content||auxiliary||element.clientWidth===0||declaredColumns<=1)return[];
     const ratio=content.getBoundingClientRect().width/element.getBoundingClientRect().width;
-    return ratio<.9?[{id:element.dataset.pageNode??"UNKNOWN",ratio,declaredColumns}]:[];
+    return ratio<minimumContentFillRatio?[{id:element.dataset.pageNode??"UNKNOWN",ratio,declaredColumns}]:[];
   });
   return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,unsafeHorizontalScroll,underfilledContentOnlyNodes};
 }
@@ -46,6 +47,11 @@ for(const category of categories){
     await expect(page.locator(`[data-generated-page='${category}']`)).toBeVisible();
     const nodes=page.locator("[data-page-node]");
     expect(await nodes.count()).toBeGreaterThanOrEqual(5);
+    const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
+    await expect.poll(
+      ()=>nodes.evaluateAll((entries,expectedViewport)=>entries.every((entry)=>entry.getAttribute("data-current-viewport")===expectedViewport),viewport),
+      {message:`all generated sections must hydrate the ${viewport} responsive contract before layout measurement`}
+    ).toBe(true);
     const indices=await nodes.evaluateAll((entries)=>entries.map((entry)=>Number(entry.getAttribute("data-semantic-index"))));
     expect(indices).toEqual(indices.map((_,index)=>index));
     const runtimeLayout=await page.evaluate(measureGeneratedPageLayout);
@@ -54,9 +60,7 @@ for(const category of categories){
     expect(runtimeLayout.unsafeHorizontalScroll,"generated content requires unsafe horizontal scrolling").toEqual([]);
     expect(runtimeLayout.textClipping,"rendered text is actually clipped").toEqual([]);
     expect(runtimeLayout.underfilledContentOnlyNodes,"content-only sections must span their declared outer composition").toEqual([]);
-    const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
     const expectedLayoutAttribute=`data-${viewport}-layout`;
-    await expect(nodes.first()).toHaveAttribute("data-current-viewport",viewport);
     expect(await nodes.first().getAttribute(expectedLayoutAttribute)).toBeTruthy();
     const responsiveObservations=await nodes.evaluateAll((entries)=>entries.map((entry)=>{
       const style=getComputedStyle(entry);
@@ -131,12 +135,24 @@ for(const category of categories){
   });
 }
 
-test("runtime layout gate detects injected clipping and unsafe horizontal scrolling",async({page})=>{
+test("runtime layout gate detects injected clipping, scrolling, and underfilled content-only sections",async({page},testInfo)=>{
   const response=await page.goto("/benchmarks/b2b-product",{waitUntil:"networkidle"});
   expect(response?.ok()).toBeTruthy();
+  const nodes=page.locator("[data-page-node]");
+  const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
+  await expect.poll(
+    ()=>nodes.evaluateAll((entries,expectedViewport)=>entries.every((entry)=>entry.getAttribute("data-current-viewport")===expectedViewport),viewport),
+    {message:`negative control requires stable ${viewport} responsive contracts`}
+  ).toBe(true);
+  expect((await page.evaluate(measureGeneratedPageLayout)).underfilledContentOnlyNodes,"stable responsive content must not be reported before injection").toEqual([]);
   await page.evaluate(()=>{
-    const node=document.querySelector<HTMLElement>("[data-page-node]");
+    const node=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node]")).find((entry)=>entry.querySelector(":scope > .wdc-generated-node__content")&&!entry.querySelector(":scope > .wdc-generated-node__media, :scope > .wdc-generated-node__field"));
     if(!node)throw new Error("negative-control generated content is absent");
+    const content=node.querySelector<HTMLElement>(":scope > .wdc-generated-node__content");
+    if(!content)throw new Error("negative-control content-only section is absent");
+    node.dataset.activeColumns="4";
+    node.style.gridTemplateColumns="repeat(4,minmax(0,1fr))";
+    content.style.gridColumn="auto";
     const clippedText=document.createElement("p");clippedText.textContent="runtime clipping negative control with intentionally oversized text";
     clippedText.style.cssText="display:block;width:24px;height:2px;line-height:20px;overflow:hidden;white-space:nowrap";
     node.append(clippedText);
@@ -149,4 +165,5 @@ test("runtime layout gate detects injected clipping and unsafe horizontal scroll
   expect(observation.textClipping.length,"negative control must trip real text clipping measurement").toBeGreaterThan(0);
   expect(observation.nodeHorizontalOverflow.length,"negative control must trip generated-node overflow measurement").toBeGreaterThan(0);
   expect(observation.unsafeHorizontalScroll.length,"negative control must trip unsafe scroll-container measurement").toBeGreaterThan(0);
+  expect(observation.underfilledContentOnlyNodes.length,"negative control must trip multi-column content-only underfill measurement").toBeGreaterThan(0);
 });
