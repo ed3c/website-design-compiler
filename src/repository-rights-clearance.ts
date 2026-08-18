@@ -13,7 +13,7 @@ export interface Waiver { subjectId: string; owner: string; rationale: string; s
 export interface RepositoryClearanceReceipt { schema: "website-design-compiler/repository-rights-clearance/v2"; overall: "PASS" | "FAIL"; generatedAt: string; subjects: RightsSubject[]; counts: Record<RightsState, number>; unresolved: string[]; expiredWaivers: string[]; diagnostics: string[]; noticeSubjects: string[]; legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"; }
 
 const PERMISSIVE = ["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "Unlicense", "CC0-1.0", "BlueOak-1.0.0", "Python-2.0", "WTFPL"];
-const REVIEW_MARKERS = ["MPL", "EPL", "LGPL", "GPL", "AGPL", "CDDL", "OSL", "Artistic", "CC-BY"];
+const REVIEW_MARKERS = ["MPL", "EPL", "LGPL", "GPL", "AGPL", "CDDL", "OSL", "Artistic", "CC-BY", "gsap.com/standard-license"];
 const DENY_MARKERS = ["NON-COMMERCIAL", "NONCOMMERCIAL", "NC-", "Commons-Clause", "PolyForm-Noncommercial"];
 
 export function classifyLicense(expression: string | null): RightsState {

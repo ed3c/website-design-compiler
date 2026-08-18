@@ -9,6 +9,7 @@ test("rights classifier covers allow review deny and unknown", () => {
   assert.equal(classifyLicense("MIT"), "ALLOW");
   assert.equal(classifyLicense("MIT OR Apache-2.0"), "ALLOW");
   assert.equal(classifyLicense("MPL-2.0"), "REVIEW_REQUIRED");
+  assert.equal(classifyLicense("Standard 'no charge' license: https://gsap.com/standard-license."), "REVIEW_REQUIRED");
   assert.equal(classifyLicense("PolyForm-Noncommercial-1.0.0"), "DENY");
   assert.equal(classifyLicense(null), "UNKNOWN");
 });
