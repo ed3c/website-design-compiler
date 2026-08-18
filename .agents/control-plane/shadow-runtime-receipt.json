@@ -1,0 +1,89 @@
+{
+  "schema": "procedural-shadow-runtime-receipt/v1",
+  "receipt_id": "wdc-final-convergence-human-gates",
+  "checkpoint": "convergence-human-gate-handoff",
+  "subject": {
+    "repository": "ed3c/website-design-compiler",
+    "base_sha": "974e16e0cff87b298621dc24219d92be718f6978",
+    "current_sha": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+    "runtime": "codex-app/local-worktree",
+    "context_digest": "658e982b5c2a008e21a1b5790369b953c01393a6d02016ec445cc4c7db674f07"
+  },
+  "action": {
+    "class": "LOCAL_HANDOFF_MONITOR",
+    "side_effecting": false,
+    "intent_digest": "ed151413206af13926178ee60cbbb51d4075f48612b856b801da90c3a73a8b6a"
+  },
+  "applicable_procedures": [
+    {
+      "procedure_id": "local-handoff-authority",
+      "criticality": "must",
+      "source": {"repository": "ed3c/skills-shared", "ref": "fad02756797c1d0948507fc9edbef7931ead3f1d", "path": "skills/agentic-tech-lead-orchestration/SKILL.md", "content_sha256": "8a295169f382a8a3df93458e8553d35b676d8078ac80f1c1bd56cb6dd15c3229"}
+    },
+    {
+      "procedure_id": "reference-browser-admission",
+      "criticality": "must",
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c", "path": "docs/issues/29-reference-browser-admission.md", "content_sha256": "a7baf06100f133792daba31c9c0ba1ce813c1ff2fd05fb33e9dc7d4b1c146122"}
+    },
+    {
+      "procedure_id": "generated-page-browser-admission",
+      "criticality": "must",
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c", "path": "docs/issues/31-generated-page-browser-admission.md", "content_sha256": "29b842faf65416c7e836e51f4a14fb562da8056fbf5cbda4a299eac070148acf"}
+    },
+    {
+      "procedure_id": "storybook-visual-admission",
+      "criticality": "must",
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c", "path": "docs/issues/30-storybook-visual-admission.md", "content_sha256": "65ba962f75a4f91337f1284601246d7a6b4f2db6159ca395911d838bd05c3812"}
+    },
+    {
+      "procedure_id": "repository-rights-clearance",
+      "criticality": "must",
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c", "path": "AGENTS.md", "content_sha256": "cc00bdc163bc5bc37261dd91e1e1ef6a158230c1839ad1afffddb5a3fa45bb0f"}
+    },
+    {
+      "procedure_id": "live-reference-admission",
+      "criticality": "must",
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c", "path": "docs/issues/22-live-reference.md", "content_sha256": "a4ea059730967fd18d56b2bf2ffbbc5b1226d81680437fd80bbeec7537b9b906"}
+    },
+    {
+      "procedure_id": "production-provider-admission",
+      "criticality": "must",
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c", "path": "src/production-media-provider.ts", "content_sha256": "574df164e1653d75f0969127daed2f083737a0729e8cd0c7595a9d8398b2321a"}
+    },
+    {
+      "procedure_id": "delivery-authority",
+      "criticality": "must",
+      "source": {"repository": "ed3c/skills-shared", "ref": "fad02756797c1d0948507fc9edbef7931ead3f1d", "path": "skills/github-delivery-loop/SKILL.md", "content_sha256": "788f703f9064bc8c9d9fdcfa714a4daf2c30bb84079960e4b0e7581c1f9cd42e"}
+    }
+  ],
+  "assertions": [
+    {"assertion_id": "queue-normal-and-selftest", "procedure_id": "local-handoff-authority", "result": "PASS"},
+    {"assertion_id": "reference-browser-human-admit", "procedure_id": "reference-browser-admission", "result": "NOT_RUN"},
+    {"assertion_id": "generated-page-human-admit", "procedure_id": "generated-page-browser-admission", "result": "NOT_RUN"},
+    {"assertion_id": "storybook-human-admit", "procedure_id": "storybook-visual-admission", "result": "NOT_RUN"},
+    {"assertion_id": "repository-rights-current-scan", "procedure_id": "repository-rights-clearance", "result": "FAIL"},
+    {"assertion_id": "live-reference-two-target-run", "procedure_id": "live-reference-admission", "result": "NOT_RUN"},
+    {"assertion_id": "production-provider-runtime", "procedure_id": "production-provider-admission", "result": "NOT_RUN"},
+    {"assertion_id": "delivery-host-gate", "procedure_id": "delivery-authority", "result": "NOT_RUN"}
+  ],
+  "evidence": [
+    {
+      "evidence_id": "validated-local-handoff-queue",
+      "procedure_id": "local-handoff-authority",
+      "kind": "TEST",
+      "artifact_sha256": "658e982b5c2a008e21a1b5790369b953c01393a6d02016ec445cc4c7db674f07",
+      "exact_subject": true
+    }
+  ],
+  "dispositions": [
+    {"procedure_id": "local-handoff-authority", "state": "VERIFIED", "reason": "Normal validator and semantic negative-control selftest both passed."},
+    {"procedure_id": "reference-browser-admission", "state": "BLOCKED", "reason": "External admission file and protected hash are absent; this is the queue ACTIVE item."},
+    {"procedure_id": "generated-page-browser-admission", "state": "BLOCKED", "reason": "External generated-page evidence admission and protected hash are absent."},
+    {"procedure_id": "storybook-visual-admission", "state": "BLOCKED", "reason": "Independent visual inspection passed, but the separate trusted admission is absent for the exact convergence subject."},
+    {"procedure_id": "repository-rights-clearance", "state": "BLOCKED", "reason": "sharp-libvips, caniuse-lite, and gsap remain unresolved Human/legal decisions."},
+    {"procedure_id": "live-reference-admission", "state": "BLOCKED", "reason": "Two stable public HTTPS targets and outbound-network Human admission were not supplied."},
+    {"procedure_id": "production-provider-admission", "state": "BLOCKED", "reason": "Provider/model identity, credentials, budget authorization, rights evidence, and Human admission were not supplied."},
+    {"procedure_id": "delivery-authority", "state": "BLOCKED", "reason": "Push, merge, issue closure, and canonical-main validation remain Human-owned and depend on the blocked gates."}
+  ],
+  "close_state": "BLOCKED"
+}

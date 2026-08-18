@@ -1,0 +1,111 @@
+{
+  "schema": "procedural-shadow-context-capsule/v1",
+  "capsule_id": "wdc-final-convergence-human-gates",
+  "checkpoint": "convergence-human-gate-handoff",
+  "context_digest": "658e982b5c2a008e21a1b5790369b953c01393a6d02016ec445cc4c7db674f07",
+  "expires_at_checkpoint": "convergence-human-gate-handoff",
+  "procedures": [
+    {
+      "procedure_id": "local-handoff-authority",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/skills-shared",
+        "ref": "fad02756797c1d0948507fc9edbef7931ead3f1d",
+        "path": "skills/agentic-tech-lead-orchestration/SKILL.md",
+        "content_sha256": "8a295169f382a8a3df93458e8553d35b676d8078ac80f1c1bd56cb6dd15c3229"
+      },
+      "expected_observation": "The queue validates with exactly one ACTIVE item, preserves the exact subject and rollback identity, and does not automate Human-owned promotion or delivery.",
+      "failure_action": "BLOCK"
+    },
+    {
+      "procedure_id": "reference-browser-admission",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/website-design-compiler",
+        "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "path": "docs/issues/29-reference-browser-admission.md",
+        "content_sha256": "a7baf06100f133792daba31c9c0ba1ce813c1ff2fd05fb33e9dc7d4b1c146122"
+      },
+      "expected_observation": "An external authority supplies an exact admission file and protected WDC_REFERENCE_BROWSER_ADMISSION_SHA256 before originality can pass.",
+      "failure_action": "BLOCK"
+    },
+    {
+      "procedure_id": "generated-page-browser-admission",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/website-design-compiler",
+        "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "path": "docs/issues/31-generated-page-browser-admission.md",
+        "content_sha256": "29b842faf65416c7e836e51f4a14fb562da8056fbf5cbda4a299eac070148acf"
+      },
+      "expected_observation": "An external authority binds the exact generated-page receipt, artifact sets, source aggregate, Git subject, and protected admission hash.",
+      "failure_action": "BLOCK"
+    },
+    {
+      "procedure_id": "storybook-visual-admission",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/website-design-compiler",
+        "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "path": "docs/issues/30-storybook-visual-admission.md",
+        "content_sha256": "65ba962f75a4f91337f1284601246d7a6b4f2db6159ca395911d838bd05c3812"
+      },
+      "expected_observation": "A separate authority admits the independent visual review through WDC_STORYBOOK_VISUAL_ADMISSION_SHA256 for the exact subject and screenshot set.",
+      "failure_action": "BLOCK"
+    },
+    {
+      "procedure_id": "repository-rights-clearance",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/website-design-compiler",
+        "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "path": "AGENTS.md",
+        "content_sha256": "cc00bdc163bc5bc37261dd91e1e1ef6a158230c1839ad1afffddb5a3fa45bb0f"
+      },
+      "expected_observation": "Unknown or review-required licenses remain FAIL until an authorized legal or repository owner decision resolves each distributed subject.",
+      "failure_action": "ESCALATE"
+    },
+    {
+      "procedure_id": "live-reference-admission",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/website-design-compiler",
+        "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "path": "docs/issues/22-live-reference.md",
+        "content_sha256": "a4ea059730967fd18d56b2bf2ffbbc5b1226d81680437fd80bbeec7537b9b906"
+      },
+      "expected_observation": "A Human privately nominates two stable public HTTPS targets and authorizes outbound execution before live evidence is attempted.",
+      "failure_action": "ESCALATE"
+    },
+    {
+      "procedure_id": "production-provider-admission",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/website-design-compiler",
+        "ref": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "path": "src/production-media-provider.ts",
+        "content_sha256": "574df164e1653d75f0969127daed2f083737a0729e8cd0c7595a9d8398b2321a"
+      },
+      "expected_observation": "Provider identity, model, credentials, budget, rights, and Human admission are all present before a production call can execute.",
+      "failure_action": "ESCALATE"
+    },
+    {
+      "procedure_id": "delivery-authority",
+      "criticality": "must",
+      "source": {
+        "repository": "ed3c/skills-shared",
+        "ref": "fad02756797c1d0948507fc9edbef7931ead3f1d",
+        "path": "skills/github-delivery-loop/SKILL.md",
+        "content_sha256": "788f703f9064bc8c9d9fdcfa714a4daf2c30bb84079960e4b0e7581c1f9cd42e"
+      },
+      "expected_observation": "Push, merge, issue closure, and canonical-main promotion occur only after the required Human authority and exact-host gates pass.",
+      "failure_action": "BLOCK"
+    }
+  ],
+  "authority": {
+    "shadow_read_only": true,
+    "capability_widening": "DENY",
+    "private_data_egress": "DENY",
+    "raw_private_reasoning": "DENY"
+  }
+}

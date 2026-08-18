@@ -1,0 +1,87 @@
+{
+  "schema_version": "agentic-tech-lead/local-handoff-queue/v1",
+  "subject": {
+    "repository": "ed3c/website-design-compiler",
+    "commit": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+    "tree": "1e5782e9147a49b4504fc1dd1077ac12e2e21dec",
+    "rollback_commit": "974e16e0cff87b298621dc24219d92be718f6978"
+  },
+  "authority": {
+    "automation_forbidden": [
+      "merge",
+      "force_push",
+      "issue_close",
+      "queue_advance",
+      "provider_activation",
+      "semantic_conflict_resolution"
+    ],
+    "human_owned": [
+      "review browser producer and verifier sources",
+      "write the generated admission file",
+      "set the protected WDC_REFERENCE_BROWSER_ADMISSION_SHA256 value",
+      "admit or reject promotion after reading the exact receipt"
+    ]
+  },
+  "current": {
+    "active_item": "issue-29-reference-browser-admission",
+    "state": "ACTIVE"
+  },
+  "items": [
+    {
+      "id": "issue-29-reference-browser-admission",
+      "task_ref": "ed3c/website-design-compiler#29",
+      "state": "ACTIVE",
+      "entry": {
+        "predecessor": null,
+        "required_subject_commit": "8f3a9d3ad9ccd8f74b6c35a52c3f0e5bdde1558c",
+        "required_capabilities": [
+          "human:repository-administrator",
+          "local:chromium",
+          "protected-env:WDC_REFERENCE_BROWSER_ADMISSION_SHA256"
+        ]
+      },
+      "runtime_lane": {
+        "class": "LOCAL_HOST",
+        "commands": [
+          {
+            "argv": ["pnpm", "reference:browser-fixture"],
+            "cwd": ".",
+            "timeout_seconds": 180
+          },
+          {
+            "argv": ["pnpm", "v2:visual-directions"],
+            "cwd": ".",
+            "timeout_seconds": 180,
+            "environment_names": ["WDC_REFERENCE_BROWSER_ADMISSION_SHA256"]
+          }
+        ],
+        "unresolved_operations": [
+          {
+            "operation_id": "human-admit-reference-browser",
+            "resolver_source": "docs/issues/29-reference-browser-admission.md",
+            "required_output": "CONCRETE_COMMAND_CONTRACT"
+          }
+        ],
+        "live_evidence_required": true
+      },
+      "receipt": {
+        "path": "artifacts/v2/visual-direction-search/receipt.json",
+        "schema": "website-design-compiler/visual-direction-benchmark-receipt/v2",
+        "required_states": ["PASS", "FAIL", "NOT_EXERCISED", "HUMAN_ADMIT_REQUIRED"],
+        "forbidden_promotions": [
+          "same-producer admission",
+          "repository-derived protected hash",
+          "schema-only evidence",
+          "synthetic non-browser observation",
+          "issue state as runtime proof"
+        ]
+      },
+      "exit": {
+        "requires_receipt": true,
+        "required_verdict": "PASS",
+        "cleanup_required": false
+      },
+      "next": null
+    }
+  ]
+}
