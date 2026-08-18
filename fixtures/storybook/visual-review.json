@@ -1,0 +1,410 @@
+{
+  "schema": "website-design-compiler/storybook-visual-review/v1",
+  "sourceFilesSha256": "390537d5d7fc03affd8142bf7e5e8bd267b44f0e74055c6ba0c30b65f2e3a954",
+  "reviewer": {
+    "kind": "agent",
+    "identity": "Codex runtime visual review 2026-08-18"
+  },
+  "screenshots": [
+    {
+      "name": "storybook-desktop--governed-sections-section--bento-grid.png",
+      "sha256": "932a52dc92140c1c68bbf9739553b67b356e2e8d36b57818b35e8517a8d2fe40",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: asymmetric four-card hierarchy remains legible; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--comparison.png",
+      "sha256": "1fa58b13eb5b6356577c369b73be21e5ef9fda76aa84301b462b85f43530f12b",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: comparison headers and evidence rows remain aligned and readable; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--cta.png",
+      "sha256": "cb82ef55d257b1c51e4049aeebeac683a5c89d3d09c92e69af2454cdda6a7790",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: dark call-to-action surface preserves heading, body, and action contrast; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--editorial-media.png",
+      "sha256": "f0753e27ec05142f100b9ea7e6fb28f8929f2714fb6b64079044e2fd4ffc889d",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: approved-media identity stays paired with its caption; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--editorial-prose.png",
+      "sha256": "4f34830dd68dc426c1e72e1e7605ac830924f047dba6c448fa8c519a020612ee",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: display and editorial type hierarchy remains readable; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--faq.png",
+      "sha256": "9e8bddad4a562ec494ba454914e49547bb803dc7cd7c62a7bb6a62c5a083dcd8",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: accordion disclosure states and answer hierarchy remain clear; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--feature-grid.png",
+      "sha256": "b970307e93b3986df296208e65ba18a57bd841995416f0cbfd46026d29860acc",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: three governed feature owners remain visually distinct; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--footer.png",
+      "sha256": "9ccaa61e4644dbb40be16c3c5be76af7fc6fb7bc789952e86728d47d78e802f1",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: brand, policy links, and rights note remain ordered; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--graphics-2-d-stage.png",
+      "sha256": "25f20f8dc7a2aa44994592c503531be58b316b10ab5d89c5b2dcae9c538b66d4",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: bounded 2D scene stays separated from its semantic explanation; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--graphics-3-d-stage.png",
+      "sha256": "b0420eb4c118b62c76c7ff8d8bccb2302b4dc94a1e6d598ed0a8992ca4c21713",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: spatial preview stays separated from its fallback explanation; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--hero.png",
+      "sha256": "7a6fd6867ea3ad8be8d7a810c4295bd99834e1e070cb3f68928a5b70a84ee4dd",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: headline, supporting copy, actions, and approved-media identity remain coherent; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--media-stage.png",
+      "sha256": "eaf17a620b871cce2b0f833aaf0ad2318790963e6a8c4b9d7fdf97fc0a6d24be",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: asset identity remains visible and the fallback explanation is separated with compliant dark-surface contrast; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--metrics.png",
+      "sha256": "db5a74a7be3d1a98cffc00c9f6e52b04a18904dc9980793d59952c78100b6126",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: metric values and labels retain strong hierarchy; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--navigation.png",
+      "sha256": "d83872cb7adab38284fd07a8a665e75e6057a1c9d39f28b5fc402257adbd813c",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: brand and primary action remain visible without clipping; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--pricing.png",
+      "sha256": "cd9a543ee664d6a6d536c15eece82756d13c4a2b1ea9bb9912bba83b9f6e68ab",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: three evidence-gated tiers remain readable and equally structured; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--product-showcase.png",
+      "sha256": "c64618a36b56c626eb8493e686aa55922d69bfc80fe61fe9f9cf4ae03096d091",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: approved-media identity and product copy remain distinct typed regions; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--proof-cloud.png",
+      "sha256": "ffedba58630365277ebf8bebb7c2d8d593e0bb127ccd9e59a7e494a3aa4e0dd4",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: all four evidence items remain readable and visibly grouped; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-sections-section--testimonial.png",
+      "sha256": "218079f4b797b3012de6a1b9fffbfcd462180d0539b45e634aa60c4f24a0010b",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: quotation and attributed source retain clear hierarchy; desktop composition uses the available width without overlap or clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-button--disabled.png",
+      "sha256": "23fbce5da49d25b408f058574662b4d38af4d2f32d7fd454aca22bba0a7c8f07",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: disabled button label, border/fill state, and focus or disabled affordance remain legible without clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-button--primary.png",
+      "sha256": "b7241b392dd371b48083ccd851edf6df6992593cf21243e62b26b0a9f17ed37c",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: primary button label, border/fill state, and focus or disabled affordance remain legible without clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-button--secondary.png",
+      "sha256": "f2b2b85fb43c96ae4148e7fd160ca50af9f27713c678a15cb43d29d887f05c98",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: secondary button label, border/fill state, and focus or disabled affordance remain legible without clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-statuspanel--empty.png",
+      "sha256": "3e5d596709903ba294c58504244183315621a47358556fcf112e4f27779334b7",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: empty status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-statuspanel--error.png",
+      "sha256": "8a268ca1ac19b288d3f967476b91dd7be1f323252a0c357f43b6f4cad90b3d83",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: error status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-statuspanel--loading.png",
+      "sha256": "ce3c7e2aac793db58ba916a79ae60558a854a1836968bda7fe461289f7188c19",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: loading status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-desktop--governed-ui-statuspanel--success.png",
+      "sha256": "0e3b863e4ec1a0fc623148367174d84ad8015a98f27ce404cf73d9510c017b84",
+      "verdict": "PASS",
+      "observations": [
+        "Desktop: success status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--bento-grid.png",
+      "sha256": "f8cafaeaaec4479b34b438e89aa46dd4cb11596d3fbbdffa2831590e2b9a2873",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: asymmetric four-card hierarchy remains legible; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--comparison.png",
+      "sha256": "509444952050dbc8c3b10c09e4ce9f1e3c3a1fc5c80c1cd2be6ed766a27044b9",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: comparison headers and evidence rows remain aligned and readable; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--cta.png",
+      "sha256": "5defac8c704597a51b7e228c185250824ddc3fb2d1c375a341bcaa9cd401291b",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: dark call-to-action surface preserves heading, body, and action contrast; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--editorial-media.png",
+      "sha256": "884af06077e22310be0905ffd148f5d4625f5dde355920c40d9e39c57a1da8b3",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: approved-media identity stays paired with its caption; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--editorial-prose.png",
+      "sha256": "eacd946baefe82bd2fbb15645cdf17b24693b5152ef169a870963c68fcbf1a08",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: display and editorial type hierarchy remains readable; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--faq.png",
+      "sha256": "89e569f46fcace047c338e47212756090c7a58782a036b857be809ea05f44edb",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: accordion disclosure states and answer hierarchy remain clear; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--feature-grid.png",
+      "sha256": "2635ff04b3f3b88c10e91c528d3ec669191acd7034b2a8a31ab79a7dd16deaef",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: three governed feature owners remain visually distinct; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--footer.png",
+      "sha256": "b3559e5b8ea51228a81b37a7577286f02ec6006c733c2100f1cea7bf0dbe1f14",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: brand, policy links, and rights note remain ordered; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--graphics-2-d-stage.png",
+      "sha256": "963fb7fb3ba6aa35633b4305bc25f81a56a828797a9fb9933fa8cd427e82e113",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: bounded 2D scene stays separated from its semantic explanation; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--graphics-3-d-stage.png",
+      "sha256": "81a9ee8145860543609d33a202abd338e54693c1f9c020a2d8bb265630e4c329",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: spatial preview stays separated from its fallback explanation; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--hero.png",
+      "sha256": "06721ce8ccf05fbe1b509e0f770e0402ecf52f1936a7ed0cedc77d00b0750333",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: headline, supporting copy, actions, and approved-media identity remain coherent; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--media-stage.png",
+      "sha256": "76508e682dc5c7533618b42b33a3f7072e43628db8484239aafc4cf24d64f81e",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: asset identity remains visible and the fallback explanation is separated with compliant dark-surface contrast; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--metrics.png",
+      "sha256": "80425920b1bf1613eb9933c47c659b6891038def52b604a2275f56ba630247d6",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: metric values and labels retain strong hierarchy; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--navigation.png",
+      "sha256": "f507876c0e8c73951fe315420b871b40556cc0d1f11d3d15032485dc46e466ca",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: brand and primary action remain visible without clipping; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--pricing.png",
+      "sha256": "eedbd85702b5dc6ed04e4e935ae43da598b3142569d09f0e5c882e00d06bdf36",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: three evidence-gated tiers remain readable and equally structured; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--product-showcase.png",
+      "sha256": "508023a234efabf1e15575e16e3f58d66c35f63f1a80c8370724045fb3e5a1e0",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: approved-media identity and product copy remain distinct typed regions; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--proof-cloud.png",
+      "sha256": "481499c2659f043f12a3c975674cfc31e201fdaf06a408d2057af563b15c8c54",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: all four evidence items remain readable and visibly grouped; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-sections-section--testimonial.png",
+      "sha256": "4b63c2bbdc99aaf919befc8fafa538e46d17cef60f0c3057f1a8882cad62e944",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: quotation and attributed source retain clear hierarchy; responsive stacking/wrapping has no overlap or horizontal clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-button--disabled.png",
+      "sha256": "38dc0e372679343cebceef0054a9dd909b345c40721952c480c82932126169db",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: disabled button label, border/fill state, and focus or disabled affordance remain legible without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-button--primary.png",
+      "sha256": "62d3ce41bdcd984e5b559a4f92d99028b37553e6f7462ba779a8952aeaea7022",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: primary button label, border/fill state, and focus or disabled affordance remain legible without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-button--secondary.png",
+      "sha256": "42dd18ccbeb5ef52bfd92197f453e3e146e4680dcf84498940f332c3dbec923a",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: secondary button label, border/fill state, and focus or disabled affordance remain legible without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-statuspanel--empty.png",
+      "sha256": "99f4c4b67e0ef262c641c70ae59451c28d5caae35be062462a214b4646386a5d",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: empty status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-statuspanel--error.png",
+      "sha256": "146843b8d33abf087665c298b6e3f2b1a90f24d55d24db859c6bf4e2b3e926ac",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: error status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-statuspanel--loading.png",
+      "sha256": "1b920e5471a091e21cca7b913603ec0b5b5a92a51f8b916c0ea982ff6ed7e6a7",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: loading status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    },
+    {
+      "name": "storybook-mobile--governed-ui-statuspanel--success.png",
+      "sha256": "38154dfbb2d39953e33ba1cc8b43cbd0d91830e7d6fec5650634494a2d135e89",
+      "verdict": "PASS",
+      "observations": [
+        "Mobile: success status panel keeps its title, message, border, and surface readable without clipping."
+      ]
+    }
+  ]
+}

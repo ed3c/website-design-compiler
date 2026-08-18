@@ -5,6 +5,8 @@ if (!/^\d{1,5}$/.test(storybookPort) || Number(storybookPort) < 1024 || Number(s
   throw new Error("WDC_STORYBOOK_PORT must be an unprivileged TCP port");
 }
 const storybookBaseUrl = `http://127.0.0.1:${storybookPort}`;
+const nodeExecutable = JSON.stringify(process.execPath);
+const storybookDispatcher = JSON.stringify("apps/site/node_modules/storybook/dist/bin/dispatcher.js");
 
 export default defineConfig({
   testDir: "./tests/storybook",
@@ -17,7 +19,7 @@ export default defineConfig({
     screenshot: "off"
   },
   webServer: {
-    command: `pnpm --filter @website-design-compiler/site exec storybook dev --ci --host 127.0.0.1 --port ${storybookPort}`,
+    command: `${nodeExecutable} ${storybookDispatcher} dev --ci -c apps/site/.storybook --host 127.0.0.1 --port ${storybookPort}`,
     url: storybookBaseUrl,
     reuseExistingServer: false,
     timeout: 120_000,
