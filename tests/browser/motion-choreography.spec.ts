@@ -27,7 +27,9 @@ test("generated motion records bounded performance and zero leaked resources aft
   const observations=[];
   for(const category of categories){
     const plan=plans.get(category)!;
-    const response=await page.goto(`/benchmarks/${category}`,{waitUntil:"networkidle"});
+    // Motion owns this performance lane. Rich media has a separate runtime budget suite;
+    // disabling it here prevents Pixi/Three initialization from being attributed to motion.
+    const response=await page.goto(`/benchmarks/${category}?media=off&graphics=off&graphics3d=off`,{waitUntil:"networkidle"});
     expect(response?.ok()).toBeTruthy();
     const root=page.locator(`[data-generated-page='${category}']`);
     const nodes=root.locator("[data-page-node]");
@@ -58,7 +60,7 @@ test("generated motion records bounded performance and zero leaked resources aft
   }
 
   await page.emulateMedia({reducedMotion:"reduce"});
-  await page.goto("/benchmarks/motion-heavy",{waitUntil:"networkidle"});
+  await page.goto("/benchmarks/motion-heavy?media=off&graphics=off&graphics3d=off",{waitUntil:"networkidle"});
   const reducedNodes=page.locator("[data-page-node]");
   await expect(reducedNodes.first()).toHaveAttribute("data-motion-runtime","VISIBLE_NO_MOTION");
   const reducedMotionFallback=await reducedNodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-motion-runtime")==="VISIBLE_NO_MOTION"&&getComputedStyle(entry).opacity==="1"));
