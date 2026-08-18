@@ -1,4 +1,5 @@
 import { GovernedSection, type GovernedSectionKind } from "./governed-section";
+import { MediaOrchestrationStage, type ProjectedMediaHook } from "./media-orchestration-stage";
 
 type ProjectedNode={
   id:string;
@@ -7,7 +8,7 @@ type ProjectedNode={
   semanticIndex:number;
   section:{props:Record<string,unknown>};
   responsive:{mobile:{layout:string};tablet:{layout:string};desktop:{layout:string}};
-  mediaHook:{renderer:string};
+  mediaHook:ProjectedMediaHook;
   motionHook:{engine:string};
 };
 export type ProjectedPageGraph={
@@ -38,6 +39,7 @@ export function GeneratedPage({graph}: {graph:ProjectedPageGraph}){
       const copy=content(node);
       return <div key={node.id} data-page-node={node.id} data-semantic-index={node.semanticIndex} data-mobile-layout={node.responsive.mobile.layout} data-tablet-layout={node.responsive.tablet.layout} data-desktop-layout={node.responsive.desktop.layout} data-media-renderer={node.mediaHook.renderer} data-motion-engine={node.motionHook.engine}>
         <GovernedSection kind={node.kind} variant={node.variant} heading={copy.heading} body={copy.body} items={copy.items}/>
+        {node.mediaHook.renderer!=="dom"?<MediaOrchestrationStage sectionId={node.id} decision={node.mediaHook}/>:null}
       </div>;
     })}
   </main>;

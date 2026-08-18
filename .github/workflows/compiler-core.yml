@@ -146,7 +146,9 @@ jobs:
             artifacts/browser-qa/playwright-report.json
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
+            artifacts/browser-qa/webgpu/
             artifacts/generated-pages/
+            artifacts/media-orchestration/
             artifacts/accessibility-performance/
             artifacts/arena/
             artifacts/release/release-gate-receipt.json

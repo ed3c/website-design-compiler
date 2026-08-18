@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/media-orchestration-browser-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "git", "categories", "gates"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/media-orchestration-browser-receipt/v1" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "git": {
+      "type": "object", "additionalProperties": false, "required": ["sha", "ref"],
+      "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } }
+    },
+    "categories": {
+      "type": "array", "minItems": 6, "maxItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["category", "strategy", "requestedRenderers", "runtimeStates"],
+        "properties": {
+          "category": { "type": "string" }, "strategy": { "type": "string" },
+          "requestedRenderers": { "type": "array", "items": { "enum": ["dom", "image", "video", "pixi", "three"] } },
+          "runtimeStates": { "type": "array", "items": { "enum": ["PENDING", "ACTIVE", "DOM_FALLBACK"] } }
+        }
+      }
+    },
+    "gates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["uniqueStrategies", "deliberateNoMedia", "providerFallback", "pixiRuntime", "threeRuntime", "forcedFailureFallback", "lazyLoading", "budgets", "semanticOwnership"],
+      "properties": {
+        "uniqueStrategies": { "enum": ["PASS", "FAIL"] }, "deliberateNoMedia": { "enum": ["PASS", "FAIL"] },
+        "providerFallback": { "enum": ["PASS", "FAIL"] }, "pixiRuntime": { "enum": ["PASS", "FAIL"] },
+        "threeRuntime": { "enum": ["PASS", "FAIL"] }, "forcedFailureFallback": { "enum": ["PASS", "FAIL"] },
+        "lazyLoading": { "enum": ["PASS", "FAIL"] }, "budgets": { "enum": ["PASS", "FAIL"] },
+        "semanticOwnership": { "enum": ["PASS", "FAIL"] }
+      }
+    }
+  }
+}

@@ -238,7 +238,7 @@ const receipt = {
   scopeNotes: {
     benchmarkProvenanceCompleteness: "PASS applies to the deterministic Arena provenance fixture only; repository-wide rights clearance remains outside this claim.",
     keyboardCompletion: "The browser runtime test contract explicitly exercises Tab focus followed by the primary button action; project PASS plus retained Playwright report/trace is the runtime evidence boundary.",
-    mediaStrategyFit: "Static orchestration remains NOT_EXERCISED in Arena until a separate browser runtime receipt verifies actual lazy loading, budgets and failure fallback."
+    mediaStrategyFit: "The Arena metric requires both the compiler strategy receipt and a separate browser receipt proving lazy activation, bounded Pixi/Three execution, provider fallback and forced media-off behavior."
   }
 };
 

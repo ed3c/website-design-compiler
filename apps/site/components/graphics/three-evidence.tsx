@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useId, useState, type ComponentType } from "react";
 import {
   fallbackAfterWebGPUFailure,
   GRAPHICS_3D_RUNTIME_BUDGETS,
@@ -33,6 +33,7 @@ function hasWebGL(): boolean {
 }
 
 export function ThreeEvidence() {
+  const titleId=useId();
   const [state, setState] = useState<Graphics3DState>("loading");
   const [selection, setSelection] = useState<Graphics3DRendererSelection | null>(null);
   const [capabilities, setCapabilities] = useState<Graphics3DCapabilities>({ webgpu: false, webgl: false });
@@ -139,7 +140,7 @@ export function ThreeEvidence() {
 
   return (
     <section
-      aria-labelledby="graphics-3d-title"
+      aria-labelledby={titleId}
       data-graphics3d-state={state}
       data-graphics3d-enabled={String(selection !== null && selection.renderer !== "static")}
       data-graphics3d-renderer={selection?.renderer ?? "none"}
@@ -156,7 +157,7 @@ export function ThreeEvidence() {
       data-graphics3d-disposed={String(disposed)}
       data-graphics3d-dpr={dpr}
     >
-      <h2 id="graphics-3d-title">Governed procedural 3D</h2>
+      <h2 id={titleId}>Governed procedural 3D</h2>
       <p data-graphics3d-semantic-fallback="true">
         The procedural scene is optional illustration. Primary content and actions remain DOM-owned when WebGPU and WebGL are absent.
       </p>
