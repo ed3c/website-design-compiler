@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
 
-type WorkflowStep = { uses?: unknown };
+type WorkflowStep = { uses?: unknown; name?: unknown; run?: unknown; env?: Record<string, unknown> };
 type WorkflowJob = { steps?: WorkflowStep[] };
 
 test("compiler workflow avoids duplicate branch runs while verifying every published PR head", async () => {
@@ -31,4 +31,9 @@ test("compiler workflow avoids duplicate branch runs while verifying every publi
   for (const action of externalActions) {
     assert.match(action, /^[^@]+@[a-f0-9]{40}$/, `${action} is not pinned to an immutable commit`);
   }
+
+  const releaseStep = Object.values(workflow.jobs ?? {})
+    .flatMap((job) => job.steps ?? [])
+    .find((step) => typeof step.run === "string" && step.run.includes("pnpm release:v2"));
+  assert.equal(releaseStep?.env?.WDC_RELEASE_PROFILE, "COMMERCIAL_PRODUCTION");
 });

@@ -158,6 +158,8 @@ jobs:
           retention-days: 14
       - name: Verify canonical v2 release policy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          WDC_RELEASE_PROFILE: COMMERCIAL_PRODUCTION
         run: pnpm release:v2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         id: compiler-core-evidence
