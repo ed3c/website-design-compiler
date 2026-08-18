@@ -134,7 +134,7 @@ function evaluateDesignQualityModel(graph:CompletePageGraph,viewport:QualityView
   const observedLayoutVariety=observation?new Set(observation.computed.layouts).size:0;
   const maxVisualSimilarity=Math.max(originalityAudit.maxVisualReferenceSimilarity,originalityAudit.maxVisualCorpusSimilarity);
   const typography=observation?clamp((headingRatio>=1.35&&headingRatio<=4?50:15)+Math.min(25,observation.computed.fontFamilies.length*8)+(observation.computed.h1Count===1?25:0)):0;
-  const contrast=observation?clamp(observation.computed.minimumTextContrastRatio>=7?96:observation.computed.minimumTextContrastRatio>=4.5?88:observation.computed.minimumTextContrastRatio>=3?55:20):0;
+  const contrast=observation?clamp(observation.accessibility.ruleIds.includes("color-contrast")?20:observation.computed.minimumTextContrastRatio>=7?96:88):0;
   const sectionTransitions=observation?clamp(45+Math.min(30,observation.computed.distinctSectionBackgrounds*8)+Math.min(25,observedLayoutVariety*7)):0;
   const dimensions:DesignQualityDimensions={
     hierarchy:observation?clamp((observation.computed.h1Count===1?45:0)+(observation.computed.h2Count>=Math.max(1,observation.computed.sectionCount-2)?25:10)+(headingRatio>=1.35&&headingRatio<=4?25:5)):0,

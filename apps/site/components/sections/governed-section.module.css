@@ -53,7 +53,7 @@
   text-decoration: none;
 }
 
-.action { background: var(--section-accent); color: white; }
+.action { background: var(--section-accent); color: var(--wdc-color-on-accent, white); }
 .quietAction { border: 1px solid color-mix(in srgb, var(--section-ink) 22%, transparent); color: inherit; }
 
 .navigation {
@@ -169,11 +169,12 @@
   gap: 2rem;
   border-radius: 2rem;
   padding: clamp(2rem, 6vw, 5rem);
-  background: var(--section-ink);
-  color: white;
+  background: var(--section-accent);
+  color: var(--wdc-color-on-accent, white);
 }
 .cta h2 { margin-bottom: .5rem; }
-.cta .kicker { color: color-mix(in srgb, var(--section-accent) 70%, white); }
+.cta .kicker { color: inherit; }
+.cta .action { background: var(--wdc-color-on-accent, white); color: var(--section-accent); }
 
 .footer { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; border-top: 1px solid color-mix(in srgb, var(--section-ink) 14%, transparent); padding: 2rem 0 4rem; }
 .footer ul { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1rem; margin: 0; padding: 0; list-style: none; }

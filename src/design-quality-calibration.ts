@@ -4,6 +4,12 @@ import { visualFingerprint, type DesignQualityBrowserObservation } from "./desig
 const clamp01=(value:number)=>Math.max(0,Math.min(1,value));
 const mean=(values:readonly number[])=>values.reduce((sum,value)=>sum+value,0)/Math.max(1,values.length);
 
+export function calibrationReorder<T>(values:readonly T[]):T[]{
+  if(values.length<2)return[...values];
+  const offset=Math.floor(values.length/2);
+  return[...values.slice(offset),...values.slice(0,offset)];
+}
+
 export function orderedTokenSimilarity(left:readonly string[],right:readonly string[]):number{
   if(left.join("|")===right.join("|"))return 1;
   const rows=Array.from({length:left.length+1},()=>Array<number>(right.length+1).fill(0));

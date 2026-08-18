@@ -39,6 +39,15 @@ test("interactive and grid sections materially adapt between mobile and desktop"
   assert.equal(graphics3d?.degradation.graphics3d,"static-poster");
 });
 
+test("the spatial 3D stage is immersive while the direct-manipulation 2D stage stays split",()=>{
+  const graphics2d=compileResponsiveSectionPolicy("graphics-2d-stage");
+  const graphics3d=compileResponsiveSectionPolicy("graphics-3d-stage");
+  assert.equal(graphics2d.desktop.columns,2);
+  assert.equal(graphics3d.desktop.layout,"stage");
+  assert.equal(graphics3d.desktop.columns,1);
+  assert.equal(graphics3d.mobile.columns,1);
+});
+
 test("asymmetric visual direction preserves a media-first mobile composition",()=>{
   const input={schema:"website-design-compiler/input/v1" as const,project:"responsive-3d",brief:{pageType:"interactive-3d",audience:"design teams",objective:"show a governed scene"},requestedStages:["visual-direction-search"]};
   const direction=searchVisualDirections(input).selectedDirection;
