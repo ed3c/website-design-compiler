@@ -1,5 +1,13 @@
 export const CAPABILITIES=["core","liveReference","webgpu","repositoryRights","productionProvider","premiumQuality"] as const;
 export type Capability=(typeof CAPABILITIES)[number];
+export const CAPABILITY_RECEIPT_SCHEMAS:Record<Capability,string>={
+  core:"website-design-compiler/release-gate-receipt/v2",
+  liveReference:"website-design-compiler/live-reference-receipt/v2",
+  webgpu:"website-design-compiler/webgpu-runtime-receipt/v1",
+  repositoryRights:"website-design-compiler/repository-rights-clearance/v2",
+  productionProvider:"website-design-compiler/production-provider-status/v1",
+  premiumQuality:"website-design-compiler/design-quality-eval-receipt/v2"
+};
 export type ReleaseProfile="CORE"|"NETWORKED_REFERENCE"|"ADVANCED_GPU"|"COMMERCIAL_PRODUCTION"|"FULL_V2";
 export type CapabilityState="PASS"|"FAIL"|"ABSENT"|"NOT_IMPLEMENTED"|"NOT_EXERCISED"|"SKIPPED_BY_POLICY";
 export interface CapabilityEvidence{state:CapabilityState;gitSha:string|null;identity:string|null;}

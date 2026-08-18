@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateReleasePolicy, validateReleasePolicy, type CapabilityEvidence, type ReleasePolicy } from "../src/release-policy-v2.js";
+import { CAPABILITY_RECEIPT_SCHEMAS, evaluateReleasePolicy, validateReleasePolicy, type CapabilityEvidence, type ReleasePolicy } from "../src/release-policy-v2.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const policy:ReleasePolicy={
@@ -21,6 +21,11 @@ const all={core:pass("release-gate/v2"),liveReference:pass("live-reference/v2"),
 test("release policy validates versioned profiles and points to the premium threshold SSOT",async()=>{
   assert.deepEqual(validateReleasePolicy(policy),[]);
   await validateAgainstSchema(policy,"release-policy-v2.schema.json");
+});
+
+test("release evidence schema identities have one versioned source of truth",()=>{
+  assert.equal(CAPABILITY_RECEIPT_SCHEMAS.liveReference,"website-design-compiler/live-reference-receipt/v2");
+  assert.equal(CAPABILITY_RECEIPT_SCHEMAS.core,"website-design-compiler/release-gate-receipt/v2");
 });
 
 test("CORE visibly marks every non-required capability NOT_REQUIRED",()=>{

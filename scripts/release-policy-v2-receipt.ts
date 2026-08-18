@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { evaluateReleasePolicy, type Capability, type CapabilityEvidence, type CapabilityState, type ReleasePolicy, type ReleaseProfile } from "../src/release-policy-v2.js";
+import { CAPABILITY_RECEIPT_SCHEMAS, evaluateReleasePolicy, type Capability, type CapabilityEvidence, type CapabilityState, type ReleasePolicy, type ReleaseProfile } from "../src/release-policy-v2.js";
 
 const root=process.cwd();
 const policy=JSON.parse(await readFile(join(root,"fixtures/v2/release-policy.json"),"utf8")) as ReleasePolicy;
@@ -19,25 +19,17 @@ const paths:Record<Capability,string>={
   productionProvider:"artifacts/media-generator/production-provider-status.json",
   premiumQuality:"artifacts/v2/design-quality/design-quality-eval-receipt.json"
 };
-const schemas:Record<Capability,string>={
-  core:"website-design-compiler/release-gate-receipt/v2",
-  liveReference:"website-design-compiler/live-reference-receipt/v1",
-  webgpu:"website-design-compiler/webgpu-runtime-receipt/v1",
-  repositoryRights:"website-design-compiler/repository-rights-clearance/v2",
-  productionProvider:"website-design-compiler/production-provider-status/v1",
-  premiumQuality:"website-design-compiler/design-quality-eval-receipt/v2"
-};
 function evidenceState(value:unknown):CapabilityState{return value==="PASS"||value==="FAIL"||value==="ABSENT"||value==="NOT_IMPLEMENTED"||value==="NOT_EXERCISED"||value==="SKIPPED_BY_POLICY"?value:"FAIL";}
 async function readEvidence(capability:Capability,path:string):Promise<CapabilityEvidence>{
   try{
     const receipt=JSON.parse(await readFile(join(root,path),"utf8")) as {schema?:unknown;overall?:unknown;git?:{sha?:unknown};evidenceBindings?:Record<string,{binding?:unknown;errors?:unknown;sha256?:unknown}>};
-    const schemaValid=receipt.schema===schemas[capability];
+    const schemaValid=receipt.schema===CAPABILITY_RECEIPT_SCHEMAS[capability];
     const coreBindingsValid=capability!=="core"||(
       receipt.evidenceBindings!==undefined&&
       Object.keys(receipt.evidenceBindings).length===12&&
       Object.values(receipt.evidenceBindings).every((binding)=>binding.binding==="BOUND"&&Array.isArray(binding.errors)&&binding.errors.length===0&&typeof binding.sha256==="string")
     );
-    return{state:schemaValid&&coreBindingsValid?evidenceState(receipt.overall):"FAIL",gitSha:typeof receipt.git?.sha==="string"?receipt.git.sha:null,identity:schemaValid?schemas[capability]:null};
+    return{state:schemaValid&&coreBindingsValid?evidenceState(receipt.overall):"FAIL",gitSha:typeof receipt.git?.sha==="string"?receipt.git.sha:null,identity:schemaValid?CAPABILITY_RECEIPT_SCHEMAS[capability]:null};
   }catch(error){
     if(error instanceof Error&&"code" in error&&error.code==="ENOENT")return{state:"ABSENT",gitSha:null,identity:null};
     throw error;
