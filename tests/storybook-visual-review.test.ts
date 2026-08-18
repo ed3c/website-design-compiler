@@ -3,7 +3,8 @@ import test from "node:test";
 import {
   hashScreenshotSet,
   validateIndependentVisualReview,
-  type IndependentVisualReview
+  type IndependentVisualReview,
+  type TrustedVisualReviewAdmission
 } from "../src/storybook-visual-review.js";
 
 const screenshots = {
@@ -49,8 +50,44 @@ const expected = {
   screenshotHashes: screenshots
 };
 
+function admissionFor(value: IndependentVisualReview): TrustedVisualReviewAdmission {
+  return {
+    receipt: {
+      schema: "website-design-compiler/storybook-visual-review-admission/v1",
+      state: "PASS",
+      reviewReceiptSha256: "1".repeat(64),
+      subject: {
+        commit: expected.subjectCommit,
+        tree: expected.subjectTree,
+        sourceFilesSha256: expected.sourceFilesSha256,
+        screenshotSetSha256: hashScreenshotSet(expected.screenshotHashes)
+      },
+      reviewer: {
+        identity: value.reviewer.identity,
+        contextId: value.reviewer.contextId
+      },
+      authority: {
+        kind: "orchestrator",
+        identity: "trusted-review-admission-controller",
+        admittedAt: "2026-08-18T14:11:00.000Z"
+      }
+    },
+    receiptSha256: "2".repeat(64),
+    trustedSha256: "2".repeat(64),
+    reviewReceiptSha256: "1".repeat(64)
+  };
+}
+
 test("an independently bound visual review admits the exact screenshot set", () => {
-  assert.deepEqual(validateIndependentVisualReview(review(), expected), []);
+  const value = review();
+  assert.deepEqual(validateIndependentVisualReview(value, expected, admissionFor(value)), []);
+});
+
+test("an admission hash not supplied by the external trust channel fails closed", () => {
+  const value = review();
+  const admission = admissionFor(value);
+  admission.trustedSha256 = "3".repeat(64);
+  assert.match(validateIndependentVisualReview(value, expected, admission).join("\n"), /externally trusted SHA-256/);
 });
 
 test("same-context self review fails closed", () => {
@@ -91,4 +128,19 @@ test("placeholder or duplicated observations are not review evidence", () => {
   const errors = validateIndependentVisualReview(value, expected).join("\n");
   assert.match(errors, /too short/);
   assert.match(errors, /duplicated/);
+});
+
+test("a self-authored reviewer identity and unique long placeholders cannot admit screenshots", () => {
+  const value = review({
+    reviewer: {
+      ...review().reviewer,
+      identity: "forged reviewer",
+      contextId: "/forged/separate-context"
+    },
+    screenshots: review().screenshots.map((entry, index) => ({
+      ...entry,
+      observations: [`placeholder observation number ${String(index).padStart(3, "0")} xxxxxxxxx`]
+    }))
+  });
+  assert.match(validateIndependentVisualReview(value, expected).join("\n"), /trusted visual review admission/);
 });

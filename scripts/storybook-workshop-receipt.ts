@@ -7,7 +7,8 @@ import { collectBrowserProjectResults } from "../src/browser-qa.js";
 import {
   hashScreenshotSet,
   validateIndependentVisualReview,
-  type IndependentVisualReview
+  type IndependentVisualReview,
+  type VisualReviewAdmission
 } from "../src/storybook-visual-review.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
@@ -17,6 +18,7 @@ const root = join(process.cwd(), "artifacts", "storybook");
 const uiDirectory = join(process.cwd(), "apps", "site", "components", "ui");
 const goldenPath = join(process.cwd(), "fixtures", "storybook", "visual-goldens.json");
 const reviewPath = join(process.cwd(), "fixtures", "storybook", "visual-review.json");
+const reviewAdmissionPath = join(process.cwd(), "fixtures", "storybook", "visual-review-admission.json");
 const sectionProjectionPath = join(process.cwd(), "artifacts", "v2", "section-grammar", "projections.json");
 const requiredProjects = ["storybook-desktop", "storybook-mobile"];
 const requiredStates = ["Loading", "Empty", "Error", "Success"];
@@ -156,6 +158,7 @@ const staticBuild = files.some((path) => path.endsWith(join("static", "index.htm
 
 let golden: GoldenManifest | null = null;
 let review: IndependentVisualReview | null = null;
+let reviewAdmission: VisualReviewAdmission | null = null;
 try {
   const parsed = JSON.parse(await readFile(goldenPath, "utf8")) as GoldenManifest;
   await validateAgainstSchema(parsed, "storybook-visual-goldens-v3.schema.json");
@@ -170,6 +173,13 @@ try {
 } catch (error) {
   diagnostics.push(`cannot load visual review receipt: ${error instanceof Error ? error.message : String(error)}`);
 }
+try {
+  const parsed = JSON.parse(await readFile(reviewAdmissionPath, "utf8")) as VisualReviewAdmission;
+  await validateAgainstSchema(parsed, "storybook-visual-review-admission-v1.schema.json");
+  if (parsed.schema === "website-design-compiler/storybook-visual-review-admission/v1") reviewAdmission = parsed;
+} catch (error) {
+  diagnostics.push(`cannot load trusted visual review admission: ${error instanceof Error ? error.message : String(error)}`);
+}
 
 const actualHashes: Record<string, string> = {};
 for (const path of screenshotPaths) actualHashes[basename(path)] = await sha256(path);
@@ -183,6 +193,8 @@ const visualMismatches = expectedNames
 const sourceFilesSha256 = await reviewedSourceSha256();
 const screenshotSetSha256 = hashScreenshotSet(actualHashes);
 const reviewReceiptSha256 = review ? await sha256(reviewPath) : null;
+const reviewAdmissionSha256 = reviewAdmission ? await sha256(reviewAdmissionPath) : null;
+const trustedReviewAdmissionSha256 = process.env.WDC_STORYBOOK_VISUAL_ADMISSION_SHA256 ?? null;
 const duplicateVisualReviews = duplicateValues((review?.screenshots ?? []).map((entry) => entry.name));
 const reviewedByName = new Map((review?.screenshots ?? []).map((entry) => [entry.name, entry]));
 const missingVisualReviews = actualNames.filter((name) => !reviewedByName.has(name));
@@ -210,7 +222,12 @@ if (review) {
     subjectTree: golden.source.subjectTree,
     sourceFilesSha256,
     screenshotHashes: actualHashes
-  }));
+  }, reviewAdmission && reviewAdmissionSha256 && trustedReviewAdmissionSha256 && reviewReceiptSha256 ? {
+    receipt: reviewAdmission,
+    receiptSha256: reviewAdmissionSha256,
+    trustedSha256: trustedReviewAdmissionSha256,
+    reviewReceiptSha256
+  } : null));
 }
 const visualReviewPass = golden !== null && review !== null &&
   golden.source.sourceFilesSha256 === sourceFilesSha256 &&
@@ -266,6 +283,13 @@ const receipt = {
     subject: review.subject,
     reviewer: review.reviewer,
     reviewReceiptSha256,
+    admission: reviewAdmission ? {
+      schema: reviewAdmission.schema,
+      state: reviewAdmission.state,
+      receiptSha256: reviewAdmissionSha256,
+      externallyTrustedSha256: trustedReviewAdmissionSha256,
+      authority: reviewAdmission.authority
+    } : null,
     reviewSubjectTree,
     reviewSubjectIsAncestor,
     independentReviewDiagnostics,

@@ -37,6 +37,34 @@ export interface ExpectedVisualReviewSubject {
   screenshotHashes: Record<string, string>;
 }
 
+export interface VisualReviewAdmission {
+  schema: "website-design-compiler/storybook-visual-review-admission/v1";
+  state: "PASS";
+  reviewReceiptSha256: string;
+  subject: {
+    commit: string;
+    tree: string;
+    sourceFilesSha256: string;
+    screenshotSetSha256: string;
+  };
+  reviewer: {
+    identity: string;
+    contextId: string;
+  };
+  authority: {
+    kind: "human" | "orchestrator";
+    identity: string;
+    admittedAt: string;
+  };
+}
+
+export interface TrustedVisualReviewAdmission {
+  receipt: VisualReviewAdmission;
+  receiptSha256: string;
+  trustedSha256: string;
+  reviewReceiptSha256: string;
+}
+
 export function hashScreenshotSet(screenshots: Record<string, string>): string {
   const digest = createHash("sha256");
   for (const [name, sha256] of Object.entries(screenshots).sort(([left], [right]) => left.localeCompare(right))) {
@@ -50,9 +78,31 @@ export function hashScreenshotSet(screenshots: Record<string, string>): string {
 
 export function validateIndependentVisualReview(
   review: IndependentVisualReview,
-  expected: ExpectedVisualReviewSubject
+  expected: ExpectedVisualReviewSubject,
+  admission: TrustedVisualReviewAdmission | null = null
 ): string[] {
   const errors: string[] = [];
+  if (!admission) {
+    errors.push("trusted visual review admission is absent");
+  } else {
+    if (admission.receiptSha256 !== admission.trustedSha256) errors.push("visual review admission does not match the externally trusted SHA-256");
+    if (admission.receipt.reviewReceiptSha256 !== admission.reviewReceiptSha256) errors.push("visual review admission does not bind the exact review receipt bytes");
+    if (admission.receipt.subject.commit !== expected.subjectCommit || admission.receipt.subject.tree !== expected.subjectTree) {
+      errors.push("visual review admission does not bind the reviewed Git subject");
+    }
+    if (admission.receipt.subject.sourceFilesSha256 !== expected.sourceFilesSha256 || admission.receipt.subject.screenshotSetSha256 !== hashScreenshotSet(expected.screenshotHashes)) {
+      errors.push("visual review admission does not bind the reviewed source and screenshot set");
+    }
+    if (admission.receipt.reviewer.identity !== review.reviewer.identity || admission.receipt.reviewer.contextId !== review.reviewer.contextId) {
+      errors.push("visual review admission does not bind the declared reviewer identity and context");
+    }
+    if (admission.receipt.authority.identity === review.reviewer.identity) errors.push("visual review admission authority must be independent from the reviewer");
+    const admittedAt = Date.parse(admission.receipt.authority.admittedAt);
+    const completedAt = Date.parse(review.reviewer.completedAt);
+    if (!Number.isFinite(admittedAt) || !Number.isFinite(completedAt) || admittedAt < completedAt) {
+      errors.push("visual review admission must occur after the review completed");
+    }
+  }
   if (review.subject.commit !== expected.subjectCommit) errors.push("review subject commit does not match the admitted commit");
   if (review.subject.tree !== expected.subjectTree) errors.push("review subject tree does not match the admitted tree");
   if (review.subject.sourceFilesSha256 !== expected.sourceFilesSha256) errors.push("review source files do not match the current reviewed source set");
@@ -88,6 +138,9 @@ export function validateIndependentVisualReview(
       const normalized = observation.trim();
       observations.push(normalized);
       if (normalized.length < 24) errors.push(`visual review observation is too short for ${entry.name}`);
+      if (/\b(?:placeholder observation|looks? (?:fine|good)|observation number|lorem ipsum)\b|x{6,}/i.test(normalized)) {
+        errors.push(`visual review observation is placeholder text for ${entry.name}`);
+      }
     }
   }
   const duplicateObservations = observations.filter((observation, index) => observations.indexOf(observation) !== index);

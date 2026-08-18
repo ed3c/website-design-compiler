@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/storybook-visual-review-admission/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "state", "reviewReceiptSha256", "subject", "reviewer", "authority"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/storybook-visual-review-admission/v1" },
+    "state": { "const": "PASS" },
+    "reviewReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree", "sourceFilesSha256", "screenshotSetSha256"],
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "tree": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "screenshotSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "contextId"],
+      "properties": {
+        "identity": { "type": "string", "minLength": 1 },
+        "contextId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identity", "admittedAt"],
+      "properties": {
+        "kind": { "enum": ["human", "orchestrator"] },
+        "identity": { "type": "string", "minLength": 1 },
+        "admittedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
