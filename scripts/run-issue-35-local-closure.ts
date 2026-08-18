@@ -34,6 +34,8 @@ const evidenceByCommand: Partial<Record<(typeof OWNING_CLOSURE_COMMANDS)[number]
   "pnpm authoring:receipt": ["artifacts/authoring/authoring-receipt.json"],
   "pnpm cms:fixture": ["artifacts/cms/payload-cms-receipt.json"],
   "pnpm browser:qa": [
+    "artifacts/runtime/minimal/graphics-2d/graphics-2d-plan.json",
+    "artifacts/runtime/minimal/graphics-3d/graphics-3d-plan.json",
     "artifacts/browser-qa/playwright-report.json",
     "artifacts/browser-qa/playwright-runtime-report.json",
     "artifacts/generated-pages/generated-page-browser-receipt.json"
@@ -67,6 +69,18 @@ for (const command of OWNING_CLOSURE_COMMANDS) {
   if (stopped) {
     commands.push({ command, evidence: [], exitCode: null, verdict: "NOT_EXERCISED" });
     continue;
+  }
+  if (command === "pnpm browser:qa") {
+    const fixture = spawnSync("pnpm", ["compile:fixture"], {
+      cwd: root,
+      env: environment,
+      stdio: "inherit"
+    });
+    if ((fixture.status ?? 1) !== 0) {
+      commands.push({ command, evidence: await collectEvidence(evidenceByCommand[command] ?? []), exitCode: fixture.status ?? 1, verdict: "FAIL" });
+      stopped = true;
+      continue;
+    }
   }
   const script = command.slice("pnpm ".length);
   const result = spawnSync("pnpm", [script], { cwd: root, env: environment, stdio: "inherit" });
