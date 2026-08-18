@@ -11,7 +11,8 @@ function canonicalStory(kind:SectionKind,variant:string):Story {
   if(!contract.variants.includes(variant))throw new Error(`Storybook variant ${variant} is not governed for ${kind}`);
   const label=`${kind} / ${variant}`;
   const fields=Object.fromEntries(Object.entries(contract.fields).map(([name,field])=>{
-    const value=field.type==="items"?[`${label} evidence item`,`${label} responsive item`]
+    const value=kind==="navigation"&&name==="links"?["Overview","Evidence","Security"]
+      :field.type==="items"?[`${label} evidence item`,`${label} responsive item`]
       :field.type==="link"?{label:`${label} action`,href:"#storybook-evidence"}
       :field.type==="media"?{assetId:`storybook:${kind}:${variant}`,alt:`${label} approved media`}
       :field.type==="number"?42
