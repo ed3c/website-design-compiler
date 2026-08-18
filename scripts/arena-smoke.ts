@@ -61,8 +61,10 @@ if (!matrix || matrix.schema !== "website-design-compiler/arena-benchmark-matrix
 
 const receipts = new Map<string, RuntimeReceipt>();
 const benchmarkArtifacts: Array<{ id: string; input: string; runtimeReceipt: string }> = [];
+const diagnostics: string[] = [];
 const visualEvidenceReceiptPath = join(root, "artifacts", "reference-browser", "observed-visual-fingerprint.json");
 const visualEvidenceReceiptSha256 = createHash("sha256").update(await readFile(visualEvidenceReceiptPath)).digest("hex");
+const visualDirectionReceipt = await readJson<{ overall?: unknown }>(join(root, "artifacts", "v2", "visual-direction-search", "receipt.json"));
 
 for (const benchmark of matrix.categories) {
   const benchmarkDirectory = join(outputRoot, benchmark.id);
@@ -97,7 +99,26 @@ for (const benchmark of matrix.categories) {
     authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, benchmarkAuthoredContent(slot, benchmark.id)]))
   };
   await writeFile(inputPath, `${JSON.stringify(input, null, 2)}\n`, "utf8");
-  execFileSync("pnpm", ["exec", "tsx", "src/cli.ts", inputPath, compilerOutput], { cwd: root, stdio: "pipe" });
+  if (visualDirectionReceipt?.overall !== "PASS") {
+    diagnostics.push(`${benchmark.id}: visual-direction benchmark receipt is ${evidenceState(visualDirectionReceipt?.overall)}`);
+    benchmarkArtifacts.push({
+      id: benchmark.id,
+      input: `artifacts/arena/${benchmark.id}/compiler-input.json`,
+      runtimeReceipt: `artifacts/arena/${benchmark.id}/compiler-output/runtime-receipt.json`
+    });
+    continue;
+  }
+  try {
+    execFileSync("pnpm", ["exec", "tsx", "src/cli.ts", inputPath, compilerOutput], { cwd: root, stdio: "pipe" });
+  } catch {
+    diagnostics.push(`${benchmark.id}: compiler execution failed for the current subject`);
+    benchmarkArtifacts.push({
+      id: benchmark.id,
+      input: `artifacts/arena/${benchmark.id}/compiler-input.json`,
+      runtimeReceipt: `artifacts/arena/${benchmark.id}/compiler-output/runtime-receipt.json`
+    });
+    continue;
+  }
   const receiptPath = join(compilerOutput, "runtime-receipt.json");
   const runtimeReceipt = await readJson<RuntimeReceipt>(receiptPath);
   if (runtimeReceipt) receipts.set(benchmark.id, runtimeReceipt);
@@ -275,7 +296,8 @@ const receipt = {
     benchmarkProvenanceCompleteness: "PASS applies to the deterministic Arena provenance fixture only; repository-wide rights clearance remains outside this claim.",
     keyboardCompletion: "The browser runtime test contract explicitly exercises Tab focus followed by the primary button action; project PASS plus retained Playwright report/trace is the runtime evidence boundary.",
     mediaStrategyFit: "The Arena metric requires both the compiler strategy receipt and a separate browser receipt proving lazy activation, bounded Pixi/Three execution, provider fallback and forced media-off behavior."
-  }
+  },
+  diagnostics
 };
 
 const receiptPath = join(outputRoot, "arena-score.json");
