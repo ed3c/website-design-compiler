@@ -1,4 +1,16 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+async function expectedStudioNodeCount(): Promise<number> {
+  const projection = JSON.parse(
+    await readFile("apps/site/generated/benchmark-page-graphs.json", "utf8")
+  ) as { graphs?: Record<string, { nodes?: unknown[] }> };
+  const nodes = projection.graphs?.["b2b-product"]?.nodes;
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    throw new Error("generated b2b-product page graph has no governed nodes");
+  }
+  return nodes.length;
+}
 
 test("governed authoring render uses production registry components", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -33,10 +45,11 @@ test("invalid authoring data fails closed before production registry render", as
 
 test("Puck editor route loads as a separate governed authoring surface", async ({ page }) => {
   const pageErrors: string[] = [];
+  const expectedNodes = await expectedStudioNodeCount();
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/studio", { waitUntil: "networkidle" });
   await expect(page.locator("[data-authoring-studio='true']")).toBeVisible();
   await expect(page.getByText("Website Design Compiler Studio")).toBeVisible();
-  await expect(page.frameLocator("iframe").locator("[data-page-node]")).toHaveCount(7);
+  await expect(page.frameLocator("iframe").locator("[data-page-node]")).toHaveCount(expectedNodes);
   expect(pageErrors).toEqual([]);
 });
