@@ -327,7 +327,12 @@ export function applyWaivers(subjects: RightsSubject[], waivers: Waiver[], now: 
   }
   return { subjects: subjects.map((subject) => {
     const waiver = bySubject.get(subject.id); if (!waiver) return subject;
-    if (subject.state === "REVIEW_REQUIRED") return { ...subject, state: "ALLOW" as const, evidence: [...subject.evidence, `waiver:${waiver.owner}:${waiver.scope}:${waiver.expiresAt}`] };
+    if (subject.state === "REVIEW_REQUIRED") return {
+      ...subject,
+      state: "ALLOW" as const,
+      attributionRequired: true,
+      evidence: [...subject.evidence, `waiver:${waiver.owner}:${waiver.scope}:${waiver.expiresAt}`]
+    };
     return subject;
   }), expiredWaivers, diagnostics };
 }
