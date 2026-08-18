@@ -13,7 +13,7 @@ export default defineConfig({
   webServer: {
     command: "pnpm --filter @website-design-compiler/site storybook",
     url: "http://127.0.0.1:6006",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
     stdout: "ignore",
     stderr: "pipe"
