@@ -25,6 +25,7 @@ const pageGraphDirectory=join(outputDirectory,"page-graphs");
 await mkdir(outputDirectory,{recursive:true});
 await mkdir(pageGraphDirectory,{recursive:true});
 const gitSha=process.env.GITHUB_SHA??"UNBOUND";
+async function run():Promise<void>{
 const profilePath=join(process.cwd(),"fixtures","v2","release-profiles","premium.json");
 const profileBytes=await readFile(profilePath);
 const profile=JSON.parse(profileBytes.toString("utf8")) as DesignQualityReleaseProfile;
@@ -84,3 +85,29 @@ const path=join(outputDirectory,"design-quality-eval-receipt.json");
 await writeFile(path,`${JSON.stringify(receipt,null,2)}\n`,`utf8`);
 console.log(JSON.stringify({path,overall:receipt.overall,profile:receipt.releaseProfile,categoryCount:receipt.categoryCount,viewportCoverage,exactHeadBound,allEvidenceBound,allStructuralPass,allOriginalityPass,premium:receipt.premium.state,scores:evaluations.map((entry)=>({category:entry.card.category,viewport:entry.card.viewport,score:entry.card.score,originality:entry.card.originalityAudit.state,maxCorpusSimilarity:entry.card.originalityAudit.maxCorpusSimilarity,state:entry.decision.overall}))}));
 if(receipt.overall!=="PASS")process.exitCode=1;
+}
+
+try{
+  await run();
+}catch(error){
+  const message=error instanceof Error?error.message:"design-quality evaluation failed";
+  const safeMessage=message.replaceAll(process.cwd(),"[workspace]");
+  const receipt={
+    schema:"website-design-compiler/design-quality-eval-receipt/v2",
+    overall:"FAIL",
+    git:{sha:gitSha,ref:process.env.GITHUB_REF??"UNBOUND"},
+    releaseProfile:{schema:"website-design-compiler/design-quality-release-profile/v2",id:"premium-web-v2",sha256:"0".repeat(64),premiumQualityThreshold:0,originalitySimilarityThreshold:0,requiredViewports:["mobile","desktop"],requireExactEvidenceBinding:true},
+    categoryCount:0,
+    viewportCoverage:{mobile:0,desktop:0},
+    exactHeadBound:false,
+    allEvidenceBound:false,
+    allStructuralPass:false,
+    allOriginalityPass:false,
+    premium:{state:"FAIL",evaluations:[]},
+    diagnostics:[safeMessage]
+  };
+  const path=join(outputDirectory,"design-quality-eval-receipt.json");
+  await writeFile(path,`${JSON.stringify(receipt,null,2)}\n`,`utf8`);
+  console.log(JSON.stringify({path,overall:receipt.overall,diagnostics:receipt.diagnostics}));
+  process.exitCode=1;
+}
