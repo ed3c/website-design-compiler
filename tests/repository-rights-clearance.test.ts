@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { applyWaivers, classifyLicense, scanRepositoryRights, scanShippedAssets, validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt, type RightsSubject } from "../src/repository-rights-clearance.js";
+import { applyWaivers, classifyLicense, loadTrustedWaivers, scanRepositoryRights, scanShippedAssets, validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt, type RightsSubject } from "../src/repository-rights-clearance.js";
 
 test("rights classifier covers allow review deny and unknown", () => {
   assert.equal(classifyLicense("MIT"), "ALLOW");
@@ -42,6 +43,20 @@ test("active review waiver is explicit while expired waiver fails to change stat
   assert.equal(expired.subjects[0]?.state, "REVIEW_REQUIRED");
   assert.deepEqual(expired.expiredWaivers, [subject.id]);
   assert.deepEqual(expired.diagnostics, []);
+});
+
+test("a non-empty waiver file requires an externally trusted exact byte hash", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-rights-waiver-trust-"));
+  const path = join(root, "rights-waivers.json");
+  const bytes = Buffer.from(`${JSON.stringify([{ subjectId: "package:x@1", owner: "legal-reviewer", rationale: "approved distribution terms", scope: "subject:package:x@1", expiresAt: "2030-01-01T00:00:00.000Z" }], null, 2)}\n`);
+  try {
+    await writeFile(path, bytes);
+    await assert.rejects(loadTrustedWaivers(path), /externally trusted SHA-256 is absent/);
+    await assert.rejects(loadTrustedWaivers(path, "0".repeat(64)), /does not match/);
+    assert.equal((await loadTrustedWaivers(path, createHash("sha256").update(bytes).digest("hex"))).length, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("invalid review waivers stay non-ALLOW and produce diagnostics", () => {

@@ -59,6 +59,8 @@ jobs:
         run: pnpm v2:complete-page-graph
       - run: pnpm provenance:fixture
       - name: Verify repository-wide rights clearance
+        env:
+          WDC_RIGHTS_WAIVERS_SHA256: ${{ vars.WDC_RIGHTS_WAIVERS_SHA256 }}
         run: pnpm rights:clearance
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck

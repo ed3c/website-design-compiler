@@ -105,6 +105,14 @@ export function validateRepositoryClearanceReceipt(value: unknown): string[] {
   return errors;
 }
 
+function parseWaivers(source: string): Waiver[] {
+  let value: unknown;
+  try { value = JSON.parse(source) as unknown; }
+  catch { throw new Error("rights waivers contain invalid JSON"); }
+  if (!Array.isArray(value)) throw new Error("rights waivers must be an array");
+  return value as Waiver[];
+}
+
 export async function loadWaivers(path: string): Promise<Waiver[]> {
   let source: string;
   try { source = await readFile(path, "utf8"); }
@@ -112,11 +120,26 @@ export async function loadWaivers(path: string): Promise<Waiver[]> {
     if (errorCode(error) === "ENOENT") return [];
     throw new Error(`unable to read rights waivers: ${errorCode(error)}`);
   }
-  let value: unknown;
-  try { value = JSON.parse(source) as unknown; }
-  catch { throw new Error("rights waivers contain invalid JSON"); }
-  if (!Array.isArray(value)) throw new Error("rights waivers must be an array");
-  return value as Waiver[];
+  return parseWaivers(source);
+}
+
+export async function loadTrustedWaivers(path: string, trustedSha256?: string): Promise<Waiver[]> {
+  let bytes: Buffer;
+  try { bytes = await readFile(path); }
+  catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      if (trustedSha256) throw new Error("externally trusted rights waiver SHA-256 is configured but the waiver file is absent");
+      return [];
+    }
+    throw new Error(`unable to read rights waivers: ${errorCode(error)}`);
+  }
+  const waivers = parseWaivers(bytes.toString("utf8"));
+  if (waivers.length === 0 && !trustedSha256) return waivers;
+  if (!trustedSha256) throw new Error("rights waiver externally trusted SHA-256 is absent");
+  if (!/^[a-f0-9]{64}$/.test(trustedSha256)) throw new Error("rights waiver externally trusted SHA-256 is malformed");
+  const actualSha256 = createHash("sha256").update(bytes).digest("hex");
+  if (actualSha256 !== trustedSha256) throw new Error("rights waiver file does not match the externally trusted SHA-256");
+  return waivers;
 }
 
 function assetScanFailure(root: string, path: string, error: unknown): RightsSubject {

@@ -36,4 +36,8 @@ test("compiler workflow avoids duplicate branch runs while verifying every publi
     .flatMap((job) => job.steps ?? [])
     .find((step) => typeof step.run === "string" && step.run.includes("pnpm release:v2"));
   assert.equal(releaseStep?.env?.WDC_RELEASE_PROFILE, "COMMERCIAL_PRODUCTION");
+  const rightsStep = Object.values(workflow.jobs ?? {})
+    .flatMap((job) => job.steps ?? [])
+    .find((step) => typeof step.run === "string" && step.run.includes("pnpm rights:clearance"));
+  assert.match(String(rightsStep?.env?.WDC_RIGHTS_WAIVERS_SHA256 ?? ""), /vars\.WDC_RIGHTS_WAIVERS_SHA256/);
 });
