@@ -1,42 +1,182 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/website-design-compiler/live-reference-receipt.schema.json",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/live-reference-receipt.schema.json",
+  "title": "Live Reference Receipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "overall", "executionMode", "transportMode", "approval", "policy", "targets", "promotionBlockedReason", "git"],
+  "required": [
+    "schema",
+    "overall",
+    "executionMode",
+    "transportMode",
+    "approval",
+    "policy",
+    "targets",
+    "promotionBlockedReason",
+    "git"
+  ],
   "properties": {
     "schema": { "const": "website-design-compiler/live-reference-receipt/v2" },
     "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
     "executionMode": { "const": "LIVE" },
     "transportMode": { "enum": ["PRODUCTION", "INJECTED"] },
     "approval": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["id", "approvedAt", "targetCount"],
-      "properties": { "id": { "type": "string" }, "approvedAt": { "type": "string", "format": "date-time" }, "targetCount": { "type": "integer", "minimum": 2 } }
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9._:-]{3,80}$" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "targetCount": { "type": "integer", "minimum": 2 }
+      }
     },
     "policy": {
-      "type": "object", "additionalProperties": false,
-      "required": ["httpsOnly", "credentialsForbidden", "queryForbidden", "maxRedirects", "maxBytes", "timeoutMs", "maxAttempts", "retryBackoffMs"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumDistinctHttpsTargets", "timeoutMs", "maxAttempts", "retryBackoffMs", "maxRedirects", "maxBytes"],
       "properties": {
-        "httpsOnly": { "const": true }, "credentialsForbidden": { "const": true }, "queryForbidden": { "const": true },
-        "maxRedirects": { "type": "integer", "minimum": 0 }, "maxBytes": { "type": "integer", "minimum": 1 }, "timeoutMs": { "type": "integer", "minimum": 1 }, "maxAttempts": { "type": "integer", "minimum": 1 }, "retryBackoffMs": { "type": "integer", "minimum": 0 }
+        "minimumDistinctHttpsTargets": { "const": 2 },
+        "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "retryBackoffMs": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "maxRedirects": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "maxBytes": { "type": "integer", "minimum": 1, "maximum": 8388608 }
       }
     },
     "targets": {
-      "type": "array", "minItems": 1,
-      "items": {
-        "type": "object", "additionalProperties": false,
-        "required": ["target", "state", "availability", "finalUrl", "redirects", "dns", "contentType", "byteCount", "responseSha256", "observationIdentity", "drift", "observedAt", "facts", "attempts", "reason"],
-        "properties": {
-          "target": { "type": "string" }, "state": { "enum": ["PASS", "FAIL"] }, "availability": { "enum": ["AVAILABLE", "UNAVAILABLE"] },
-          "finalUrl": { "type": ["string", "null"] }, "redirects": { "type": "array", "items": { "type": "string" } },
-          "dns": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["hostname", "addresses", "selectedAddress", "connectedAddress"], "properties": { "hostname": { "type": "string" }, "addresses": { "type": "array", "minItems": 1, "items": { "type": "string" } }, "selectedAddress": { "type": "string" }, "connectedAddress": { "type": "string" } } } }, "contentType": { "type": ["string", "null"] }, "byteCount": { "type": "integer", "minimum": 0 },
-          "responseSha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" }, "observationIdentity": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" }, "drift": { "enum": ["BASELINE", "UNCHANGED", "CHANGED", "NOT_OBSERVED"] },
-          "observedAt": { "type": "string", "format": "date-time" }, "facts": { "type": "array", "items": { "type": "string" } }, "attempts": { "type": "integer", "minimum": 0 }, "reason": { "type": ["string", "null"] }
-        }
-      }
+      "type": "array",
+      "items": { "$ref": "#/$defs/target" }
     },
     "promotionBlockedReason": { "type": ["string", "null"] },
-    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } }
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "ref"],
+      "properties": {
+        "sha": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|UNBOUND)$" },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "transportMode": { "const": "INJECTED" } },
+        "required": ["transportMode"]
+      },
+      "then": {
+        "properties": { "overall": { "enum": ["FAIL", "NOT_EXERCISED"] } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "overall": { "const": "PASS" } },
+        "required": ["overall"]
+      },
+      "then": {
+        "properties": {
+          "transportMode": { "const": "PRODUCTION" },
+          "promotionBlockedReason": { "type": "null" },
+          "targets": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "allOf": [
+                { "$ref": "#/$defs/target" },
+                {
+                  "type": "object",
+                  "required": [
+                    "targetUrl",
+                    "finalUrl",
+                    "state",
+                    "availability",
+                    "httpStatus",
+                    "contentType",
+                    "responseBytes",
+                    "responseSha256",
+                    "artifactIdentity",
+                    "capturedAt",
+                    "connectedAddress"
+                  ],
+                  "properties": {
+                    "state": { "const": "PASS" },
+                    "availability": { "const": "AVAILABLE" },
+                    "contentType": { "enum": ["text/html", "application/xhtml+xml"] }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "availability",
+        "dnsResolutions",
+        "redirectChain",
+        "attemptCount",
+        "observations",
+        "implementationDetails",
+        "drift"
+      ],
+      "properties": {
+        "targetUrl": { "type": "string", "format": "uri", "pattern": "^https://[^?#]+$" },
+        "finalUrl": { "type": "string", "format": "uri", "pattern": "^https://[^?#]+$" },
+        "state": { "enum": ["PASS", "FAIL", "ABSENT", "NOT_IMPLEMENTED", "NOT_EXERCISED", "SKIPPED_BY_POLICY"] },
+        "availability": { "enum": ["AVAILABLE", "UNAVAILABLE", "NOT_ASSESSED"] },
+        "failureKind": { "enum": ["AVAILABILITY", "POLICY", "COMPILER"] },
+        "failureReason": { "type": "string", "minLength": 1 },
+        "httpStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "contentType": { "type": "string", "minLength": 1 },
+        "responseBytes": { "type": "integer", "minimum": 0 },
+        "responseSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "artifactIdentity": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "dnsResolutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["attempt", "hostname", "addresses", "observedAt"],
+            "properties": {
+              "attempt": { "type": "integer", "minimum": 1 },
+              "hostname": { "type": "string", "minLength": 1 },
+              "addresses": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "observedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "redirectChain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["attempt", "fromUrl", "status", "toUrl"],
+            "properties": {
+              "attempt": { "type": "integer", "minimum": 1 },
+              "fromUrl": { "type": "string", "format": "uri", "pattern": "^https://[^?#]+$" },
+              "status": { "type": "integer", "minimum": 300, "maximum": 399 },
+              "toUrl": { "type": "string", "format": "uri", "pattern": "^https://[^?#]+$" }
+            }
+          }
+        },
+        "connectedAddress": { "type": "string", "minLength": 1 },
+        "attemptCount": { "type": "integer", "minimum": 0 },
+        "observations": { "type": "array", "items": { "type": "string" } },
+        "implementationDetails": { "const": "UNKNOWN" },
+        "drift": { "enum": ["BASELINE", "UNCHANGED", "CHANGED", "NOT_OBSERVED"] }
+      }
+    }
   }
 }

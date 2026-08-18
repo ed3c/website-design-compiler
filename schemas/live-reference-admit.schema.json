@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/live-reference-admit.schema.json",
+  "title": "Live Reference Human Admit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "approvalId", "approvedAt", "targets"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/live-reference-admit/v1" },
+    "approvalId": { "type": "string", "pattern": "^[a-zA-Z0-9._:-]{3,80}$" },
+    "approvedAt": { "type": "string", "format": "date-time" },
+    "targets": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "type": "string", "format": "uri", "pattern": "^https://[^?#]+$" }
+    }
+  }
+}
