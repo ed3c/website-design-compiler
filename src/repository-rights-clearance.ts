@@ -141,7 +141,10 @@ export async function scanShippedAssets(root: string): Promise<RightsSubject[]> 
   async function walk(dir: string): Promise<void> {
     let entries;
     try { entries = await readdir(dir, { withFileTypes: true }); }
-    catch (error) { subjects.push(assetScanFailure(root, dir, error)); return; }
+    catch (error) {
+      if (dir === publicDir && errorCode(error) === "ENOENT") return;
+      subjects.push(assetScanFailure(root, dir, error)); return;
+    }
     for (const entry of entries) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await walk(path);

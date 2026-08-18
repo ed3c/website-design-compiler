@@ -75,9 +75,7 @@ test("repository-wide scan includes production dependencies from the shipped sit
     assert.ok(ids.has(`package:${dependency}`), `missing site production dependency ${dependency}`);
   }
   assert.equal(receipt.overall, "FAIL");
-  for (const unresolved of ["package:@img/sharp-libvips-darwin-arm64@1.2.4", "package:caniuse-lite@1.0.30001809", "package:gsap@3.15.0"]) {
-    assert.ok(receipt.unresolved.includes(unresolved), `expected repository rights failure for ${unresolved}`);
-  }
+  assert.deepEqual(receipt.unresolved, ["package:@img/sharp-libvips-darwin-arm64@1.2.4", "package:caniuse-lite@1.0.30001809", "package:gsap@3.15.0"]);
 });
 
 test("unmanifested or hash-mismatched public assets fail closed as UNKNOWN", async () => {
@@ -98,22 +96,19 @@ test("unmanifested or hash-mismatched public assets fail closed as UNKNOWN", asy
   }
 });
 
-test("missing or unreadable public tree materializes a diagnostic UNKNOWN subject", async () => {
-  for (const publicTree of ["missing", "not-a-directory"] as const) {
-    const root = await mkdtemp(join(tmpdir(), "wdc-rights-public-tree-"));
-    try {
-      if (publicTree === "not-a-directory") {
-        await mkdir(join(root, "apps/site"), { recursive: true });
-        await writeFile(join(root, "apps/site/public"), "not a directory", "utf8");
-      }
-      const subjects = await scanShippedAssets(root);
-      assert.equal(subjects.length, 1);
-      assert.equal(subjects[0]?.state, "UNKNOWN");
-      assert.equal(subjects[0]?.distributed, true);
-      assert.match(subjects[0]?.evidence.join(" ") ?? "", /diagnostic:public-tree:(?:ENOENT|ENOTDIR)/);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+test("absent public tree means zero assets while an unreadable tree is diagnostic UNKNOWN", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-rights-public-tree-"));
+  try {
+    assert.deepEqual(await scanShippedAssets(root), []);
+    await mkdir(join(root, "apps/site"), { recursive: true });
+    await writeFile(join(root, "apps/site/public"), "not a directory", "utf8");
+    const subjects = await scanShippedAssets(root);
+    assert.equal(subjects.length, 1);
+    assert.equal(subjects[0]?.state, "UNKNOWN");
+    assert.equal(subjects[0]?.distributed, true);
+    assert.match(subjects[0]?.evidence.join(" ") ?? "", /diagnostic:public-tree:ENOTDIR/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 
@@ -173,10 +168,15 @@ test("waiver and public-tree diagnostics independently fail the repository recei
     assert.match(invalidWaiverReceipt.diagnostics.join(" "), /waiver:0:owner:EMPTY/);
 
     await rm(publicDirectory, { recursive: true });
+    const absentPublicTreeReceipt = await scanRepositoryRights(root, [], new Date("2026-08-18T00:00:00.000Z"));
+    assert.equal(absentPublicTreeReceipt.overall, "PASS");
+    assert.deepEqual(absentPublicTreeReceipt.diagnostics, []);
+
+    await writeFile(publicDirectory, "not a directory", "utf8");
     const publicTreeReceipt = await scanRepositoryRights(root, [], new Date("2026-08-18T00:00:00.000Z"));
     assert.equal(publicTreeReceipt.overall, "FAIL");
     assert.ok(publicTreeReceipt.unresolved.includes("asset-scan:apps/site/public"));
-    assert.match(publicTreeReceipt.diagnostics.join(" "), /diagnostic:public-tree:ENOENT/);
+    assert.match(publicTreeReceipt.diagnostics.join(" "), /diagnostic:public-tree:ENOTDIR/);
   } finally {
     process.env.PATH = previousPath;
     await rm(root, { recursive: true, force: true });
