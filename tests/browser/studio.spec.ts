@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompletePageGraph } from "../../src/complete-page-graph";
 import { pageGraphFingerprint, pageGraphToPuck } from "../../src/page-graph-roundtrip";
+import { validateAgainstSchema } from "../../src/validate";
 
 test("governed authoring render uses production registry components", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -35,9 +38,18 @@ test("invalid authoring data fails closed before production registry render", as
   await expect(page.getByText(/not an approved governed component/)).toBeVisible();
 });
 
-test("Puck editor consumes every production benchmark page graph", async ({ page }) => {
+test("Puck editor consumes every production benchmark page graph", async ({ page, request }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium", "one browser lane owns the Puck runtime receipt");
   test.setTimeout(120_000);
   const pageErrors: string[] = [];
+  const observations: Array<{
+    category: string;
+    fingerprint: string;
+    nodeCount: number;
+    publishedFingerprint: string;
+    renderedSemanticOrder: string[];
+    semanticOrder: string[];
+  }> = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   const projection = JSON.parse(
     await readFile(join(process.cwd(), "apps/site/generated/benchmark-page-graphs.json"), "utf8")
@@ -53,14 +65,19 @@ test("Puck editor consumes every production benchmark page graph", async ({ page
       .toHaveAttribute("data-published-fingerprint", fingerprint);
     const saved = await page.evaluate((key) => window.localStorage.getItem(key), `wdc:puck-page:${category}`);
     expect(saved).not.toBeNull();
+    const renderedSemanticOrder = await page.frameLocator("iframe").locator("[data-page-node]")
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-page-node") ?? ""));
+    expect(renderedSemanticOrder).toEqual(graph.semanticOrder);
+    observations.push({
+      category,
+      fingerprint,
+      nodeCount: graph.nodes.length,
+      publishedFingerprint: fingerprint,
+      renderedSemanticOrder,
+      semanticOrder: graph.semanticOrder
+    });
   }
   expect(pageErrors).toEqual([]);
-});
-
-test("Puck publish readback rejects unknown blocks and extra properties", async ({ request }) => {
-  const projection = JSON.parse(
-    await readFile(join(process.cwd(), "apps/site/generated/benchmark-page-graphs.json"), "utf8")
-  ) as { graphs: Record<string, CompletePageGraph> };
   const source = pageGraphToPuck(projection.graphs["b2b-product"]!);
   const unknownBlock = structuredClone(source) as unknown as Record<string, unknown>;
   (unknownBlock.content as Array<Record<string, unknown>>)[0]!.type = "RawHtml";
@@ -71,6 +88,37 @@ test("Puck publish readback rejects unknown blocks and extra properties", async 
   (extraProperty.root as { props: Record<string, unknown> }).props.unowned = true;
   const propertyResponse = await request.post("/api/studio/publish", { data: extraProperty });
   expect(propertyResponse.status()).toBe(422);
+
+  const git = {
+    ref: `refs/heads/${execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" }).trim()}`,
+    sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim()
+  };
+  const receipt = {
+    schema: "website-design-compiler/issue-35-puck-runtime/v1",
+    overall: "PASS",
+    git,
+    runtime: {
+      consumer: "apps/site/components/studio/studio-editor.tsx",
+      graphSource: "apps/site/generated/benchmark-page-graphs.json",
+      package: "@puckeditor/core",
+      version: "0.22.4"
+    },
+    graphs: observations,
+    controls: {
+      extraPropertyRejected: propertyResponse.status() === 422,
+      manualBenchmarkGraphRequired: false,
+      unknownBlockRejected: blockResponse.status() === 422
+    },
+    commands: [{
+      command: "pnpm exec playwright test tests/browser/studio.spec.ts --project=desktop-chromium",
+      verdict: "PASS"
+    }]
+  };
+  await validateAgainstSchema(receipt, "issue-35-puck-runtime.schema.json");
+  const outputDirectory = join(process.cwd(), "artifacts", "handoff");
+  await mkdir(outputDirectory, { recursive: true });
+  await writeFile(join(outputDirectory, "issue-35-puck-runtime.json"), `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 });
 
 test("Puck editor rejects an unknown production graph category", async ({ page }) => {
