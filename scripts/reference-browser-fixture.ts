@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observation-fixture.js";
@@ -182,9 +182,6 @@ try {
   const producerReceiptText = `${JSON.stringify(receipt, null, 2)}\n`;
   await writeFile(outputPath, producerReceiptText, "utf8");
   const producerReceiptSha256 = sha256(producerReceiptText);
-  if (process.env.GITHUB_OUTPUT) {
-    await appendFile(process.env.GITHUB_OUTPUT, `receipt_sha256=${producerReceiptSha256}\n`, "utf8");
-  }
   const visualFingerprint = {
     schema: "website-design-compiler/observed-visual-fingerprint/v3",
     state: "PASS",

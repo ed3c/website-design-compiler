@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { deflateSync } from "node:zlib";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
 import { validateAgainstSchema } from "../src/validate.js";
-import { auditCandidateOriginality, deriveObservedVisualDimensions, loadVerifiedVisualReferences, searchVisualDirections } from "../src/visual-direction-search.js";
+import { REFERENCE_BROWSER_TRUST_SOURCE_PATHS, auditCandidateOriginality, deriveObservedVisualDimensions, loadVerifiedVisualReferences, referenceBrowserTrustSourceSha256, searchVisualDirections } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
   return {
@@ -68,17 +69,53 @@ test("originality audit rejects a candidate that is too close to an observed ref
   assert.ok(reasons.some((reason) => reason.includes("too close to an observed reference")));
 });
 
-async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>, includeSelfSignedProducer = false): Promise<T> {
+function pngCrc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const typeBytes = Buffer.from(type, "ascii");
+  const chunk = Buffer.alloc(data.length + 12);
+  chunk.writeUInt32BE(data.length, 0);
+  typeBytes.copy(chunk, 4);
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(pngCrc32(Buffer.concat([typeBytes, data])), data.length + 8);
+  return chunk;
+}
+
+function indexedPngWithoutPalette(width: number, height: number): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 3;
+  const rows = Buffer.alloc(height * (width + 1));
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(rows)),
+    pngChunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
+async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>, includeSelfSignedProducer = false, includeExternalAdmission = false, evidenceOverride?: Buffer): Promise<T> {
   const root = await mkdtemp(join(tmpdir(), "wdc-visual-evidence-"));
   try {
     const compilerInput = input("premium-consumer");
     const value = "<!doctype html><main><h1>Observed reference</h1></main>";
-    const evidenceBytes = Buffer.alloc(24);
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(evidenceBytes);
-    evidenceBytes.writeUInt32BE(13, 8);
-    evidenceBytes.write("IHDR", 12, "ascii");
-    evidenceBytes.writeUInt32BE(1280, 16);
-    evidenceBytes.writeUInt32BE(800, 20);
+    const evidenceBytes = evidenceOverride ?? Buffer.alloc(24);
+    if (!evidenceOverride) {
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(evidenceBytes);
+      evidenceBytes.writeUInt32BE(13, 8);
+      evidenceBytes.write("IHDR", 12, "ascii");
+      evidenceBytes.writeUInt32BE(1280, 16);
+      evidenceBytes.writeUInt32BE(800, 20);
+    }
     await writeFile(join(root, "evidence.png"), evidenceBytes);
     const digest = (content: string | Uint8Array) => createHash("sha256").update(content).digest("hex");
     const measurements = {
@@ -133,6 +170,27 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
       await writeFile(join(root, "forged-browser-runtime-receipt.json"), producerReceiptText, "utf8");
       receipt.producerReceipt.sha256 = digest(producerReceiptText);
     }
+    let trustedAdmissionSha256: string | undefined;
+    if (includeExternalAdmission) {
+      for (const path of REFERENCE_BROWSER_TRUST_SOURCE_PATHS) {
+        const absolutePath = join(root, path);
+        await mkdir(dirname(absolutePath), { recursive: true });
+        await writeFile(absolutePath, `independently reviewed source: ${path}\n`, "utf8");
+      }
+      const admission = {
+        schema: "website-design-compiler/reference-browser-admission/v1",
+        state: "PASS",
+        producer: "playwright-computed-style/v1",
+        sourceFilesSha256: await referenceBrowserTrustSourceSha256(root),
+        capturedArtifactSha256: digest(value),
+        authority: { kind: "repository-administrator", identity: "external browser evidence authority", admittedAt: "2026-08-18T00:01:00.000Z" }
+      };
+      const admissionPath = join(root, "fixtures/reference-browser/browser-admission.json");
+      await mkdir(dirname(admissionPath), { recursive: true });
+      const admissionText = `${JSON.stringify(admission, null, 2)}\n`;
+      await writeFile(admissionPath, admissionText, "utf8");
+      trustedAdmissionSha256 = digest(admissionText);
+    }
     const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
     await writeFile(join(root, "receipt.json"), receiptText, "utf8");
     compilerInput.references = [{
@@ -140,7 +198,14 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
       value,
       visualEvidence: { receiptPath: "receipt.json", receiptSha256: digest(receiptText) }
     }];
-    return await run(compilerInput, root);
+    const previousAdmissionSha256 = process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256;
+    if (trustedAdmissionSha256) process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 = trustedAdmissionSha256;
+    try {
+      return await run(compilerInput, root);
+    } finally {
+      if (previousAdmissionSha256 === undefined) delete process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256;
+      else process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 = previousAdmissionSha256;
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -149,22 +214,20 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
 test("caller-authored measurements and fake screenshot bytes cannot promote originality", async () => {
   await assert.rejects(
     withVisualEvidence(null, async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root), true),
-    /trusted browser runtime admission/
+    /trusted reference browser admission/
   );
 });
 
 test("an externally admitted receipt still cannot promote an incomplete PNG header", async () => {
   await withVisualEvidence(null, async (compilerInput, root) => {
-    const fingerprint = JSON.parse(await readFile(join(root, "receipt.json"), "utf8"));
-    const previous = process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256;
-    process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256 = fingerprint.producerReceipt.sha256;
-    try {
-      await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /truncated PNG chunk|complete PNG browser screenshot/);
-    } finally {
-      if (previous === undefined) delete process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256;
-      else process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256 = previous;
-    }
-  }, true);
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /truncated PNG chunk|complete PNG browser screenshot/);
+  }, true, true);
+});
+
+test("an externally admitted indexed PNG without its required palette cannot promote originality", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /missing its PNG palette/);
+  }, true, true, indexedPngWithoutPalette(1280, 800));
 });
 
 test("observed fingerprint dimensions are derived from browser measurements", async () => {

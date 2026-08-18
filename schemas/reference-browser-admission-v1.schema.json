@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/reference-browser-admission/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "state", "producer", "sourceFilesSha256", "capturedArtifactSha256", "authority"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/reference-browser-admission/v1" },
+    "state": { "const": "PASS" },
+    "producer": { "const": "playwright-computed-style/v1" },
+    "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "capturedArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identity", "admittedAt"],
+      "properties": {
+        "kind": { "enum": ["human", "repository-administrator"] },
+        "identity": { "type": "string", "minLength": 1 },
+        "admittedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

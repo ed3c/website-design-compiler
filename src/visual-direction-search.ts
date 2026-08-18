@@ -92,6 +92,19 @@ interface ReferenceBrowserReceipt {
   responsiveBehavior: { state: "PASS" | "FAIL" };
 }
 
+interface ReferenceBrowserAdmission {
+  schema: "website-design-compiler/reference-browser-admission/v1";
+  state: "PASS";
+  producer: "playwright-computed-style/v1";
+  sourceFilesSha256: string;
+  capturedArtifactSha256: string;
+  authority: {
+    kind: "human" | "repository-administrator";
+    identity: string;
+    admittedAt: string;
+  };
+}
+
 export interface ObservedVisualMeasurement {
   fontFamily: string;
   headingFontSizePx: number;
@@ -138,6 +151,15 @@ const DIMENSION_KEYS: Array<keyof VisualDirectionDimensions> = [
 
 const DIVERSITY_THRESHOLD = 60;
 const ORIGINALITY_THRESHOLD = 70;
+export const REFERENCE_BROWSER_TRUST_SOURCE_PATHS = [
+  ".github/workflows/compiler-core.yml",
+  "schemas/observed-visual-fingerprint-v3.schema.json",
+  "schemas/reference-browser-admission-v1.schema.json",
+  "schemas/reference-browser-receipt.schema.json",
+  "scripts/reference-browser-fixture.ts",
+  "src/reference-browser-observation-fixture.ts",
+  "src/visual-direction-search.ts"
+] as const;
 
 const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
   {
@@ -180,6 +202,37 @@ function resolveWorkspacePath(root: string, path: string): string {
   return resolved;
 }
 
+export async function referenceBrowserTrustSourceSha256(root = process.cwd()): Promise<string> {
+  const digest = createHash("sha256");
+  for (const path of REFERENCE_BROWSER_TRUST_SOURCE_PATHS) {
+    digest.update(path);
+    digest.update("\0");
+    digest.update(await readFile(resolveWorkspacePath(root, path)));
+    digest.update("\0");
+  }
+  return digest.digest("hex");
+}
+
+async function loadTrustedReferenceBrowserAdmission(root: string, capturedArtifactSha256: string): Promise<void> {
+  const path = resolveWorkspacePath(root, "fixtures/reference-browser/browser-admission.json");
+  let bytes: Buffer;
+  try { bytes = await readFile(path); }
+  catch { throw new Error("trusted reference browser admission is absent"); }
+  const receiptSha256 = createHash("sha256").update(bytes).digest("hex");
+  const trustedSha256 = process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256?.trim();
+  if (!trustedSha256 || trustedSha256 !== receiptSha256) {
+    throw new Error("reference browser admission does not match the externally trusted SHA-256");
+  }
+  const admission = JSON.parse(bytes.toString("utf8")) as ReferenceBrowserAdmission;
+  await validateAgainstSchema(admission, "reference-browser-admission-v1.schema.json");
+  if (admission.sourceFilesSha256 !== await referenceBrowserTrustSourceSha256(root)) {
+    throw new Error("reference browser admission does not bind the current producer and verifier sources");
+  }
+  if (admission.capturedArtifactSha256 !== capturedArtifactSha256) {
+    throw new Error("reference browser admission does not bind the captured reference artifact");
+  }
+}
+
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) {
@@ -206,6 +259,7 @@ function assertPngEvidence(bytes: Uint8Array, expected: { width: number; minimum
   let sawEnd = false;
   let bitDepth = 0;
   let colorType = -1;
+  let sawPalette = false;
   const imageData: Buffer[] = [];
   while (offset + 12 <= value.length) {
     const length = value.readUInt32BE(offset);
@@ -230,6 +284,12 @@ function assertPngEvidence(bytes: Uint8Array, expected: { width: number; minimum
       sawImageData = true;
       imageData.push(value.subarray(offset + 8, dataEnd));
     }
+    if (type === "PLTE") {
+      if (sawImageData || length === 0 || length > 768 || length % 3 !== 0) {
+        throw new Error(`visual evidence for ${expected.viewport} has an invalid PNG palette`);
+      }
+      sawPalette = true;
+    }
     if (type === "IEND") {
       if (length !== 0) throw new Error(`visual evidence for ${expected.viewport} has an invalid PNG IEND`);
       sawEnd = true;
@@ -247,6 +307,7 @@ function assertPngEvidence(bytes: Uint8Array, expected: { width: number; minimum
   if (!channels || !validBitDepths.get(colorType)?.includes(bitDepth) || height > 32768) {
     throw new Error(`visual evidence for ${expected.viewport} uses unsupported PNG pixel data`);
   }
+  if (colorType === 3 && !sawPalette) throw new Error(`visual evidence for ${expected.viewport} is missing its PNG palette`);
   const rowBytes = Math.ceil(width * channels * bitDepth / 8);
   const expectedDecodedBytes = height * (rowBytes + 1);
   if (!Number.isSafeInteger(expectedDecodedBytes) || expectedDecodedBytes > 128 * 1024 * 1024) {
@@ -328,10 +389,6 @@ export async function loadVerifiedVisualReferences(input: CompilerInput, root = 
     if (producerReceiptSha256 !== receipt.producerReceipt.sha256) {
       throw new Error("visual evidence browser runtime receipt bytes do not match the fingerprint");
     }
-    const trustedProducerReceiptSha256 = process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256?.trim();
-    if (!trustedProducerReceiptSha256 || trustedProducerReceiptSha256 !== producerReceiptSha256) {
-      throw new Error("visual evidence lacks trusted browser runtime admission");
-    }
     const producerReceipt = JSON.parse(producerReceiptBytes.toString("utf8")) as ReferenceBrowserReceipt;
     await validateAgainstSchema(producerReceipt, "reference-browser-receipt.schema.json");
     if (producerReceipt.schema !== receipt.producerReceipt.schema || producerReceipt.overall !== "PASS" || producerReceipt.responsiveBehavior.state !== "PASS") {
@@ -343,6 +400,7 @@ export async function loadVerifiedVisualReferences(input: CompilerInput, root = 
     if (producerReceipt.measurementsSha256 !== hash(receipt.measurements)) {
       throw new Error("visual evidence measurements are not bound to the browser runtime receipt");
     }
+    await loadTrustedReferenceBrowserAdmission(root, producerReceipt.capturedArtifactSha256);
     const viewports = receipt.evidenceArtifacts.map((evidence) => evidence.viewport).sort();
     if (JSON.stringify(viewports) !== JSON.stringify(["desktop", "mobile"])) {
       throw new Error("visual evidence must include one desktop and one mobile browser screenshot");
