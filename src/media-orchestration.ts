@@ -4,7 +4,14 @@ import { compileResponsiveSectionPolicy } from "./responsive-composition.js";
 
 export type MediaRenderer="dom"|"image"|"video"|"pixi"|"three";
 export type MediaPurpose="none"|"explain"|"demonstrate"|"editorial-support"|"ambient-brand"|"interactive-exploration";
-export interface MediaDecision { sectionId:string; kind:SectionKind; renderer:MediaRenderer; purpose:MediaPurpose; justification:string; criticality:"primary"|"supporting"|"decorative"; lazyPriority:"eager"|"viewport"|"idle"; budget:{maxBytes:number;maxDpr:number;maxTriangles:number;maxDrawCalls:number}; accessibility:{semanticOwner:"DOM";altRequired:boolean;descriptionRequired:boolean;canvasAriaHidden:boolean}; fallback:{mobile:MediaRenderer;gpuFailure:MediaRenderer;providerFailure:MediaRenderer;reducedMotion:MediaRenderer}; execution:{provider:"NONE"|"internal-deterministic-mock"|"PRODUCTION_PROVIDER_REQUIRED";state:"NO_JOB"|"READY_INTERNAL"|"PROVIDER_NOT_ADMITTED";provenanceRequired:boolean}; }
+export interface MediaDecision {
+  sectionId:string; kind:SectionKind; renderer:MediaRenderer; purpose:MediaPurpose; justification:string;
+  criticality:"primary"|"supporting"|"decorative"; lazyPriority:"eager"|"viewport"|"idle";
+  budget:{maxBytes:number;maxDpr:number;maxTriangles:number;maxDrawCalls:number};
+  accessibility:{semanticOwner:"DOM";altRequired:boolean;descriptionRequired:boolean;canvasAriaHidden:boolean};
+  fallback:{mobile:MediaRenderer;gpuFailure:MediaRenderer;providerFailure:MediaRenderer;reducedMotion:MediaRenderer};
+  execution:{provider:"NONE"|"internal-deterministic-mock"|"PRODUCTION_PROVIDER_REQUIRED";state:"NO_JOB"|"READY_INTERNAL"|"PROVIDER_NOT_ADMITTED";provenanceRequired:boolean};
+}
 export interface MediaOrchestrationPlan { schema:"website-design-compiler/media-orchestration/v2";category:string;decisions:MediaDecision[];richMediaCount:number;gpuCount:number;providerBlockedCount:number;strategySignature:string; }
 function choose(category:string,kind:SectionKind):MediaRenderer{if(kind==="graphics-2d-stage")return"pixi";if(kind==="graphics-3d-stage")return"three";if(kind==="editorial-media")return"image";if(kind==="media-stage")return category==="motion-heavy"?"video":"image";if(kind==="product-showcase")return category==="interactive-3d"?"three":category==="premium-consumer"?"image":"dom";if(kind==="hero")return category==="premium-consumer"?"image":category==="motion-heavy"?"video":category==="interactive-2d"?"pixi":category==="interactive-3d"?"three":"dom";return"dom";}
 function purpose(renderer:MediaRenderer,kind:SectionKind):MediaPurpose{if(renderer==="dom")return"none";if(kind==="editorial-media")return"editorial-support";if(renderer==="pixi"||renderer==="three")return"interactive-exploration";if(kind==="hero")return"ambient-brand";return"demonstrate";}
