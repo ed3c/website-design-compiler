@@ -5,14 +5,14 @@
   "subject": {
     "repository": "ed3c/website-design-compiler",
     "base_sha": "974e16e0cff87b298621dc24219d92be718f6978",
-    "current_sha": "e676a4b8eaad5962c71b08046dda7802c4c01a9f",
+    "current_sha": "3dfcec98e167dabe4406883696ba43c52ce3a725",
     "runtime": "codex-app/local-worktree",
-    "context_digest": "a3c936303be01dff7248951fda97975598d4b4f9cfd0da088445869a94375968"
+    "context_digest": "165139a779c4f66d1b340ccc656ef2f945c0ce6fb4ce8fd7fbe5cfd915db3acc"
   },
   "action": {
     "class": "LOCAL_HANDOFF_MONITOR",
     "side_effecting": false,
-    "intent_digest": "75ad1ef755a9029266c01d672fb988d2b8e665d91fcb335301877dfc56d24636"
+    "intent_digest": "c208f873109fa5f4bee2e6275a2b83fbc25b62f745e97fb3d01c37dedff54861"
   },
   "applicable_procedures": [
     {
@@ -23,32 +23,32 @@
     {
       "procedure_id": "reference-browser-admission",
       "criticality": "must",
-      "source": {"repository": "ed3c/website-design-compiler", "ref": "e676a4b8eaad5962c71b08046dda7802c4c01a9f", "path": "docs/issues/29-reference-browser-admission.md", "content_sha256": "a7baf06100f133792daba31c9c0ba1ce813c1ff2fd05fb33e9dc7d4b1c146122"}
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "3dfcec98e167dabe4406883696ba43c52ce3a725", "path": "docs/issues/29-reference-browser-admission.md", "content_sha256": "a7baf06100f133792daba31c9c0ba1ce813c1ff2fd05fb33e9dc7d4b1c146122"}
     },
     {
       "procedure_id": "generated-page-browser-admission",
       "criticality": "must",
-      "source": {"repository": "ed3c/website-design-compiler", "ref": "e676a4b8eaad5962c71b08046dda7802c4c01a9f", "path": "docs/issues/31-generated-page-browser-admission.md", "content_sha256": "29b842faf65416c7e836e51f4a14fb562da8056fbf5cbda4a299eac070148acf"}
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "3dfcec98e167dabe4406883696ba43c52ce3a725", "path": "docs/issues/31-generated-page-browser-admission.md", "content_sha256": "29b842faf65416c7e836e51f4a14fb562da8056fbf5cbda4a299eac070148acf"}
     },
     {
       "procedure_id": "storybook-visual-admission",
       "criticality": "must",
-      "source": {"repository": "ed3c/website-design-compiler", "ref": "e676a4b8eaad5962c71b08046dda7802c4c01a9f", "path": "docs/issues/30-storybook-visual-admission.md", "content_sha256": "65ba962f75a4f91337f1284601246d7a6b4f2db6159ca395911d838bd05c3812"}
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "3dfcec98e167dabe4406883696ba43c52ce3a725", "path": "docs/issues/30-storybook-visual-admission.md", "content_sha256": "65ba962f75a4f91337f1284601246d7a6b4f2db6159ca395911d838bd05c3812"}
     },
     {
       "procedure_id": "repository-rights-clearance",
       "criticality": "must",
-      "source": {"repository": "ed3c/website-design-compiler", "ref": "e676a4b8eaad5962c71b08046dda7802c4c01a9f", "path": "AGENTS.md", "content_sha256": "cc00bdc163bc5bc37261dd91e1e1ef6a158230c1839ad1afffddb5a3fa45bb0f"}
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "3dfcec98e167dabe4406883696ba43c52ce3a725", "path": "AGENTS.md", "content_sha256": "cc00bdc163bc5bc37261dd91e1e1ef6a158230c1839ad1afffddb5a3fa45bb0f"}
     },
     {
       "procedure_id": "live-reference-admission",
       "criticality": "must",
-      "source": {"repository": "ed3c/website-design-compiler", "ref": "e676a4b8eaad5962c71b08046dda7802c4c01a9f", "path": "docs/issues/22-live-reference.md", "content_sha256": "a4ea059730967fd18d56b2bf2ffbbc5b1226d81680437fd80bbeec7537b9b906"}
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "3dfcec98e167dabe4406883696ba43c52ce3a725", "path": "docs/issues/22-live-reference.md", "content_sha256": "a4ea059730967fd18d56b2bf2ffbbc5b1226d81680437fd80bbeec7537b9b906"}
     },
     {
       "procedure_id": "production-provider-admission",
       "criticality": "must",
-      "source": {"repository": "ed3c/website-design-compiler", "ref": "e676a4b8eaad5962c71b08046dda7802c4c01a9f", "path": "src/production-media-provider.ts", "content_sha256": "574df164e1653d75f0969127daed2f083737a0729e8cd0c7595a9d8398b2321a"}
+      "source": {"repository": "ed3c/website-design-compiler", "ref": "3dfcec98e167dabe4406883696ba43c52ce3a725", "path": "src/production-media-provider.ts", "content_sha256": "574df164e1653d75f0969127daed2f083737a0729e8cd0c7595a9d8398b2321a"}
     },
     {
       "procedure_id": "delivery-authority",
@@ -71,7 +71,7 @@
       "evidence_id": "validated-local-handoff-queue",
       "procedure_id": "local-handoff-authority",
       "kind": "TEST",
-      "artifact_sha256": "a3c936303be01dff7248951fda97975598d4b4f9cfd0da088445869a94375968",
+      "artifact_sha256": "165139a779c4f66d1b340ccc656ef2f945c0ce6fb4ce8fd7fbe5cfd915db3acc",
       "exact_subject": true
     }
   ],
