@@ -29,6 +29,24 @@
       "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
       "additionalProperties": { "$ref": "#/$defs/authoredContentEntry" }
     },
+    "briefSourceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputSha256", "fields"],
+      "properties": {
+        "inputSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "fields": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pageType", "audience", "objective"],
+          "properties": {
+            "pageType": { "$ref": "#/$defs/sourceField" },
+            "audience": { "$ref": "#/$defs/sourceField" },
+            "objective": { "$ref": "#/$defs/sourceField" }
+          }
+        }
+      }
+    },
     "references": {
       "type": "array",
       "items": {
@@ -110,6 +128,15 @@
         "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
         "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
         "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }
+      }
+    },
+    "sourceField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "sourceExcerpt"],
+      "properties": {
+        "state": { "enum": ["EXPLICIT", "INFERRED"] },
+        "sourceExcerpt": { "type": "string", "minLength": 1 }
       }
     }
   }

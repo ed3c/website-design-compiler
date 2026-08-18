@@ -73,8 +73,11 @@ function maxCharactersFor(slot: string): number {
 
 function planningProvenanceFor(slot: string, input: CompilerInput, section: IaSection): string[] {
   if (slot === "brand-or-project-name" || slot === "project-name") return [`compiler.project:${input.project}`];
-  if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task") return [`brief.objective:${input.brief.objective}`];
-  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return [`brief.objective:${input.brief.objective}`, `ia.section:${section.id}`];
+  const objectiveEvidence = input.briefSourceEvidence
+    ? `brief-input:${input.briefSourceEvidence.inputSha256}#objective`
+    : `brief.objective:${input.brief.objective}`;
+  if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task" || slot === "dek") return [objectiveEvidence];
+  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return [objectiveEvidence, `ia.section:${section.id}`];
   if (slot === "scene-purpose" || slot === "interaction-purpose") return [`ia.section:${section.id}`, ...section.evidence];
   return [];
 }
@@ -156,7 +159,9 @@ export function compileContentArchitecture(input: CompilerInput): ContentArchite
   const ia = compileInformationArchitecture(input);
   const forbidden = new Set(ia.forbiddenInventions);
   const requiredSlots = new Set(ia.sections.flatMap((section) => section.requiredContent));
-  const unownedSlots = Object.keys(input.authoredContent ?? {}).filter((slot) => !requiredSlots.has(slot)).sort();
+  const unownedSlots = Object.keys(input.authoredContent ?? {})
+    .filter((slot) => !requiredSlots.has(slot))
+    .sort();
   if (unownedSlots.length > 0) {
     throw new Error(`authored content is not owned by this page architecture: ${unownedSlots.join(", ")}`);
   }

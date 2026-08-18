@@ -56,7 +56,9 @@ test("six benchmark families produce content contracts matching their IA graphs"
 });
 
 test("publishable fields always carry provenance and obey length budgets", () => {
-  const content = compileContentArchitecture(input("product-landing"));
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"a".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:`Objective: ${compilerInput.brief.objective}`}}};
+  const content = compileContentArchitecture(compilerInput);
   for (const section of content.sections) {
     for (const field of section.fields.filter((candidate) => candidate.publishable)) {
       assert.ok(field.provenance.length > 0);
@@ -64,6 +66,14 @@ test("publishable fields always carry provenance and obey length budgets", () =>
       assert.ok((field.value?.length ?? 0) <= field.lengthBudget.maxCharacters);
     }
   }
+});
+
+test("an unbound objective and compiler-invented CTA never become publishable",()=>{
+  const content=compileContentArchitecture(input("product-landing"));
+  const hero=content.sections.find((section)=>section.sectionId==="hero")!;
+  assert.equal(hero.fields.find((field)=>field.slot==="headline")?.state,"NEEDS_INPUT");
+  assert.equal(hero.fields.find((field)=>field.slot==="primary-action")?.publishable,false);
+  assert.ok(hero.fields.filter((field)=>field.publishable).every((field)=>field.sourceType==="user_supplied_claim"));
 });
 
 test("missing proof and feature inputs remain NEEDS_INPUT instead of fabricated evidence", () => {
@@ -183,4 +193,12 @@ test("page architect carries the full content contract without dropping provenan
   assert.equal(proof?.contentContract.fields[0]?.publishable, false);
   assert.equal(heroState, "NEEDS_INPUT");
   assert.deepEqual(projectedHero, contentHero);
+  assert.equal(hero?.contentContract.fields.some((field) => field.publishable), false);
+  assert.deepEqual(proof?.contentContract.localePolicy,{sourceLocale:"en",localizationReady:true});
+  assert.deepEqual(proof?.contentContract.fields[0]?.lengthBudget,{maxCharacters:280});
+  assert.deepEqual(proof?.contentContract.quality,contentQuality(plan,"proof"));
 });
+
+function contentQuality(plan:ReturnType<typeof buildPageArchitecturePlan>,sectionId:string){
+  return plan.sectionIntents.find((section)=>section.id===sectionId)!.contentContract.quality;
+}

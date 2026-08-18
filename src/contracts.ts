@@ -63,6 +63,15 @@ export interface AuthoredContentEntry {
   };
 }
 
+export interface CompilerBriefSourceEvidence {
+  inputSha256: string;
+  fields: {
+    pageType: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+    audience: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+    objective: { state: "EXPLICIT" | "INFERRED"; sourceExcerpt: string };
+  };
+}
+
 export interface CompilerInput {
   schema: "website-design-compiler/input/v1";
   project: string;
@@ -73,6 +82,7 @@ export interface CompilerInput {
   };
   hardConstraints?: string[];
   authoredContent?: Record<string, AuthoredContentEntry>;
+  briefSourceEvidence?: CompilerBriefSourceEvidence;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];

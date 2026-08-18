@@ -98,7 +98,7 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
       nav,
       configuredSection("editorial-hero", "hero-editorial", "Establish topic, editorial promise and reading context.", "PRIMARY", ["headline", "dek"], "Use the brief objective as planning evidence for the dek; require authored headline copy.", audienceAndObjectiveEvidence),
       configuredSection("article-body", "editorial-prose", "Deliver the main evidence-backed narrative.", "PRIMARY", ["body-content"], "Omit the body until source material is supplied.", objectiveEvidence),
-      configuredSection("related-content", "related-content", "Offer optional continuation without fabricating articles.", "SECONDARY", ["related-items"], "Omit when no related items are provided.", pageTypeAndAudienceEvidence),
+      configuredSection("editorial-media", "editorial-media", "Pair the narrative with explicitly supplied editorial media.", "SECONDARY", ["editorial-media-asset-id", "editorial-media-alt"], "Omit media when no approved asset and alternative text are provided.", pageTypeAndAudienceEvidence),
       footer
     ];
   }
@@ -107,7 +107,7 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
     return [
       nav,
       configuredSection("brand-hero", "hero-premium", "Create a high-confidence first impression around the product or brand promise.", "PRIMARY", ["headline", "primary-action"], "Use a text-first shell without publishable claims or actions until authored content is supplied.", audienceAndObjectiveEvidence),
-      configuredSection("product-showcase", "product-showcase", "Show product form, use or differentiated experience.", "PRIMARY", ["product-description"], "Use a static placeholder without product claims when no approved content or asset exists.", pageTypeAndAudienceEvidence),
+      configuredSection("product-showcase", "product-showcase", "Show product form, use or differentiated experience.", "PRIMARY", ["product-description", "product-media-asset-id", "product-media-alt"], "Omit product media until approved content, asset identity and alternative text are supplied.", pageTypeAndAudienceEvidence),
       configuredSection("brand-proof", "proof", "Provide supported reasons to trust the product.", "SECONDARY", ["proof-items"], "Omit social proof until evidence is supplied.", audienceAndObjectiveEvidence),
       configuredSection("conversion", "cta-band", "Provide the primary conversion action.", "PRIMARY", ["cta-label"], "Omit the action until its label and target are supplied.", objectiveEvidence),
       footer
@@ -118,8 +118,8 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
     return [
       nav,
       configuredSection("creative-hero", "hero-creative", "Establish the concept and a signature interaction opportunity.", "PRIMARY", ["headline", "primary-action"], "Render a non-publishable semantic shell until authored copy and an action are supplied.", audienceAndObjectiveEvidence),
-      configuredSection("narrative-sequence", "narrative-sequence", "Build a paced story across distinct semantic beats.", "PRIMARY", ["story-beats"], "Omit choreography until authored story beats are supplied.", pageTypeAndAudienceEvidence),
-      configuredSection("interactive-showcase", "interactive-stage", "Provide a justified interactive demonstration.", "SECONDARY", ["interaction-purpose"], "Use a static poster and objective-derived planning note; do not invent explanatory copy.", objectiveEvidence),
+      configuredSection("narrative-sequence", "bento-grid", "Build a paced story across distinct semantic beats.", "PRIMARY", ["story-beats"], "Render ordinary semantic sections without choreography until authored story beats are supplied.", pageTypeAndAudienceEvidence),
+      configuredSection("interactive-showcase", "media-stage", "Provide a justified interactive demonstration.", "SECONDARY", ["interaction-purpose", "stage-media-asset-id", "stage-media-alt"], "Omit the media stage until approved media and explanatory copy are supplied.", objectiveEvidence),
       configuredSection("conversion", "cta-band", "Return from exploration to the primary action.", "PRIMARY", ["cta-label"], "Omit the action until its label and target are supplied.", objectiveEvidence),
       footer
     ];
@@ -159,6 +159,17 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
 
 export function compileInformationArchitecture(input: CompilerInput): InformationArchitecturePlan {
   const family = familyFromPageType(input.brief.pageType);
+  const availableContent = new Set([
+    "brand-or-project-name",
+    "project-name",
+    ...Object.keys(input.authoredContent ?? {})
+  ]);
+  const sections = sectionsForFamily(family, input).map((entry) => ({
+    ...entry,
+    status: entry.requiredContent.every((slot) => availableContent.has(slot))
+      ? "READY" as const
+      : "NEEDS_INPUT" as const
+  }));
   return {
     schema: "website-design-compiler/information-architecture/v2",
     project: input.project,
@@ -168,7 +179,7 @@ export function compileInformationArchitecture(input: CompilerInput): Informatio
       mode: family === "editorial" ? "content-led" : "single-page",
       mobilePriority: ["primary-action", "primary-content", "supporting-content"]
     },
-    sections: sectionsForFamily(family, input),
+    sections,
     forbiddenInventions: ["customer-logos", "testimonials", "metrics", "pricing", "customer-names", "performance-claims"]
   };
 }

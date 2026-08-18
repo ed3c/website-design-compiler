@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ARENA_CATEGORIES } from "../../src/arena.js";
 
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
-for(const category of categories){
+for(const category of ARENA_CATEGORIES){
   test(`${category} generated page preserves semantic order and responsive containment`,async({page},testInfo)=>{
     const response=await page.goto(`/benchmarks/${category}`,{waitUntil:"networkidle"});
     expect(response?.ok()).toBeTruthy();

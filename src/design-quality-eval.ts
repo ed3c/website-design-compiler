@@ -43,8 +43,8 @@ interface QualityIntent { mode:"CONVERSION"|"INFORMATION"; requiredConversionSte
 const CATEGORY_QUALITY_INTENTS:Record<string,QualityIntent>={
   "b2b-product":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
   editorial:{mode:"INFORMATION",requiredConversionSteps:0,ctaRequired:false},
-  "premium-consumer":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
-  "motion-heavy":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
+  "premium-consumer-brand":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
+  "motion-heavy-creative":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
   "interactive-2d":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
   "interactive-3d":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true}
 };

@@ -42,7 +42,10 @@ function conversionPath(sections:SectionInstance[]):string[]{
 export function compileCompletePageGraph(page:SectionPageFixture):CompletePageGraph{
   const motion=compileMotionChoreography(page);
   const media=compileMediaOrchestration(page);
-  const missingEvidence=page.sections.flatMap(requiredEvidenceMissing);
+  const missingEvidence=[...new Set([
+    ...page.missingEvidence,
+    ...page.sections.flatMap(requiredEvidenceMissing)
+  ])].sort();
   const nodes=page.sections.map((section,index):CompletePageNode=>({
     id:section.id,
     kind:section.kind,
