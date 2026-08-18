@@ -275,6 +275,45 @@ function isMediaAssetCompatible(kind: MediaKind, mediaType: string, extension: s
   return allowedFormats[kind].has(`${mediaType.toLowerCase()}:${extension.toLowerCase()}`);
 }
 
+export function validateProductionMediaRequest(request: SignedMediaRequest["request"]): string[] {
+  const errors: string[] = [];
+  if (request.schema !== "website-design-compiler/media-request/v1") errors.push("request schema is invalid");
+  if (!isSafeOpaqueId(request.requestId)) errors.push("requestId must be a safe opaque identity");
+  if (request.kind !== "image" && request.kind !== "video" && request.kind !== "3d") errors.push("request kind is invalid");
+  if (!isSafeOpaqueId(request.modelId)) errors.push("request modelId must be a safe opaque identity");
+  if (typeof request.prompt !== "string" || request.prompt.trim().length === 0 || request.prompt.length > 10_000) {
+    errors.push("request prompt must be a non-empty bounded string");
+  }
+  if (!request.parameters || typeof request.parameters !== "object" || Array.isArray(request.parameters)) {
+    errors.push("request parameters must be an object");
+  } else {
+    const entries = Object.entries(request.parameters);
+    if (entries.length > 64) errors.push("request parameters exceed the admitted field count");
+    for (const [key, value] of entries) {
+      if (!/^[A-Za-z][A-Za-z0-9._-]{0,63}$/.test(key)) errors.push(`request parameter ${key} has an invalid key`);
+      if (typeof value === "number" && !Number.isFinite(value)) errors.push(`request parameter ${key} must be finite`);
+      if (typeof value === "string" && value.length > 4096) errors.push(`request parameter ${key} exceeds the string budget`);
+      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") errors.push(`request parameter ${key} has an invalid value`);
+    }
+    for (const dimension of ["width", "height"] as const) {
+      const value = request.parameters[dimension];
+      if (value !== undefined && (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 16_384)) {
+        errors.push(`request ${dimension} must be a positive safe pixel dimension`);
+      }
+    }
+  }
+  if (
+    !request.optimization ||
+    request.optimization.target !== "web" ||
+    !Number.isSafeInteger(request.optimization.maxBytes) ||
+    request.optimization.maxBytes < 1 ||
+    request.optimization.maxBytes > 33_554_432
+  ) {
+    errors.push("request optimization must target web with maxBytes between 1 and 33554432");
+  }
+  return errors;
+}
+
 export function productionRightsIdentities(identity: ProductionProviderIdentity): {
   modelWeight: string;
   generatedOutput: string;
@@ -378,7 +417,7 @@ export async function routeProductionMediaGeneration(args: {
     requestId: safeReceiptOpaque(request.requestId),
     provider: receiptProvider,
     requestSha256,
-    promptSha256: sha256(request.prompt),
+    promptSha256: sha256(typeof request.prompt === "string" ? request.prompt : canonicalMediaValue(request.prompt)),
     configurationSha256: sha256(canonicalMediaValue({ prompt: request.prompt, parameters: request.parameters })),
     attempts: 0,
     admissionEvidence: {
@@ -418,6 +457,18 @@ export async function routeProductionMediaGeneration(args: {
     },
     reason: "production provider requires human admission, available credentials, and authorized budget"
   };
+
+  const requestErrors = validateProductionMediaRequest(request);
+  if (requestErrors.length > 0) {
+    return {
+      receipt: {
+        ...base,
+        overall: "FAIL",
+        admissionState: "DENIED",
+        reason: `invalid production media request: ${requestErrors.join("; ")}`
+      }
+    };
+  }
 
   const policyErrors = validateProductionProviderPolicy(args.policy);
   if (policyErrors.length > 0) {

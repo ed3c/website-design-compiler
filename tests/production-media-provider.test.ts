@@ -5,6 +5,7 @@ import {
   buildUnconfiguredProductionProviderStatus,
   ProductionProviderError,
   routeProductionMediaGeneration as routeProvider,
+  validateProductionMediaRequest,
   validateProductionProviderPolicy,
   type ProductionProviderPolicy,
   type ProductionProviderTransport
@@ -533,6 +534,31 @@ test("production policy rejects floating identities, incomplete rights bindings,
   assert.match(errors, /maxAttempts/);
   assert.match(errors, /revocation.*reason/);
   assert.match(errors, /revocation.*effectiveAt/);
+});
+
+test("production request rejects non-finite parameters and unbounded response budgets before transport", async () => {
+  const invalidRequest: MediaRequest = {
+    ...request,
+    parameters: { ...request.parameters, width: Number.NaN },
+    optimization: { target: "web", maxBytes: 100_000_000 }
+  };
+  assert.match(validateProductionMediaRequest(invalidRequest).join("; "), /width.*positive safe|maxBytes/);
+  let calls = 0;
+  const transport: ProductionProviderTransport = {
+    identity: policy.identity,
+    async generate() {
+      calls += 1;
+      throw new Error("must not execute");
+    }
+  };
+  const result = await routeProductionMediaGeneration({
+    signed: { request: invalidRequest, signature: signMediaRequest(invalidRequest, secret) },
+    secret, policy, rightsReceipt, transport,
+    executionAdmission: admissionFor(policy, rightsReceipt, invalidRequest)
+  });
+  assert.equal(calls, 0);
+  assert.equal(result.receipt.overall, "FAIL");
+  assert.match(result.receipt.reason, /invalid production media request/);
 });
 
 test("rate-limit and quota exhaustion are deterministic preflight stops", async () => {
