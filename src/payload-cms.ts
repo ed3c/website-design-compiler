@@ -2,6 +2,7 @@ import { sqliteAdapter } from "@payloadcms/db-sqlite";
 import { buildConfig, type Block, type CollectionConfig, type Field } from "payload";
 import { SECTION_CONTRACTS, SECTION_KINDS, type SectionFieldContract, type SectionKind } from "./section-grammar.js";
 import { validateAuthoringData, type AuthoringComponentData, type AuthoringData } from "./puck-authoring.js";
+import { validateCompletePageGraph, type CompletePageGraph } from "./complete-page-graph.js";
 
 export const PAYLOAD_VERSION="3.86.0" as const;export const CMS_LOCALES=["en","zh-TW"] as const;export const PAYLOAD_DEPLOYMENT_POLICY={developmentSchemaSync:"PUSH_ALLOWED",productionSchemaSync:"MIGRATIONS_REQUIRED",productionCredentialSource:"ENVIRONMENT_ONLY"} as const;
 const authenticated=({req}:{req:{user?:unknown}})=>Boolean(req.user);
@@ -27,6 +28,21 @@ export const Users:CollectionConfig={slug:"cms-users",auth:{maxLoginAttempts:5,l
 export const MediaAssets:CollectionConfig={slug:"media-assets",admin:{useAsTitle:"assetId"},access:{create:authenticated,read:authenticated,update:authenticated,delete:authenticated},fields:[{name:"assetId",type:"text",required:true,unique:true},{name:"mediaType",type:"select",required:true,options:["image","video","3d"]},{name:"sha256",type:"text",required:true},{name:"provenanceReceiptPath",type:"text",required:true},{name:"modelIdentity",type:"text",required:true},{name:"outputTermsSubject",type:"text",required:true},{name:"rightsState",type:"select",required:true,options:["ALLOW","REVIEW_REQUIRED","DENY"]}]};
 
 export const Pages:CollectionConfig={slug:"pages",admin:{useAsTitle:"title"},versions:{drafts:{validate:true},maxPerDoc:50},access:{create:authenticated,update:authenticated,delete:authenticated,readVersions:authenticated,read:({req})=>req.user?true:{_status:{equals:"published"}}},fields:[{name:"slug",type:"text",required:true,unique:true},{name:"project",type:"text",required:true},{name:"title",type:"text",required:true,localized:true},{name:"surfaceToken",type:"select",required:true,defaultValue:"surface-default",options:["surface-default","surface-muted"]},{name:"layout",type:"blocks",required:true,localized:true,blocks:[ButtonBlock,StatusPanelBlock,SectionBlock,...RichSectionBlocks],maxRows:64,validate:(value)=>{try{const data=payloadLayoutToAuthoring(value,"Payload validation","surface-default");const result=validateAuthoringData(data);return result.overall==="PASS"?true:result.errors.join("; ");}catch(error){return error instanceof Error?error.message:"invalid governed Payload layout";}}},{name:"media",type:"relationship",relationTo:"media-assets",hasMany:true,required:false},{name:"compilerSchema",type:"text",required:true,defaultValue:"website-design-compiler/frontend-plan/v1"},{name:"authoringSchema",type:"text",required:true,defaultValue:"website-design-compiler/governed-authoring/v1"}]};
+
+function validateStoredPageGraph(value:unknown):true|string{
+  if(!isRecord(value)||value.schema!=="website-design-compiler/payload-page-graph/v2")return"compiled page graph schema is invalid";
+  if(!Array.isArray(value.layout))return"compiled page graph layout must be an array";
+  const nodes=value.layout.map((entry)=>{
+    if(!isRecord(entry)||entry.blockType!=="governed-page-section")throw new Error("compiled page graph contains an ungoverned block");
+    const {blockType:_,...node}=entry;
+    return node;
+  });
+  const graph={schema:"website-design-compiler/page-graph/v2",category:value.category,route:value.route,readiness:value.readiness,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature,missingEvidence:value.missingEvidence,nodes} as unknown as CompletePageGraph;
+  const errors=validateCompletePageGraph(graph);
+  return errors.length===0?true:errors.join("; ");
+}
+
+export const PageGraphs:CollectionConfig={slug:"compiled-pages",admin:{useAsTitle:"category"},versions:{drafts:{validate:true},maxPerDoc:50},access:{create:authenticated,update:authenticated,delete:authenticated,readVersions:authenticated,read:({req})=>req.user?true:{_status:{equals:"published"}}},fields:[{name:"category",type:"text",required:true,unique:true},{name:"route",type:"text",required:true},{name:"graph",type:"json",required:true,validate:(value)=>{try{return validateStoredPageGraph(value);}catch(error){return error instanceof Error?error.message:"invalid compiled page graph";}}},{name:"graphFingerprint",type:"text",required:true},{name:"editorNote",type:"text",required:false},{name:"compilerSchema",type:"text",required:true,defaultValue:"website-design-compiler/page-graph/v2"}]};
 
 type PayloadBlock=Record<string,unknown>&{blockType:string};
 function requireString(value:unknown,path:string):string{if(typeof value!=="string"||value.trim()==="")throw new Error(`${path} must be non-empty text`);return value;}
@@ -56,4 +72,4 @@ function fromPayloadBlock(block:PayloadBlock):AuthoringComponentData{
 
 export function authoringToPayloadLayout(data:AuthoringData):PayloadBlock[]{const validation=validateAuthoringData(data);if(validation.overall!=="PASS")throw new Error(`authoring data failed validation: ${validation.errors.join("; ")}`);return data.content.map(toPayloadBlock);}
 export function payloadLayoutToAuthoring(layout:unknown,pageTitle:string,surfaceToken:"surface-default"|"surface-muted"):AuthoringData{if(!Array.isArray(layout))throw new Error("Payload layout must be an array");const content=layout.map((entry)=>{if(!entry||typeof entry!=="object"||Array.isArray(entry)||typeof(entry as Record<string,unknown>).blockType!=="string")throw new Error("Payload layout entry is not a governed block");return fromPayloadBlock(entry as PayloadBlock);});const data:AuthoringData={content,root:{props:{pageTitle,surfaceToken}}};const validation=validateAuthoringData(data);if(validation.overall!=="PASS")throw new Error(`Payload layout drifted from authoring schema: ${validation.errors.join("; ")}`);return data;}
-export function createPayloadConfig(options:{databaseUrl:string;secret:string}){if(!options.secret||options.secret.length<16)throw new Error("Payload secret must be supplied by private runtime state");const developmentPush=process.env.NODE_ENV!=="production";return buildConfig({secret:options.secret,admin:{user:Users.slug},collections:[Users,Pages,MediaAssets],localization:{locales:[...CMS_LOCALES],defaultLocale:"en",fallback:true},db:sqliteAdapter({client:{url:options.databaseUrl},push:developmentPush,blocksAsJSON:true,wal:true}),typescript:{autoGenerate:false}});}
+export function createPayloadConfig(options:{databaseUrl:string;secret:string}){if(!options.secret||options.secret.length<16)throw new Error("Payload secret must be supplied by private runtime state");const developmentPush=process.env.NODE_ENV!=="production";return buildConfig({secret:options.secret,admin:{user:Users.slug},collections:[Users,Pages,PageGraphs,MediaAssets],localization:{locales:[...CMS_LOCALES],defaultLocale:"en",fallback:true},db:sqliteAdapter({client:{url:options.databaseUrl},push:developmentPush,blocksAsJSON:true,wal:true}),typescript:{autoGenerate:false}});}

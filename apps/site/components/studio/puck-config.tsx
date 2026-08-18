@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { StatusPanel } from "@/components/ui/status-panel";
 import { GovernedSection } from "@/components/sections/governed-section";
 import { SECTION_CONTRACTS, SECTION_KINDS, type SectionFieldContract, type SectionKind } from "../../../../src/section-grammar";
+import type { CompletePageNode } from "../../../../src/complete-page-graph";
 
 type StudioProps = {
   ButtonBlock: { label: string; intent: "primary" | "secondary" };
   StatusPanelBlock: { state: "loading" | "empty" | "error" | "success"; title: string; message: string };
   Section: { surfaceToken: "surface-default" | "surface-muted"; content: Slot };
   RichSectionBlock: { kind:SectionKind; variant:string; fields:Record<string,unknown>; provenance:Record<string,string>; tokenRef?:"semantic-design-tokens/v2" };
+  GovernedPageSection: Record<string,unknown>;
 };
 
 function fieldFor(contract:SectionFieldContract):Field {
@@ -23,6 +25,7 @@ function fieldsFor(kind:SectionKind):Record<string,Field>{return Object.fromEntr
 function provenanceFieldsFor(kind:SectionKind):Record<string,Field>{return Object.fromEntries(Object.entries(SECTION_CONTRACTS[kind].fields).filter(([,contract])=>contract.provenanceRequired).map(([name])=>[name,{type:"text"} satisfies Field]));}
 function textValue(value:unknown):string|undefined{return typeof value==="string"?value:undefined;}
 function itemValues(value:unknown):string[]{if(!Array.isArray(value))return[];return value.map((entry)=>typeof entry==="string"?entry:entry&&typeof entry==="object"&&"value" in entry?String((entry as{value:unknown}).value):"").filter(Boolean);}
+function pageNodeContent(node:CompletePageNode){const props=node.section.props;return{heading:textValue(props.heading)??textValue(props.headline)??textValue(props.title),body:textValue(props.body)??textValue(props.quote)??textValue(props.summary)??textValue(props.description),items:itemValues(props.items)};}
 
 export const studioConfig: Config<StudioProps> = {
   root: {
@@ -40,6 +43,12 @@ export const studioConfig: Config<StudioProps> = {
       fields:{kind:{type:"select",label:"Section kind",options:SECTION_KINDS.map((kind)=>({label:kind,value:kind}))},variant:{type:"select",label:"Variant",options:SECTION_CONTRACTS.hero.variants.map((variant)=>({label:variant,value:variant}))},fields:{type:"object",objectFields:fieldsFor("hero")},provenance:{type:"object",objectFields:provenanceFieldsFor("hero")}},
       resolveFields:(data)=>{const kind=SECTION_KINDS.includes(data.props.kind)?data.props.kind:"hero";return{kind:{type:"select",label:"Section kind",options:SECTION_KINDS.map((entry)=>({label:entry,value:entry}))},variant:{type:"select",label:"Variant",options:SECTION_CONTRACTS[kind].variants.map((variant)=>({label:variant,value:variant}))},fields:{type:"object",objectFields:fieldsFor(kind)},provenance:{type:"object",objectFields:provenanceFieldsFor(kind)}};},
       render:({kind,variant,fields})=><GovernedSection kind={kind} variant={variant} heading={textValue(fields.heading)??textValue(fields.headline)} body={textValue(fields.body)??textValue(fields.quote)} items={itemValues(fields.items)}/>
+    },
+    GovernedPageSection:{
+      label:"Compiler generated page section",
+      defaultProps:{},
+      fields:{},
+      render:(props)=>{const node=props as unknown as CompletePageNode;const copy=pageNodeContent(node);return <div data-page-node={node.id} data-semantic-index={node.semanticIndex} data-mobile-layout={node.responsive.mobile.layout} data-tablet-layout={node.responsive.tablet.layout} data-desktop-layout={node.responsive.desktop.layout} data-media-renderer={node.mediaHook.renderer} data-motion-engine={node.motionHook.engine}><GovernedSection kind={node.kind} variant={node.variant} heading={copy.heading} body={copy.body} items={copy.items}/></div>;}
     }
   }
 };

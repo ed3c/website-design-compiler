@@ -1,4 +1,5 @@
 import { SECTION_KINDS, validateSectionInstance, type SectionInstance, type SectionKind } from "./section-grammar";
+import { validateCompletePageGraph, type CompletePageGraph, type CompletePageNode } from "./complete-page-graph";
 
 export type GovernedAuthoringType = "ButtonBlock" | "StatusPanelBlock" | "Section" | "RichSectionBlock";
 
@@ -51,8 +52,57 @@ function validateComponent(value:unknown,path:string,errors:string[],depth=0):vo
   hasOnlyKeys(props,["id","surfaceToken","content"],`${path}.props`,errors);if(!SURFACE_TOKENS.has(String(props.surfaceToken)))errors.push(`${path}.props.surfaceToken must reference an approved design token`);if(!Array.isArray(props.content)){errors.push(`${path}.props.content must be a slot component array`);return;}props.content.forEach((entry,index)=>{if(isRecord(entry)&&entry.type==="Section")errors.push(`${path}.props.content[${index}] cannot nest Section inside Section`);validateComponent(entry,`${path}.props.content[${index}]`,errors,depth+1);});
 }
 
+function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringValidation{
+  const errors:string[]=[];
+  hasOnlyKeys(value,["schema","content","root"],"data",errors);
+  if(value.schema!=="website-design-compiler/puck-page-graph/v2")errors.push("data.schema is not a supported Puck page graph");
+  if(!Array.isArray(value.content))errors.push("data.content must be an array");
+  if(!isRecord(value.root)||!isRecord(value.root.props))errors.push("data.root.props must be an object");
+  if(errors.length>0)return{overall:"FAIL",errors};
+
+  const root=value.root as {props:Record<string,unknown>};
+  hasOnlyKeys(root,["props"],"data.root",errors);
+  hasOnlyKeys(root.props,["category","route","readiness","semanticOrder","conversionPath","sharedChrome","contracts","signature","missingEvidence"],"data.root.props",errors);
+  const nodes:CompletePageNode[]=[];
+  (value.content as unknown[]).forEach((entry,index)=>{
+    const path=`data.content[${index}]`;
+    if(!isRecord(entry)){errors.push(`${path} must be an object`);return;}
+    hasOnlyKeys(entry,["type","props"],path,errors);
+    if(entry.type!=="GovernedPageSection"){errors.push(`${path}.type is not GovernedPageSection`);return;}
+    if(!isRecord(entry.props)){errors.push(`${path}.props must be an object`);return;}
+    hasOnlyKeys(entry.props,["id","kind","variant","section","tokenRef","responsive","motionHook","mediaHook","semanticIndex"],`${path}.props`,errors);
+    if(!isRecord(entry.props.section)){errors.push(`${path}.props.section must be an object`);return;}
+    const node=entry.props as unknown as CompletePageNode;
+    if(node.id!==node.section.id)errors.push(`${path}.props.id drifted from section.id`);
+    for(const error of validateSectionInstance(node.section))errors.push(`${path}.props.section: ${error}`);
+    nodes.push(node);
+  });
+  if(errors.length>0)return{overall:"FAIL",errors};
+  if(!Array.isArray(root.props.semanticOrder)||!Array.isArray(root.props.conversionPath)||!Array.isArray(root.props.missingEvidence))errors.push("data.root.props graph arrays are invalid");
+  if(!isRecord(root.props.sharedChrome)||!isRecord(root.props.contracts))errors.push("data.root.props graph contracts are invalid");
+  if(typeof root.props.category!=="string"||typeof root.props.route!=="string"||typeof root.props.signature!=="string")errors.push("data.root.props graph identity is invalid");
+  if(root.props.readiness!=="READY"&&root.props.readiness!=="NEEDS_INPUT")errors.push("data.root.props.readiness is invalid");
+  if(errors.length>0)return{overall:"FAIL",errors};
+
+  const graph:CompletePageGraph={
+    schema:"website-design-compiler/page-graph/v2",
+    category:root.props.category as string,
+    route:root.props.route as "/",
+    readiness:root.props.readiness as CompletePageGraph["readiness"],
+    missingEvidence:root.props.missingEvidence as string[],
+    semanticOrder:root.props.semanticOrder as string[],
+    conversionPath:root.props.conversionPath as string[],
+    nodes,
+    sharedChrome:root.props.sharedChrome as unknown as CompletePageGraph["sharedChrome"],
+    contracts:root.props.contracts as unknown as CompletePageGraph["contracts"],
+    signature:root.props.signature as string
+  };
+  errors.push(...validateCompletePageGraph(graph));
+  return{overall:errors.length===0?"PASS":"FAIL",errors};
+}
+
 export function validateAuthoringData(value:unknown):AuthoringValidation{
-  const errors:string[]=[];if(!isRecord(value))return{overall:"FAIL",errors:["authoring data must be an object"]};hasOnlyKeys(value,["content","root"],"data",errors);if(!Array.isArray(value.content))errors.push("data.content must be an array");else value.content.forEach((entry,index)=>validateComponent(entry,`data.content[${index}]`,errors));if(!isRecord(value.root))errors.push("data.root must be an object");else{hasOnlyKeys(value.root,["props"],"data.root",errors);if(value.root.props!==undefined){if(!isRecord(value.root.props))errors.push("data.root.props must be an object");else{hasOnlyKeys(value.root.props,["pageTitle","surfaceToken"],"data.root.props",errors);if(value.root.props.pageTitle!==undefined&&typeof value.root.props.pageTitle!=="string")errors.push("data.root.props.pageTitle must be text");if(value.root.props.surfaceToken!==undefined&&!SURFACE_TOKENS.has(String(value.root.props.surfaceToken)))errors.push("data.root.props.surfaceToken must reference an approved design token");}}}return{overall:errors.length===0?"PASS":"FAIL",errors};
+  const errors:string[]=[];if(!isRecord(value))return{overall:"FAIL",errors:["authoring data must be an object"]};if(value.schema!==undefined)return validatePageGraphAuthoringData(value);hasOnlyKeys(value,["content","root"],"data",errors);if(!Array.isArray(value.content))errors.push("data.content must be an array");else value.content.forEach((entry,index)=>validateComponent(entry,`data.content[${index}]`,errors));if(!isRecord(value.root))errors.push("data.root must be an object");else{hasOnlyKeys(value.root,["props"],"data.root",errors);if(value.root.props!==undefined){if(!isRecord(value.root.props))errors.push("data.root.props must be an object");else{hasOnlyKeys(value.root.props,["pageTitle","surfaceToken"],"data.root.props",errors);if(value.root.props.pageTitle!==undefined&&typeof value.root.props.pageTitle!=="string")errors.push("data.root.props.pageTitle must be text");if(value.root.props.surfaceToken!==undefined&&!SURFACE_TOKENS.has(String(value.root.props.surfaceToken)))errors.push("data.root.props.surfaceToken must reference an approved design token");}}}return{overall:errors.length===0?"PASS":"FAIL",errors};
 }
 
 export function importFrontendPlan(plan:FrontendPlanLike):AuthoringData{

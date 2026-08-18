@@ -1,4 +1,4 @@
-import { SECTION_CONTRACTS, validateSectionInstance, type SectionFieldContract, type SectionInstance, type SectionKind } from "./section-grammar.js";
+import { SECTION_CONTRACTS, validateSectionInstance, type SectionFieldContract, type SectionInstance, type SectionKind } from "./section-grammar";
 
 export const SECTION_PAGE_CATEGORIES = ["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
 export type SectionPageCategory=(typeof SECTION_PAGE_CATEGORIES)[number];

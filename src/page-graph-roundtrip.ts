@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CompletePageGraph, CompletePageNode } from "./complete-page-graph.js";
+import type { CompletePageGraph, CompletePageNode } from "./complete-page-graph";
 
 export type PageGraphNodeProjection = {
   id:string;

@@ -37,5 +37,6 @@ test("Puck editor route loads as a separate governed authoring surface", async (
   await page.goto("/studio", { waitUntil: "networkidle" });
   await expect(page.locator("[data-authoring-studio='true']")).toBeVisible();
   await expect(page.getByText("Website Design Compiler Studio")).toBeVisible();
+  await expect(page.frameLocator("iframe").locator("[data-page-node]")).toHaveCount(7);
   expect(pageErrors).toEqual([]);
 });

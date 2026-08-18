@@ -1,5 +1,5 @@
-import { SECTION_KINDS, type SectionKind } from "./section-grammar.js";
-import type { SectionPageFixture } from "./section-page-fixtures.js";
+import { SECTION_KINDS, type SectionKind } from "./section-grammar";
+import type { SectionPageFixture } from "./section-page-fixtures";
 
 export type LayoutMode="stack"|"split"|"grid"|"inline"|"stage"|"list";
 export type Density="compact"|"comfortable"|"spacious";

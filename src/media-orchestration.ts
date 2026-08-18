@@ -1,6 +1,6 @@
-import type { SectionKind } from "./section-grammar.js";
-import type { SectionPageFixture } from "./section-page-fixtures.js";
-import { compileResponsiveSectionPolicy } from "./responsive-composition.js";
+import type { SectionKind } from "./section-grammar";
+import type { SectionPageFixture } from "./section-page-fixtures";
+import { compileResponsiveSectionPolicy } from "./responsive-composition";
 
 export type MediaRenderer="dom"|"image"|"video"|"pixi"|"three";
 export type MediaPurpose="none"|"explain"|"demonstrate"|"editorial-support"|"ambient-brand"|"interactive-exploration";

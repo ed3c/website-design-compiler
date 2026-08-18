@@ -1,6 +1,6 @@
-import type { SectionKind } from "./section-grammar.js";
-import type { SectionPageFixture } from "./section-page-fixtures.js";
-import { compileResponsiveSectionPolicy } from "./responsive-composition.js";
+import type { SectionKind } from "./section-grammar";
+import type { SectionPageFixture } from "./section-page-fixtures";
+import { compileResponsiveSectionPolicy } from "./responsive-composition";
 
 export type MotionPurpose="orient"|"reveal-causality"|"confirm-action"|"spatial-continuity"|"emphasize-hierarchy"|"express-brand";
 export type MotionEngine="motion"|"gsap"|"none";

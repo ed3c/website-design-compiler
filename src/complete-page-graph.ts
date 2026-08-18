@@ -1,8 +1,8 @@
-import type { SectionInstance, SectionKind } from "./section-grammar.js";
-import type { SectionPageFixture } from "./section-page-fixtures.js";
-import { compileResponsiveSectionPolicy, type ResponsiveSectionPolicy } from "./responsive-composition.js";
-import { compileMotionChoreography, type ChoreographyEffect } from "./motion-choreography.js";
-import { compileMediaOrchestration, type MediaDecision } from "./media-orchestration.js";
+import type { SectionInstance, SectionKind } from "./section-grammar";
+import type { SectionPageFixture } from "./section-page-fixtures";
+import { compileResponsiveSectionPolicy, type ResponsiveSectionPolicy } from "./responsive-composition";
+import { compileMotionChoreography, type ChoreographyEffect } from "./motion-choreography";
+import { compileMediaOrchestration, type MediaDecision } from "./media-orchestration";
 
 export type PageGraphReadiness="READY"|"NEEDS_INPUT";
 export interface CompletePageNode {
