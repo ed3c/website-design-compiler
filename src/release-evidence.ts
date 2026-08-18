@@ -270,13 +270,14 @@ function validateQualityReceipt(value: JsonRecord): string[] {
 
 function validateStorybookReceipt(value: JsonRecord): string[] {
   const errors: string[] = [];
-  for (const key of ["publicComponents", "storyComponents", "requiredStates", "requiredButtonStories", "requiredProjects", "screenshots", "reviewedSourceRoots"] as const) requireStringArray(value[key], key, errors, true);
+  for (const key of ["publicComponents", "storyComponents", "requiredStates", "requiredButtonStories", "requiredProjects", "reviewedSourceRoots"] as const) requireStringArray(value[key], key, errors, true);
+  requireStringArray(value.screenshots, "screenshots", errors);
   for (const key of ["missingStories", "missingStatusStates", "missingButtonStates", "failedProjects", "missingProjects", "duplicateScreenshotNames", "diagnostics"] as const) requireStringArray(value[key], key, errors);
   if (!Array.isArray(value.projectResults)) errors.push("projectResults must be an array");
   if (typeof value.sourceFilesSha256 !== "string" || !SHA256.test(value.sourceFilesSha256)) errors.push("sourceFilesSha256 must be a SHA-256 digest");
   if (typeof value.screenshotSetSha256 !== "string" || !SHA256.test(value.screenshotSetSha256)) errors.push("screenshotSetSha256 must be a SHA-256 digest");
   const richSections = requireRecord(value.richSections, "richSections", errors);
-  if (richSections && (!Number.isInteger(richSections.expectedCount) || Number(richSections.expectedCount) < 1 || !isStringArray(richSections.storyIds, true) || !isStringArray(richSections.missingSectionScreenshots))) errors.push("richSections is malformed");
+  if (richSections && (!Number.isInteger(richSections.expectedCount) || Number(richSections.expectedCount) < 0 || !isStringArray(richSections.storyIds) || !isStringArray(richSections.missingSectionScreenshots))) errors.push("richSections is malformed");
   if (value.visualRegression !== "PASS" && value.visualRegression !== "FAIL") errors.push("visualRegression must be PASS or FAIL");
   for (const key of ["visualReview", "visualGoldens"] as const) if (!isRecord(value[key])) errors.push(`${key} must contain retained evidence`);
   const visualReview = isRecord(value.visualReview) ? value.visualReview : null;
@@ -288,7 +289,7 @@ function validateStorybookReceipt(value: JsonRecord): string[] {
       statusStateMatrix: Array.isArray(value.missingStatusStates) && value.missingStatusStates.length === 0 ? "PASS" : "FAIL",
       buttonStateMatrix: Array.isArray(value.missingButtonStates) && value.missingButtonStates.length === 0 ? "PASS" : "FAIL",
       browserProjects: Array.isArray(value.missingProjects) && value.missingProjects.length === 0 && Array.isArray(value.failedProjects) && value.failedProjects.length === 0 ? "PASS" : "FAIL",
-      richSectionRuntimeCoverage: richSections && Array.isArray(richSections.storyIds) && richSections.expectedCount === richSections.storyIds.length && Array.isArray(richSections.missingSectionScreenshots) && richSections.missingSectionScreenshots.length === 0 ? "PASS" : "FAIL",
+      richSectionRuntimeCoverage: richSections && Number(richSections.expectedCount)>0 && Array.isArray(richSections.storyIds) && richSections.expectedCount === richSections.storyIds.length && Array.isArray(richSections.missingSectionScreenshots) && richSections.missingSectionScreenshots.length === 0 ? "PASS" : "FAIL",
       visualReview: visualReview && ["independentReviewDiagnostics", "missingVisualReviews", "unexpectedVisualReviews", "duplicateVisualReviews", "failedVisualReviews"].every((key) => Array.isArray(visualReview[key]) && visualReview[key].length === 0) ? "PASS" : "FAIL"
     };
     for (const [key, state] of Object.entries(expected)) if (gates[key] !== state) errors.push(`gates.${key} is inconsistent; expected ${state}`);

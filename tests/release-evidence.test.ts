@@ -156,6 +156,16 @@ test("a formal Arena FAIL can preserve complete category coverage when compiler 
   assert.deepEqual(binding.errors, []);
 });
 
+test("a complete Storybook FAIL remains structurally bound when runtime screenshots and review are absent",()=>{
+  const storybook=validReceipts().storybook;
+  assert.ok(storybook);
+  Object.assign(storybook,{overall:"FAIL",projectResults:[],missingProjects:["desktop"],screenshots:[],diagnostics:["storybook runtime is not exercised"],richSections:{expectedCount:0,storyIds:[],missingSectionScreenshots:[]},visualRegression:"FAIL",visualReview:{reviewReceiptSha256:null,reviewSubjectIsAncestor:false,independentReviewDiagnostics:["independent review is absent"],missingVisualReviews:[],unexpectedVisualReviews:[],duplicateVisualReviews:[],failedVisualReviews:[]},visualGoldens:{missingGoldenScreenshots:[],unexpectedScreenshots:[],mismatches:[],actualHashes:{}},gates:{inputDiagnostics:"FAIL",publicComponentCoverage:"PASS",statusStateMatrix:"PASS",buttonStateMatrix:"PASS",storybookBuild:"FAIL",browserProjects:"FAIL",richSectionRuntimeCoverage:"FAIL",visualReview:"FAIL",visualRegression:"FAIL"}});
+  const binding=bindReleaseEvidence(storybook,RELEASE_CHILD_SPECS.storybook.schema,git);
+  assert.equal(binding.state,"FAIL");
+  assert.equal(binding.binding,"BOUND");
+  assert.deepEqual(binding.errors,[]);
+});
+
 test("receipt binding requires the exact SHA and ref", () => {
   const receipt = validReceipts().runtime;
   assert.equal(bindReleaseEvidence(receipt, RELEASE_CHILD_SPECS.runtime.schema, { ...git, sha: "c".repeat(40) }).binding, "MISMATCH");
