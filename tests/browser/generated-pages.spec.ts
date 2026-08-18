@@ -23,6 +23,7 @@ function measureGeneratedPageLayout(){
     return clippedX||clippedY?[{tag:element.tagName.toLowerCase(),text:(element.textContent??"").trim().slice(0,80),clippedX,clippedY,scrollWidth:element.scrollWidth,clientWidth:element.clientWidth,scrollHeight:element.scrollHeight,clientHeight:element.clientHeight}]:[];
   });
   const nodeHorizontalOverflow=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node]")).flatMap((element)=>element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{id:element.dataset.pageNode??"UNKNOWN",scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[]);
+  const mediaHorizontalOverflow=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node] .wdc-generated-node__media, [data-page-node] .wdc-generated-node__media *")).flatMap((element)=>element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{id:element.closest<HTMLElement>("[data-page-node]")?.dataset.pageNode??"UNKNOWN",tag:element.tagName.toLowerCase(),scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[]);
   const unsafeHorizontalScroll=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node] *")).flatMap((element)=>{
     const overflowX=getComputedStyle(element).overflowX;
     return (overflowX==="auto"||overflowX==="scroll")&&element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{tag:element.tagName.toLowerCase(),text:(element.textContent??"").trim().slice(0,80),scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[];
@@ -35,7 +36,7 @@ function measureGeneratedPageLayout(){
     const ratio=content.getBoundingClientRect().width/element.getBoundingClientRect().width;
     return ratio<minimumContentFillRatio?[{id:element.dataset.pageNode??"UNKNOWN",ratio,declaredColumns}]:[];
   });
-  return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,unsafeHorizontalScroll,underfilledContentOnlyNodes};
+  return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,mediaHorizontalOverflow,unsafeHorizontalScroll,underfilledContentOnlyNodes};
 }
 
 const categories=ARENA_CATEGORIES;
@@ -57,6 +58,7 @@ for(const category of categories){
     const runtimeLayout=await page.evaluate(measureGeneratedPageLayout);
     expect(runtimeLayout.documentHorizontalOverflow,"document has unsafe horizontal overflow").toBe(false);
     expect(runtimeLayout.nodeHorizontalOverflow,"generated section exceeds its runtime box").toEqual([]);
+    expect(runtimeLayout.mediaHorizontalOverflow,"generated media exceeds its assigned composition column").toEqual([]);
     expect(runtimeLayout.unsafeHorizontalScroll,"generated content requires unsafe horizontal scrolling").toEqual([]);
     expect(runtimeLayout.textClipping,"rendered text is actually clipped").toEqual([]);
     expect(runtimeLayout.underfilledContentOnlyNodes,"content-only sections must span their declared outer composition").toEqual([]);
