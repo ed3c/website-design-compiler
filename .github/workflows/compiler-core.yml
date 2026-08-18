@@ -146,6 +146,7 @@ jobs:
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
             artifacts/browser-qa/playwright-report.json
+            artifacts/browser-qa/playwright-runtime-report.json
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
             artifacts/graphics-3d/

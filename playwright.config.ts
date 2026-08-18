@@ -5,10 +5,8 @@ if(!Number.isInteger(browserPort)||browserPort<1024||browserPort>65535)throw new
 
 export default defineConfig({
   testDir: "./tests/browser",
-  // Performance and GPU evidence must not compete for the same runner CPU/GPU.
-  // Parallel functional tests made the measured INP depend on unrelated workers.
-  workers: 1,
-  outputDir: "artifacts/browser-qa/test-results",
+  testIgnore: ["runtime.spec.ts", "media-orchestration.spec.ts", "webgpu.spec.ts"],
+  outputDir: "artifacts/browser-qa/test-results-functional",
   reporter: [["json", { outputFile: "artifacts/browser-qa/playwright-report.json" }], ["line"]],
   retries: 0,
   use: {
@@ -19,7 +17,7 @@ export default defineConfig({
   webServer: {
     command: `pnpm --filter @website-design-compiler/site exec next start -H 127.0.0.1 -p ${browserPort}`,
     url: `http://127.0.0.1:${browserPort}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
     stdout: "ignore",
     stderr: "pipe"
