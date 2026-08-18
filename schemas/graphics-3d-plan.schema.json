@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "website-design-compiler/graphics-3d-plan/v1",
+  "$id": "website-design-compiler/graphics-3d-plan/v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "engine", "scene", "camera", "lights", "materials", "interaction", "lod", "dprPolicy", "fallback", "lifecycle", "assetBudget", "proceduralAdapter", "experimental"],
+  "required": ["schema", "engine", "rendererPolicy", "webgpuAdapter", "scene", "camera", "lights", "materials", "interaction", "lod", "dprPolicy", "fallback", "lifecycle", "assetBudget", "proceduralAdapter", "experimental"],
   "properties": {
-    "schema": { "const": "website-design-compiler/graphics-3d-plan/v1" },
+    "schema": { "const": "website-design-compiler/graphics-3d-plan/v2" },
     "engine": {
       "type": "object",
       "additionalProperties": false,
@@ -14,6 +14,55 @@
         "renderer": { "const": "webgl" },
         "three": { "const": "0.184.0" },
         "reactThreeFiber": { "const": "9.6.1" }
+      }
+    },
+    "rendererPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stableDefault", "webgpuOptInFallbackOrder", "receiptStates"],
+      "properties": {
+        "stableDefault": { "const": "webgl" },
+        "webgpuOptInFallbackOrder": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [{ "const": "webgpu" }, { "const": "webgl" }, { "const": "static" }],
+          "items": false
+        },
+        "receiptStates": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            { "const": "WEBGPU_PASS" },
+            { "const": "WEBGL_FALLBACK" },
+            { "const": "STATIC_FALLBACK" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "webgpuAdapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "renderer", "rendererVersion", "tslModule", "requiredFeatures", "capabilityIdentity"],
+      "properties": {
+        "adapter": { "const": "navigator.gpu" },
+        "renderer": { "const": "three.WebGPURenderer" },
+        "rendererVersion": { "const": "0.184.0" },
+        "tslModule": { "const": "three/tsl@0.184.0" },
+        "requiredFeatures": { "type": "array", "maxItems": 0 },
+        "capabilityIdentity": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            { "const": "adapter-info" },
+            { "const": "features" },
+            { "const": "limits" }
+          ],
+          "items": false
+        }
       }
     },
     "scene": {
@@ -56,9 +105,13 @@
     "materials": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["policy", "maxMaterials"],
+      "required": ["policy", "webgpu", "webglFallback", "staticFallback", "criticalContent", "maxMaterials"],
       "properties": {
-        "policy": { "const": "standard-only-fixture" },
+        "policy": { "const": "tsl-node-material" },
+        "webgpu": { "const": "MeshStandardNodeMaterial" },
+        "webglFallback": { "const": "MeshStandardMaterial" },
+        "staticFallback": { "const": "DOM-owned-poster" },
+        "criticalContent": { "const": false },
         "maxMaterials": { "type": "integer", "minimum": 1, "maximum": 8 }
       }
     },
@@ -92,33 +145,40 @@
     "fallback": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["semanticDom", "staticPoster", "failedWebglHook"],
+      "required": ["semanticDom", "staticPoster", "failedWebglHook", "webgpuOptInHook"],
       "properties": {
         "semanticDom": { "const": "REQUIRED" },
         "staticPoster": { "const": "REQUIRED" },
-        "failedWebglHook": { "const": "graphics3d=off" }
+        "failedWebglHook": { "const": "graphics3d=off" },
+        "webgpuOptInHook": { "const": "graphics3d=webgpu" }
       }
     },
     "lifecycle": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["lazyChunk", "frameloopDemand", "disposeGeneratedGeometry", "disposeGeneratedMaterial"],
+      "required": ["lazyChunk", "lazyWebgpuImport", "frameloopDemand", "continuousFrameLoop", "deviceLossFallback", "disposeGeneratedGeometry", "disposeGeneratedMaterial", "disposeRendererAndDevice"],
       "properties": {
         "lazyChunk": { "const": true },
+        "lazyWebgpuImport": { "const": true },
         "frameloopDemand": { "const": true },
+        "continuousFrameLoop": { "const": false },
+        "deviceLossFallback": { "const": true },
         "disposeGeneratedGeometry": { "const": true },
-        "disposeGeneratedMaterial": { "const": true }
+        "disposeGeneratedMaterial": { "const": true },
+        "disposeRendererAndDevice": { "const": true }
       }
     },
     "assetBudget": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["externalBytes", "textureBytes", "maxTriangles", "maxDrawCalls"],
+      "required": ["externalBytes", "textureBytes", "maxTextureMemoryBytes", "maxTriangles", "maxDrawCalls", "maxFramesPerInvalidation"],
       "properties": {
         "externalBytes": { "const": 0 },
         "textureBytes": { "const": 0 },
+        "maxTextureMemoryBytes": { "const": 16777216 },
         "maxTriangles": { "type": "integer", "minimum": 100, "maximum": 10000 },
-        "maxDrawCalls": { "type": "integer", "minimum": 1, "maximum": 20 }
+        "maxDrawCalls": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "maxFramesPerInvalidation": { "const": 1 }
       }
     },
     "proceduralAdapter": {
