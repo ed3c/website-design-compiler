@@ -27,6 +27,11 @@ for (const story of stories) {
     if ("state" in story) await expect(page.locator(`[data-state='${story.state}']`)).toHaveCount(1);
     if (story.id.endsWith("--primary")) await expect(page.getByRole("button", { name: "Primary action" })).toBeFocused();
     if (story.id.startsWith("governed-sections-section--")) await expect(page.locator("[data-governed-section]")).toHaveCount(1);
+    if (story.id.endsWith("--navigation")) {
+      for (const linkName of ["Overview", "Evidence", "Security"]) {
+        await expect(page.getByRole("link", { name: linkName })).toBeVisible();
+      }
+    }
     const axe = await new AxeBuilder({ page }).analyze();
     const hardViolations = axe.violations.filter((violation) => violation.impact === "serious" || violation.impact === "critical");
     expect(hardViolations.map((violation) => violation.id)).toEqual([]);

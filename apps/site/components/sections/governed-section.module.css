@@ -210,8 +210,15 @@
 .scene3d i:nth-child(3) { transform: translate(-25%, -75%) rotate(70deg) skew(-8deg, -8deg); opacity: .35; }
 
 @media (max-width: 48rem) {
-  .navigation { grid-template-columns: 1fr auto; }
-  .navLinks { display: none; }
+  .navigation { grid-template-columns: 1fr auto; gap: .75rem; }
+  .navLinks {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: .25rem;
+  }
   .hero,
   .product,
   .graphics2d,
