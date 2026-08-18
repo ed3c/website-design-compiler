@@ -11,8 +11,16 @@ const requiredStates = ["Loading", "Empty", "Error", "Success"];
 const requiredButtonStories = ["Primary", "Secondary", "Disabled"];
 
 type GoldenManifest = {
-  schema: "website-design-compiler/storybook-visual-goldens/v1";
-  source: { gitSha: string; workflowRun: number; artifactId: number; browser: string; projects: string[] };
+  schema: "website-design-compiler/storybook-visual-goldens/v2";
+  source: {
+    kind: "local-reviewed";
+    gitSha: string;
+    node: string;
+    playwright: string;
+    browser: string;
+    projects: string[];
+    inspectedScreenshots: string[];
+  };
   screenshots: Record<string, string>;
 };
 
@@ -70,7 +78,7 @@ const staticBuild = files.some((path) => path.endsWith(join("static", "index.htm
 let golden: GoldenManifest | null = null;
 try {
   const parsed = JSON.parse(await readFile(goldenPath, "utf8")) as GoldenManifest;
-  if (parsed.schema === "website-design-compiler/storybook-visual-goldens/v1") golden = parsed;
+  if (parsed.schema === "website-design-compiler/storybook-visual-goldens/v2") golden = parsed;
 } catch {}
 
 const actualHashes: Record<string, string> = {};
