@@ -6,6 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
+import { validateAgainstSchema } from "../src/validate.js";
 import { auditCandidateOriginality, loadVerifiedVisualReferences, searchVisualDirections } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
@@ -115,6 +116,14 @@ test("winner becomes the single downstream selected visual direction", () => {
   assert.equal(designSystem.selectedVisualDirection.candidateId, search.selectedCandidateId);
   assert.deepEqual(designSystem.selectedVisualDirection.dimensions, search.selectedDirection);
   assert.equal(designSystem.selectedVisualDirection.source, search.schema);
+});
+
+test("design-system schema admits every canonical governed frontend component", async () => {
+  const compilerInput = input("b2b-product");
+  const designSystem = buildDesignSystemPlan(compilerInput, searchVisualDirections(compilerInput));
+
+  assert.ok(designSystem.governedComponents.includes("rich-section"));
+  await validateAgainstSchema(designSystem, "design-system-plan.schema.json");
 });
 
 test("design system consumes the supplied search receipt instead of rerunning search", () => {
