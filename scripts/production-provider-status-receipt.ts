@@ -11,8 +11,10 @@ import type { ProductionProviderPolicy, ProductionProviderReceipt } from "../src
 import type { ProductionAdmissionPacket } from "../src/production-provider-admission.js";
 import { validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt } from "../src/repository-rights-clearance.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { assertCleanTrackedGitSubject } from "../src/tracked-git-subject.js";
 
 const git={sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"};
+assertCleanTrackedGitSubject(process.cwd(),git.sha);
 const configPath = process.env.WDC_PRODUCTION_PROVIDER_CONFIG;
 let status = buildUnconfiguredProductionProviderStatus();
 let executionReceipt: ProductionProviderReceipt | undefined;

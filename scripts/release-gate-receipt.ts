@@ -6,12 +6,13 @@ import { RELEASE_CHILD_SPECS, readBoundReleaseEvidence, type ReleaseChildName, t
 import { evaluateReleaseGate } from "../src/release-gate.js";
 import { CAPABILITY_RECEIPT_SCHEMAS } from "../src/release-policy-v2.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { assertCleanTrackedGitSubject } from "../src/tracked-git-subject.js";
 const root=process.cwd();
 async function readJson<T>(path:string):Promise<T|null>{try{return JSON.parse(await readFile(path,"utf8")) as T;}catch{return null;}}
 function commandVersion(command:string,args:string[]):string{try{return execFileSync(command,args,{cwd:root,encoding:"utf8"}).trim();}catch{return "NOT_EXERCISED";}}
 function changedFiles():string[]{try{return execFileSync("git",["diff-tree","--no-commit-id","--name-only","-r",process.env.GITHUB_SHA??"HEAD"],{cwd:root,encoding:"utf8"}).split("\n").map(v=>v.trim()).filter(Boolean).sort();}catch{return [];}}
 const expectedSha=process.env.GITHUB_SHA??"";
-const expectedGit={sha:expectedSha,tree:commandVersion("git",["rev-parse",`${expectedSha}^{tree}`]),ref:process.env.GITHUB_REF??""};
+const expectedGit={...assertCleanTrackedGitSubject(root,expectedSha),ref:process.env.GITHUB_REF??""};
 const evidenceBindings=Object.fromEntries(await Promise.all((Object.entries(RELEASE_CHILD_SPECS) as Array<[ReleaseChildName,(typeof RELEASE_CHILD_SPECS)[ReleaseChildName]]>).map(async([key,spec])=>[key,await readBoundReleaseEvidence(root,spec.path,spec.schema,expectedGit)]))) as Record<ReleaseChildName,ReleaseEvidenceFileBinding>;
 const sharedBinding=await readJson<{sourceRepository?:string;sourceIdentity?:string;consumerIdentity?:string;resolutions?:Array<{name?:string;state?:string;identity?:string}>}>(join(root,RELEASE_CHILD_SPECS.shared.path));
 const evaluation=evaluateReleaseGate({runtime:evidenceBindings.runtime.state,browser:evidenceBindings.browser.state,accessibilityPerformance:evidenceBindings.quality.state,storybook:evidenceBindings.storybook.state,sharedBindings:evidenceBindings.shared.state,arena:evidenceBindings.arena.state,showcase:evidenceBindings.showcase.state,externalSkills:evidenceBindings.external.state,mediaGenerator:evidenceBindings.media.state,authoringStudio:evidenceBindings.authoring.state,payloadCms:evidenceBindings.cms.state,repositoryRights:evidenceBindings.rights.state});

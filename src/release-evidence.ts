@@ -775,13 +775,6 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
       return bytes;
     }catch{errors.push(`${label} is missing or unreadable`);return null;}
   };
-  const readCanonical=async(path:string,label:string):Promise<Buffer|null>=>{
-    try{
-      const canonicalRoot=await realpath(root);const target=resolve(root,path);const canonicalTarget=await realpath(target);
-      if(canonicalTarget!==resolve(canonicalRoot,path)){errors.push(`${label} resolves through a symbolic link or outside the release workspace`);return null;}
-      return await readFile(canonicalTarget);
-    }catch{errors.push(`${label} is missing or unreadable`);return null;}
-  };
   if(executionInput?.path!=="production-provider-execution-input.json")errors.push("production execution input path is not canonical");
   if(execution?.path!=="production-provider-execution-receipt.json")errors.push("production execution receipt path is not canonical");
   const inputBytes=await readBound(executionInput,"production execution input");
@@ -793,9 +786,11 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
   if(inputBytes){try{const value=JSON.parse(inputBytes.toString("utf8")) as unknown;if(isRecord(value)){input=value;errors.push(...validatePublishedSchema(value,"website-design-compiler/production-provider-execution-evidence/v1").map((error)=>`production execution input ${error}`));}else errors.push("production execution input must be an object");}catch{errors.push("production execution input is not valid JSON");}}
   if(executionBytes){try{const value=JSON.parse(executionBytes.toString("utf8")) as unknown;if(isRecord(value)){executed=value;errors.push(...validatePublishedSchema(value,"website-design-compiler/production-provider-receipt/v2").map((error)=>`production execution receipt ${error}`));}else errors.push("production execution receipt must be an object");}catch{errors.push("production execution receipt is not valid JSON");}}
   const canonicalRights=isRecord(input?.canonicalRights)?input.canonicalRights:null;
-  const rightsBytes=canonicalRights?.path===CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH
-    ?await readCanonical(CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH,"canonical repository rights receipt")
-    :null;
+  let rightsBytes:Buffer|null=null;
+  if(canonicalRights?.path===CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH){
+    try{rightsBytes=await readCanonicalWorkspaceFile(root,CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH);}
+    catch{errors.push("canonical repository rights receipt is missing, unreadable, symlinked, or outside the release workspace");}
+  }
   let rights:JsonRecord|null=null;
   if(!canonicalRights)errors.push("production execution input lacks canonical rights binding");
   if(rightsBytes){
