@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "tsx --test tests/**/*.test.ts",
     "compile:fixture": "tsx src/cli.ts fixtures/minimal/compiler-input.json artifacts/runtime/minimal",
+    "brief:normalize": "tsx src/brief-normalize-cli.ts",
     "v2:brief-ia": "tsx scripts/v2-brief-ia-fixture.ts",
     "v2:brief-benchmarks": "tsx scripts/v2-brief-benchmark-receipt.ts",
     "v2:content-architecture": "tsx scripts/content-architecture-benchmark-receipt.ts",

@@ -24,7 +24,9 @@ export interface PageArchitecturePlan {
     purpose: string;
     priority: IaPriority;
     status: IaSectionStatus;
+    evidence: string[];
     requiredContent: string[];
+    missingContent: string[];
     fallback: string;
     contentContract: {
       state: "READY" | "NEEDS_INPUT";
@@ -79,7 +81,9 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
         purpose: section.purpose,
         priority: section.priority,
         status: section.status,
+        evidence: section.evidence,
         requiredContent: section.requiredContent,
+        missingContent: section.missingContent,
         fallback: section.fallback,
         contentContract: {
           state: contentState,

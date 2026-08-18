@@ -28,14 +28,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "type", "purpose", "priority", "status", "requiredContent", "fallback", "contentContract"],
+        "required": ["id", "type", "purpose", "priority", "status", "evidence", "requiredContent", "missingContent", "fallback", "contentContract"],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
           "type": { "type": "string", "minLength": 1 },
           "purpose": { "type": "string", "minLength": 1 },
           "priority": { "enum": ["PRIMARY", "SECONDARY", "SUPPORTING"] },
           "status": { "enum": ["READY", "NEEDS_INPUT"] },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
           "requiredContent": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "missingContent": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
           "fallback": { "type": "string", "minLength": 1 },
           "contentContract": {
             "type": "object",
