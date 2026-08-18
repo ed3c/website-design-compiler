@@ -40,4 +40,17 @@ test("compiler workflow avoids duplicate branch runs while verifying every publi
     .flatMap((job) => job.steps ?? [])
     .find((step) => typeof step.run === "string" && step.run.includes("pnpm rights:clearance"));
   assert.match(String(rightsStep?.env?.WDC_RIGHTS_WAIVERS_SHA256 ?? ""), /vars\.WDC_RIGHTS_WAIVERS_SHA256/);
+
+  const providerBundleStep = Object.values(workflow.jobs ?? {})
+    .flatMap((job) => job.steps ?? [])
+    .find((step) => typeof step.run === "string" && step.run.includes("pnpm media:production-config"));
+  assert.match(String(providerBundleStep?.env?.WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64 ?? ""), /secrets\.WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64/);
+  assert.match(String(providerBundleStep?.env?.WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256 ?? ""), /vars\.WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256/);
+
+  const providerStatusStep = Object.values(workflow.jobs ?? {})
+    .flatMap((job) => job.steps ?? [])
+    .find((step) => typeof step.run === "string" && step.run.includes("pnpm media:production-status"));
+  assert.match(String(providerStatusStep?.env?.WDC_PRODUCTION_PROVIDER_CONFIG ?? ""), /steps\.production-provider-config\.outputs\.config_path/);
+  assert.match(String(providerStatusStep?.env?.WDC_PRODUCTION_REQUEST_SECRET ?? ""), /secrets\.WDC_PRODUCTION_REQUEST_SECRET/);
+  assert.match(String(providerStatusStep?.env?.WDC_PRODUCTION_PROVIDER_CREDENTIAL ?? ""), /secrets\.WDC_PRODUCTION_PROVIDER_CREDENTIAL/);
 });

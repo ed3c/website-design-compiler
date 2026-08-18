@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/production-provider-execution-bundle.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "config", "signedRequest", "policy", "admissionPacket", "admissionPublicKeyPem"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-provider-execution-bundle/v1" },
+    "config": { "type": "object" },
+    "signedRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request", "signature"],
+      "properties": {
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "requestId", "kind", "modelId", "prompt", "parameters", "optimization"],
+          "properties": {
+            "schema": { "const": "website-design-compiler/media-request/v1" },
+            "requestId": { "$ref": "#/$defs/opaqueId" },
+            "kind": { "enum": ["image", "video", "3d"] },
+            "modelId": { "$ref": "#/$defs/opaqueId" },
+            "prompt": { "type": "string", "minLength": 1, "maxLength": 10000 },
+            "parameters": {
+              "type": "object",
+              "maxProperties": 64,
+              "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$" },
+              "additionalProperties": {
+                "anyOf": [
+                  { "type": "string" },
+                  { "type": "number" },
+                  { "type": "boolean" }
+                ]
+              }
+            },
+            "optimization": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["target", "maxBytes"],
+              "properties": {
+                "target": { "const": "web" },
+                "maxBytes": { "type": "integer", "minimum": 1, "maximum": 33554432 }
+              }
+            }
+          }
+        },
+        "signature": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "policy": { "type": "object" },
+    "admissionPacket": { "type": "object" },
+    "admissionPublicKeyPem": { "type": "string", "minLength": 1, "maxLength": 16384 }
+  },
+  "$defs": {
+    "opaqueId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$" }
+  }
+}

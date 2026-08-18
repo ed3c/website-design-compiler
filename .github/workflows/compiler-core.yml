@@ -70,7 +70,17 @@ jobs:
         run: pnpm external-skills:receipt
       - name: Verify deterministic authenticated media worker
         run: pnpm media:fixture
+      - name: Materialize protected production provider inputs
+        id: production-provider-config
+        env:
+          WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64 || '' }}
+          WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256 || '' }}
+        run: pnpm media:production-config
       - name: Record fail-closed production provider admission status
+        env:
+          WDC_PRODUCTION_PROVIDER_CONFIG: ${{ steps.production-provider-config.outputs.config_path }}
+          WDC_PRODUCTION_REQUEST_SECRET: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_REQUEST_SECRET || '' }}
+          WDC_PRODUCTION_PROVIDER_CREDENTIAL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_PROVIDER_CREDENTIAL || '' }}
         run: pnpm media:production-status
       - name: Verify governed Puck authoring projection
         run: pnpm authoring:receipt

@@ -38,6 +38,7 @@
     "showcase:compiler-receipt": "tsx scripts/showcase-compiler-receipt.ts",
     "external-skills:receipt": "tsx scripts/external-skill-registry-receipt.ts",
     "media:fixture": "tsx scripts/media-router-fixture.ts",
+    "media:production-config": "tsx scripts/production-provider-config.ts",
     "media:production-status": "tsx scripts/production-provider-status-receipt.ts",
     "authoring:receipt": "tsx scripts/authoring-fixture-receipt.ts",
     "cms:fixture": "tsx scripts/payload-cms-fixture.ts",

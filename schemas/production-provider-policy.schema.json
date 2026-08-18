@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/production-provider-policy.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "identity", "rights", "controls", "revocations"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-provider-policy/v1" },
+    "identity": { "$ref": "#/$defs/identity" },
+    "rights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelWeight", "generatedOutput", "hostedService"],
+      "properties": {
+        "modelWeight": { "$ref": "#/$defs/rightsBinding" },
+        "generatedOutput": { "$ref": "#/$defs/rightsBinding" },
+        "hostedService": { "$ref": "#/$defs/rightsBinding" }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeoutMs", "maxAttempts", "retryBackoffMs", "requestsPerWindow", "quotaUnitsPerRequest"],
+      "properties": {
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "maxAttempts": { "type": "integer", "minimum": 1 },
+        "retryBackoffMs": { "type": "integer", "minimum": 0 },
+        "requestsPerWindow": { "type": "integer", "minimum": 1 },
+        "quotaUnitsPerRequest": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "revocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["providerId", "modelId", "modelRevision", "reason", "effectiveAt"],
+        "properties": {
+          "providerId": { "$ref": "#/$defs/opaqueId" },
+          "modelId": { "$ref": "#/$defs/opaqueId" },
+          "modelRevision": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "effectiveAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "opaqueId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerId", "serviceRevision", "modelId", "modelRevision", "adapter", "kind"],
+      "properties": {
+        "providerId": { "$ref": "#/$defs/opaqueId" },
+        "serviceRevision": { "type": "string", "minLength": 1 },
+        "modelId": { "$ref": "#/$defs/opaqueId" },
+        "modelRevision": { "type": "string", "minLength": 1 },
+        "adapter": { "enum": ["diffusers-image", "diffusers-video", "three-d-worker"] },
+        "kind": { "enum": ["image", "video", "3d"] }
+      }
+    },
+    "rightsBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subjectId", "expectedIdentity"],
+      "properties": {
+        "subjectId": { "$ref": "#/$defs/opaqueId" },
+        "expectedIdentity": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
