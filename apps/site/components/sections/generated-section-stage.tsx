@@ -57,9 +57,12 @@ function viewportName():ViewportName{
 
 function text(value:unknown):string|undefined{return typeof value==="string"?value:undefined;}
 function items(value:unknown):string[]{if(!Array.isArray(value))return[];return value.map((entry)=>typeof entry==="string"?entry:entry&&typeof entry==="object"&&"value" in entry?String((entry as {value:unknown}).value):"").filter(Boolean);}
+function safeActionHref(value:string):boolean{return value.startsWith("#")||value.startsWith("/")||value.startsWith("https://");}
 function content(node:ProjectedNode){
   const props=node.section.props;
-  return{heading:text(props.heading)??text(props.headline)??text(props.title),body:text(props.body)??text(props.quote)??text(props.summary)??text(props.description),items:items(props.items)};
+  const candidate=props.action;
+  const action=candidate&&typeof candidate==="object"&&"label" in candidate&&"href" in candidate&&typeof candidate.label==="string"&&typeof candidate.href==="string"&&safeActionHref(candidate.href)?{label:candidate.label,href:candidate.href}:undefined;
+  return{heading:text(props.heading)??text(props.headline)??text(props.title),body:text(props.body)??text(props.quote)??text(props.summary)??text(props.description),items:items(props.items),action};
 }
 
 function densityGap(density:"compact"|"comfortable"|"spacious"):string{return density==="compact"?"var(--wdc-space-sm)":density==="comfortable"?"var(--wdc-space-md)":"var(--wdc-space-lg)";}
@@ -183,7 +186,7 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     data-motion-cleanup-observed={String(cleanupObserved)}
   >
     <div className="wdc-generated-node__content" style={{order:contentOrder}}>
-      <GovernedSection kind={node.kind} variant={node.variant} heading={copy.heading} body={copy.body} items={copy.items}/>
+      <GovernedSection kind={node.kind} variant={node.variant} heading={copy.heading} body={copy.body} items={copy.items} action={copy.action}/>
     </div>
     {node.mediaHook.renderer!=="dom"?<div className="wdc-generated-node__media" style={{order:mediaOrder}}><MediaOrchestrationStage sectionId={node.id} decision={node.mediaHook}/></div>:null}
   </motion.div>;

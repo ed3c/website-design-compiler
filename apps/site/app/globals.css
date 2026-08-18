@@ -37,6 +37,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--wdc-color-focus
 .wdc-generated-node[data-active-media-placement="background"] { position: relative; isolation: isolate; }
 .wdc-generated-node[data-active-media-placement="background"] .wdc-generated-node__media { position: absolute; inset: 0; z-index: -1; opacity: 0.18; overflow: clip; }
 .wdc-generated-node [data-governed-section] { padding: var(--wdc-space-md); border-radius: var(--wdc-radius-lg); }
+.wdc-generated-node:nth-of-type(odd) [data-governed-section] { background: var(--wdc-color-surface); }
 .wdc-generated-node [data-governed-section] h2 { margin-block: 0 var(--wdc-space-sm); font-family: var(--wdc-font-display); font-size: clamp(1.55rem, 3vw, 2.65rem); line-height: 1.06; }
 .wdc-generated-node [data-governed-section] p,
 .wdc-generated-node [data-governed-section] li { line-height: 1.65; }

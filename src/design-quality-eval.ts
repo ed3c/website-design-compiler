@@ -1,4 +1,5 @@
 import type { CompletePageGraph } from "./complete-page-graph.js";
+import { visualObservationSimilarity,type DesignQualityBrowserObservation,type RuntimeTokenMatch,type VisualOriginalitySubject } from "./design-quality-observation.js";
 
 export type QualityViewport="mobile"|"desktop";
 export interface DesignQualityDimensions { hierarchy:number; composition:number; rhythm:number; density:number; ctaClarity:number; responsiveCoherence:number; mediaRestraint:number; motionRestraint:number; differentiation:number; originality:number; }
@@ -9,6 +10,10 @@ export interface OriginalityAudit {
   maxCorpusSimilarity:number;
   nearestReference:string|null;
   nearestCorpus:string|null;
+  maxVisualReferenceSimilarity:number;
+  maxVisualCorpusSimilarity:number;
+  nearestVisualReference:string|null;
+  nearestVisualCorpus:string|null;
   reasons:string[];
 }
 export interface DesignQualityScorecard {
@@ -22,6 +27,7 @@ export interface DesignQualityScorecard {
   dimensions:DesignQualityDimensions;
   penalties:string[];
   originalityAudit:OriginalityAudit;
+  measurement:{state:"PASS"|"FAIL"|"ABSENT";observationSchema:string|null;screenshotSha256:string|null;tokenMatch:RuntimeTokenMatch|null};
   intent:{mode:"CONVERSION"|"INFORMATION";requiredConversionSteps:number;ctaRequired:boolean};
 }
 export interface OriginalitySubject { id:string; signature:string; }
@@ -52,9 +58,9 @@ export function auditGraphOriginality(signature:string,references:readonly Origi
   const reasons:string[]=[];
   if(reference&&reference.similarity>=threshold)reasons.push(`reference-structure-too-close:${reference.id}:${reference.similarity.toFixed(3)}>=${threshold.toFixed(3)}`);
   if(corpusMatch&&corpusMatch.similarity>=threshold)reasons.push(`corpus-structure-too-close:${corpusMatch.id}:${corpusMatch.similarity.toFixed(3)}>=${threshold.toFixed(3)}`);
-  return{state:reasons.length===0?"PASS":"FAIL",threshold,maxReferenceSimilarity:reference?.similarity??0,maxCorpusSimilarity:corpusMatch?.similarity??0,nearestReference:reference?.id??null,nearestCorpus:corpusMatch?.id??null,reasons};
+  return{state:reasons.length===0?"PASS":"FAIL",threshold,maxReferenceSimilarity:reference?.similarity??0,maxCorpusSimilarity:corpusMatch?.similarity??0,nearestReference:reference?.id??null,nearestCorpus:corpusMatch?.id??null,maxVisualReferenceSimilarity:0,maxVisualCorpusSimilarity:0,nearestVisualReference:null,nearestVisualCorpus:null,reasons};
 }
-export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityViewport,threshold=78,originalityReferences:readonly OriginalitySubject[]=[],originalityCorpus:readonly OriginalitySubject[]=[],originalitySimilarityThreshold=0.82):DesignQualityScorecard{
+export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityViewport,threshold=78,originalityReferences:readonly OriginalitySubject[]=[],originalityCorpus:readonly OriginalitySubject[]=[],originalitySimilarityThreshold=0.82,observation:DesignQualityBrowserObservation|null=null,tokenMatch:RuntimeTokenMatch|null=null,visualReferences:readonly VisualOriginalitySubject[]=[],visualCorpus:readonly VisualOriginalitySubject[]=[]):DesignQualityScorecard{
   const kinds=graph.nodes.map((node)=>node.kind);
   const layouts=graph.nodes.map((node)=>node.responsive[viewport].layout);
   const renderers=graph.nodes.map((node)=>node.mediaHook.renderer);
@@ -67,25 +73,49 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
   if(intent.mode==="CONVERSION"&&graph.conversionPath.length<intent.requiredConversionSteps)penalties.push("weak-conversion-path");
   if(intent.ctaRequired&&!kinds.includes("cta"))penalties.push("required-cta-missing");
   const originalityAudit=auditGraphOriginality(graph.signature,originalityReferences,originalityCorpus,originalitySimilarityThreshold);
+  const nearestVisual=(subjects:readonly VisualOriginalitySubject[])=>observation?subjects.map((subject)=>({id:subject.id,similarity:visualObservationSimilarity(observation,subject.observation)})).sort((a,b)=>b.similarity-a.similarity||a.id.localeCompare(b.id))[0]??null:null;
+  const visualReference=nearestVisual(visualReferences);const visualCorpusMatch=nearestVisual(visualCorpus);
+  originalityAudit.maxVisualReferenceSimilarity=visualReference?.similarity??0;originalityAudit.maxVisualCorpusSimilarity=visualCorpusMatch?.similarity??0;originalityAudit.nearestVisualReference=visualReference?.id??null;originalityAudit.nearestVisualCorpus=visualCorpusMatch?.id??null;
+  if(visualReference&&visualReference.similarity>=originalitySimilarityThreshold)originalityAudit.reasons.push(`reference-visual-too-close:${visualReference.id}:${visualReference.similarity.toFixed(3)}>=${originalitySimilarityThreshold.toFixed(3)}`);
+  if(visualCorpusMatch&&visualCorpusMatch.similarity>=originalitySimilarityThreshold)originalityAudit.reasons.push(`corpus-visual-too-close:${visualCorpusMatch.id}:${visualCorpusMatch.similarity.toFixed(3)}>=${originalitySimilarityThreshold.toFixed(3)}`);
+  originalityAudit.state=originalityAudit.reasons.length===0?"PASS":"FAIL";
   if(originalityAudit.state==="FAIL")penalties.push(...originalityAudit.reasons);
+  if(!observation)penalties.push("browser-quality-observation-absent");
+  else{
+    if(observation.category!==graph.category||observation.viewport!==viewport)penalties.push("browser-quality-observation-identity-mismatch");
+    if(observation.accessibility.seriousCriticalViolationCount>0)penalties.push("serious-critical-accessibility-violation");
+    if(!observation.computed.contentBudgetPass)penalties.push("runtime-content-budget-overflow");
+    if(observation.computed.overflowX)penalties.push("runtime-horizontal-overflow");
+    if(visualCorpus.length===0)penalties.push("visual-originality-corpus-absent");
+  }
+  if(!tokenMatch)penalties.push("runtime-token-evidence-absent");else if(tokenMatch.state!=="PASS")penalties.push(...tokenMatch.mismatches.map((entry)=>`runtime-token-drift:${entry}`));
   const layoutVariety=new Set(layouts).size;
   const rendererVariety=new Set(renderers).size;
   const sectionVariety=new Set(kinds).size;
-  const originalityDistance=Math.min(1-originalityAudit.maxReferenceSimilarity,1-originalityAudit.maxCorpusSimilarity);
+  const originalityDistance=Math.min(1-originalityAudit.maxReferenceSimilarity,1-originalityAudit.maxCorpusSimilarity,1-originalityAudit.maxVisualReferenceSimilarity,1-originalityAudit.maxVisualCorpusSimilarity);
   const progression=intent.mode==="INFORMATION"?informationProgressionCount(graph):graph.conversionPath.length;
-  const ctaClarity=intent.ctaRequired?clamp(62+graph.conversionPath.length*7):clamp(76+Math.min(12,progression*3));
+  const headingRatio=observation&&observation.computed.medianH2Px>0?observation.computed.h1Px/observation.computed.medianH2Px:0;
+  const heightMean=observation?observation.computed.sectionHeights.reduce((sum,value)=>sum+value,0)/Math.max(1,observation.computed.sectionHeights.length):0;
+  const heightVariance=observation?observation.computed.sectionHeights.reduce((sum,value)=>sum+(value-heightMean)**2,0)/Math.max(1,observation.computed.sectionHeights.length):0;
+  const heightCv=heightMean>0?Math.sqrt(heightVariance)/heightMean:0;
+  const validAction=observation?.computed.actionTargets.some((target)=>target.visible&&target.width>=44&&target.height>=44)??false;
+  const ctaClarity=intent.ctaRequired?clamp((validAction?65:10)+Math.min(25,graph.conversionPath.length*8)):clamp(82+Math.min(12,progression*2));
+  const observedLayoutVariety=observation?new Set(observation.computed.layouts).size:0;
+  const maxVisualSimilarity=Math.max(originalityAudit.maxVisualReferenceSimilarity,originalityAudit.maxVisualCorpusSimilarity);
   const dimensions:DesignQualityDimensions={
-    hierarchy:clamp(70+Math.min(20,progression*5)-(graph.nodes[0]?.kind==="navigation"?0:25)),
-    composition:clamp(62+layoutVariety*9-repeatedKinds*8),
-    rhythm:clamp(68+Math.min(20,sectionVariety*3)-repeatedKinds*7),
-    density:clamp(viewport==="mobile"?graph.nodes.every((node)=>node.responsive.mobile.columns===1||node.responsive.mobile.layout==="stage")?90:55:82),
+    hierarchy:observation?clamp((observation.computed.h1Count===1?45:0)+(observation.computed.h2Count>=Math.max(1,observation.computed.sectionCount-2)?25:10)+(headingRatio>=1.35&&headingRatio<=4?25:5)):0,
+    composition:observation?clamp((observation.computed.overflowX?0:30)+Math.min(20,observation.computed.distinctSectionBackgrounds*10)+Math.min(20,observedLayoutVariety*7)+Math.min(15,observation.pixels.luminanceSpan*100)+Math.min(15,observation.pixels.colorEntropy*8)-repeatedKinds*5):0,
+    rhythm:observation?clamp(72+Math.min(18,sectionVariety*2)+(heightCv>=0.08&&heightCv<=1.2?10:-15)):0,
+    density:observation?clamp((observation.computed.contentBudgetPass?50:0)+(heightMean>=180&&heightMean<=900?25:10)+(viewport==="mobile"?observation.computed.renderedColumns.every((columns)=>columns===1)?25:0:25)):0,
     ctaClarity,
-    responsiveCoherence:clamp(graph.nodes.every((node)=>node.responsive.semanticOrder==="DOM_STABLE")?92:35),
-    mediaRestraint:clamp(92-gpuCount*8-Math.max(0,renderers.filter((renderer)=>renderer!=="dom").length-Math.ceil(graph.nodes.length*0.6))*7),
-    motionRestraint:clamp(92-Math.max(0,animatedRatio-0.8)*60),
-    differentiation:clamp(64+layoutVariety*7+rendererVariety*5),
-    originality:clamp(80-repeatedKinds*10-Math.max(0,0.7-originalityDistance)*70)
+    responsiveCoherence:observation?clamp((graph.nodes.every((node)=>node.responsive.semanticOrder==="DOM_STABLE")?40:0)+(observation.computed.overflowX?0:30)+(viewport==="mobile"?observation.computed.renderedColumns.every((columns)=>columns===1)?30:0:Math.max(...observation.computed.renderedColumns)>=2?30:15)):0,
+    mediaRestraint:observation?clamp(94-gpuCount*8-Math.max(0,observation.computed.mediaStages-Math.ceil(graph.nodes.length*.6))*8):0,
+    motionRestraint:observation?clamp((observation.computed.motionStates.every((state)=>state==="CLEANED"||state==="VISIBLE_NO_MOTION")?94:45)-Math.max(0,animatedRatio-.8)*60):0,
+    differentiation:observation?clamp((1-maxVisualSimilarity)*180+observedLayoutVariety*7+rendererVariety*5):0,
+    originality:observation?clamp(originalityDistance*120-repeatedKinds*8):0
   };
   const values=Object.values(dimensions);const score=clamp(values.reduce((sum,value)=>sum+value,0)/values.length-penalties.length*3);
-  return{schema:"website-design-compiler/design-quality-eval/v2",category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold&&originalityAudit.state==="PASS"?"PASS":"FAIL",dimensions,penalties,originalityAudit,intent};
+  const observationIdentityPass=Boolean(observation&&observation.category===graph.category&&observation.viewport===viewport&&/^[a-f0-9]{64}$/.test(observation.screenshot.sha256)&&observation.accessibility.seriousCriticalViolationCount===0&&!observation.computed.overflowX&&observation.computed.contentBudgetPass);
+  const measurementState=!observation?"ABSENT":observationIdentityPass&&tokenMatch?.state==="PASS"?"PASS":"FAIL";
+  return{schema:"website-design-compiler/design-quality-eval/v2",category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold&&originalityAudit.state==="PASS"&&measurementState==="PASS"?"PASS":"FAIL",dimensions,penalties,originalityAudit,measurement:{state:measurementState,observationSchema:observation?.schema??null,screenshotSha256:observation?.screenshot.sha256??null,tokenMatch},intent};
 }
