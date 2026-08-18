@@ -102,6 +102,7 @@ export interface RuntimeReceipt {
   generatedAt: string;
   inputSha256: string;
   runtime: { node: string; platform: string; arch: string; };
+  git?: { sha: string; ref: string };
   stages: StageEvidence[];
   overall: EvidenceState;
 }

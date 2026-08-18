@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateReleaseGate } from "../src/release-gate.js";
+import { bindReleaseEvidence, evaluateReleaseGate } from "../src/release-gate.js";
 
 const pass = {
   runtime: "PASS", browser: "PASS", accessibilityPerformance: "PASS", storybook: "PASS", sharedBindings: "PASS", arena: "PASS", showcase: "PASS", externalSkills: "PASS", mediaGenerator: "PASS", authoringStudio: "PASS", payloadCms: "PASS", repositoryRights: "PASS"
@@ -21,4 +21,13 @@ test("missing or unimplemented evidence cannot become release PASS", () => {
   for (const [key, state] of [["browser","NOT_EXERCISED"],["runtime","NOT_IMPLEMENTED"],["storybook","ABSENT"],["repositoryRights","ABSENT"]] as const) {
     assert.equal(evaluateReleaseGate({ ...pass, [key]: state }).overall, "FAIL");
   }
+});
+
+test("release evidence must bind its exact schema, SHA, and ref", () => {
+  const git = { sha: "a".repeat(40), ref: "refs/heads/main" };
+  const valid = { schema: "receipt/v1", overall: "PASS", git };
+  assert.equal(bindReleaseEvidence(valid, "receipt/v1", git).state, "PASS");
+  assert.equal(bindReleaseEvidence({ ...valid, schema: "attacker/v1" }, "receipt/v1", git).state, "FAIL");
+  assert.equal(bindReleaseEvidence({ ...valid, git: { ...git, sha: "b".repeat(40) } }, "receipt/v1", git).binding, "MISMATCH");
+  assert.equal(bindReleaseEvidence({ schema: "receipt/v1", overall: "PASS" }, "receipt/v1", git).binding, "ABSENT");
 });

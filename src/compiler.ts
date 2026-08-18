@@ -88,6 +88,7 @@ export function compile(
     generatedAt: now.toISOString(),
     inputSha256: sha256(input),
     runtime: { node: process.version, platform: process.platform, arch: process.arch },
+    git: { sha: process.env.GITHUB_SHA ?? "UNBOUND", ref: process.env.GITHUB_REF ?? "UNBOUND" },
     stages,
     overall: overallState(stages)
   };

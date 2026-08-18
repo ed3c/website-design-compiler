@@ -19,18 +19,32 @@ const paths:Record<Capability,string>={
   productionProvider:"artifacts/media-generator/production-provider-status.json",
   premiumQuality:"artifacts/v2/design-quality/design-quality-eval-receipt.json"
 };
+const schemas:Record<Capability,string>={
+  core:"website-design-compiler/release-gate-receipt/v2",
+  liveReference:"website-design-compiler/live-reference-receipt/v1",
+  webgpu:"website-design-compiler/webgpu-runtime-receipt/v1",
+  repositoryRights:"website-design-compiler/repository-rights-clearance/v2",
+  productionProvider:"website-design-compiler/production-provider-status/v1",
+  premiumQuality:"website-design-compiler/design-quality-eval-receipt/v2"
+};
 function evidenceState(value:unknown):CapabilityState{return value==="PASS"||value==="FAIL"||value==="ABSENT"||value==="NOT_IMPLEMENTED"||value==="NOT_EXERCISED"||value==="SKIPPED_BY_POLICY"?value:"FAIL";}
-async function readEvidence(path:string):Promise<CapabilityEvidence>{
+async function readEvidence(capability:Capability,path:string):Promise<CapabilityEvidence>{
   try{
-    const receipt=JSON.parse(await readFile(join(root,path),"utf8")) as {schema?:unknown;overall?:unknown;git?:{sha?:unknown}};
-    return{state:evidenceState(receipt.overall),gitSha:typeof receipt.git?.sha==="string"?receipt.git.sha:null,identity:typeof receipt.schema==="string"?receipt.schema:null};
+    const receipt=JSON.parse(await readFile(join(root,path),"utf8")) as {schema?:unknown;overall?:unknown;git?:{sha?:unknown};evidenceBindings?:Record<string,{binding?:unknown;errors?:unknown;sha256?:unknown}>};
+    const schemaValid=receipt.schema===schemas[capability];
+    const coreBindingsValid=capability!=="core"||(
+      receipt.evidenceBindings!==undefined&&
+      Object.keys(receipt.evidenceBindings).length===12&&
+      Object.values(receipt.evidenceBindings).every((binding)=>binding.binding==="BOUND"&&Array.isArray(binding.errors)&&binding.errors.length===0&&typeof binding.sha256==="string")
+    );
+    return{state:schemaValid&&coreBindingsValid?evidenceState(receipt.overall):"FAIL",gitSha:typeof receipt.git?.sha==="string"?receipt.git.sha:null,identity:schemaValid?schemas[capability]:null};
   }catch(error){
     if(error instanceof Error&&"code" in error&&error.code==="ENOENT")return{state:"ABSENT",gitSha:null,identity:null};
     throw error;
   }
 }
 const evidence={} as Record<Capability,CapabilityEvidence>;
-for(const [capability,path] of Object.entries(paths) as Array<[Capability,string]>)evidence[capability]=await readEvidence(path);
+for(const [capability,path] of Object.entries(paths) as Array<[Capability,string]>)evidence[capability]=await readEvidence(capability,path);
 const evaluation=evaluateReleasePolicy(policy,profile,evidence,git);
 const receipt={...evaluation,premiumQualityProfile:{path:policy.premiumQuality.profilePath,sha256:createHash("sha256").update(premiumProfileBytes).digest("hex"),...premiumProfile},evidencePaths:paths,unresolvedBoundaries:Object.entries(evaluation.capabilities).filter(([,value])=>value.required&&(value.state!=="PASS"||value.binding!=="BOUND")).map(([capability,value])=>({capability,state:value.state,binding:value.binding}))};
 const outputDirectory=join(root,"artifacts/release-v2");
