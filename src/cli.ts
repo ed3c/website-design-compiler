@@ -54,7 +54,8 @@ async function main(): Promise<void> {
       await executeStage("visual-direction-search", () => writeVisualDirectionSearch(input, resolvedOutputDirectory, visualDirectionSearch));
     }
     if (input.requestedStages.includes("semantic-design-tokens")) {
-      await executeStage("semantic-design-tokens", () => writeSemanticDesignTokens(input, resolvedOutputDirectory));
+      if (!visualDirectionSearch) throw new Error("semantic-design-tokens requires visual-direction-search in the same invocation");
+      await executeStage("semantic-design-tokens", () => writeSemanticDesignTokens(input, resolvedOutputDirectory, visualDirectionSearch));
     }
     if (input.requestedStages.includes("design-system-compiler")) {
       if (!visualDirectionSearch) throw new Error("design-system-compiler requires visual-direction-search in the same invocation");

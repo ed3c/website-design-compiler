@@ -4,27 +4,27 @@
 html { background: var(--wdc-color-background); color: var(--wdc-color-text-primary); }
 body { margin: 0; font-family: var(--wdc-font-body); background: var(--wdc-color-background); color: var(--wdc-color-text-primary); }
 button, a { font: inherit; }
-button:focus-visible, a:focus-visible { outline: 3px solid var(--wdc-color-focus); outline-offset: 3px; }
+button:focus-visible, a:focus-visible { outline: var(--wdc-focus-ring) solid var(--wdc-color-focus); outline-offset: var(--wdc-focus-offset); }
 
-.wdc-shell { width: min(var(--wdc-container-max), calc(100% - 2 * var(--wdc-gutter))); margin-inline: auto; padding: 5rem 0; }
-.wdc-hero { display: grid; gap: var(--wdc-space-lg); max-width: 52rem; margin-bottom: 4rem; }
-.wdc-hero h1 { margin: 0; font-family: var(--wdc-font-display); font-size: clamp(2.5rem, 8vw, 5.75rem); line-height: 0.95; letter-spacing: -0.055em; }
-.wdc-hero p { margin: 0; color: var(--wdc-color-text-muted); font-size: 1.125rem; line-height: 1.6; }
-.wdc-eyebrow { color: var(--wdc-color-accent) !important; font-size: 0.875rem !important; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+.wdc-shell { width: min(var(--wdc-container-max), calc(100% - 2 * var(--wdc-gutter))); margin-inline: auto; padding: var(--wdc-space-5) 0; }
+.wdc-hero { display: grid; gap: var(--wdc-space-lg); max-width: var(--wdc-type-body-measure); margin-bottom: var(--wdc-space-4); }
+.wdc-hero h1 { margin: 0; font-family: var(--wdc-font-display); font-size: clamp(var(--wdc-type-scale-4), 8vw, var(--wdc-type-scale-5)); font-weight: var(--wdc-type-display-weight); line-height: var(--wdc-type-display-line-height); letter-spacing: var(--wdc-type-display-letter-spacing); }
+.wdc-hero p { margin: 0; color: var(--wdc-color-text-muted); font-size: var(--wdc-type-scale-2); line-height: var(--wdc-type-body-line-height); }
+.wdc-eyebrow { color: var(--wdc-color-accent) !important; font-size: var(--wdc-type-scale-1) !important; font-weight: var(--wdc-type-display-weight); text-transform: uppercase; letter-spacing: 0.12em; }
 .wdc-actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-sm); }
-.wdc-button { min-width: 3rem; min-height: 3rem; border-radius: var(--wdc-radius-md); border: 1px solid transparent; padding: 0.7rem 1rem; cursor: pointer; transition: transform var(--wdc-motion-fast) ease, background var(--wdc-motion-fast) ease; }
+.wdc-button { min-width: var(--wdc-target-min); min-height: var(--wdc-target-min); border-radius: var(--wdc-radius-md); border: var(--wdc-border-width) var(--wdc-border-style) transparent; padding: var(--wdc-space-1) var(--wdc-space-2); cursor: pointer; transition: transform var(--wdc-motion-fast) ease, background var(--wdc-motion-fast) ease; }
 .wdc-button--primary { background: var(--wdc-color-accent); color: var(--wdc-color-on-accent); }
 .wdc-button--secondary { background: transparent; color: var(--wdc-color-text-primary); border-color: color-mix(in srgb, var(--wdc-color-text-muted) 45%, transparent); }
-.wdc-button:hover { transform: translateY(-1px); }
+.wdc-button:hover { transform: translateY(calc(-1 * var(--wdc-hover-lift))); }
 .wdc-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .wdc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--wdc-space-md); }
-.wdc-status { min-height: 10rem; padding: var(--wdc-space-lg); border-radius: var(--wdc-radius-lg); background: var(--wdc-color-surface); border: 1px solid color-mix(in srgb, var(--wdc-color-text-muted) 18%, transparent); }
+.wdc-status { min-height: calc(3 * var(--wdc-target-min)); padding: var(--wdc-space-lg); border-radius: var(--wdc-radius-lg); background: var(--wdc-color-surface); border: var(--wdc-border-width) var(--wdc-border-style) color-mix(in srgb, var(--wdc-color-text-muted) 18%, transparent); }
 .wdc-status h2 { margin-top: 0; }
-.wdc-status p { color: var(--wdc-color-text-muted); line-height: 1.5; }
+.wdc-status p { color: var(--wdc-color-text-muted); line-height: var(--wdc-type-body-line-height); }
 .wdc-status[data-state="error"] { border-color: var(--wdc-color-focus); }
 
 @media (max-width: 48rem) {
-  .wdc-shell { padding-top: 3rem; }
+  .wdc-shell { padding-top: var(--wdc-space-4); }
   .wdc-grid { grid-template-columns: 1fr; }
 }
 

@@ -4,9 +4,11 @@ import { resolve } from "node:path";
 import type { CompilerInput } from "../src/contracts.js";
 import { compileSemanticDesignTokens, projectSemanticTokensToCss } from "../src/semantic-design-tokens.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { searchVisualDirections } from "../src/visual-direction-search.js";
 
 const input = JSON.parse(await readFile(resolve("fixtures/showcase/compiler-input.json"), "utf8")) as CompilerInput;
-const tokens = compileSemanticDesignTokens(input);
+const visualSearch = searchVisualDirections(input);
+const tokens = compileSemanticDesignTokens(input, visualSearch);
 await validateAgainstSchema(tokens, "semantic-design-tokens-v2.schema.json");
 const generated = projectSemanticTokensToCss(tokens);
 const checkedIn = await readFile(resolve("apps/site/app/theme.generated.css"), "utf8");

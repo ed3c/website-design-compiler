@@ -1,13 +1,22 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
-import { searchVisualDirections } from "./visual-direction-search.js";
+import {
+  assertVisualDirectionSearchBinding,
+  type VisualDirectionSearchReceipt
+} from "./visual-direction-search.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface SemanticDesignTokensV2 {
   schema: "website-design-compiler/semantic-design-tokens/v2";
   project: string;
-  sourceVisualDirection: string;
+  sourceVisualDirection: {
+    schema: VisualDirectionSearchReceipt["schema"];
+    inputSha256: string;
+    seed: string;
+    candidateId: string;
+    candidateSignature: string;
+  };
   color: {
     mode: "light";
     background: string;
@@ -37,7 +46,7 @@ export interface SemanticDesignTokensV2 {
   elevation: { low: string; high: string };
   motionMs: { fast: number; base: number; slow: number };
   media: { treatment: string; gradientPolicy: string; blurMaxPx: number; noiseOpacityMax: number };
-  interaction: { focusRingPx: 3; focusOffsetPx: 2; rawValueBypass: false };
+  interaction: { focusRingPx: 3; focusOffsetPx: 2; minTargetPx: 48; hoverLiftPx: 1; rawValueBypass: false };
 }
 
 const PALETTES = [
@@ -84,9 +93,14 @@ export function contrastRatio(a: string, b: string): number {
   return Number(((high + 0.05) / (low + 0.05)).toFixed(2));
 }
 
-export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesignTokensV2 {
-  const visual = searchVisualDirections(input);
-  const selected = visual.selectedDirection;
+export function compileSemanticDesignTokens(
+  input: CompilerInput,
+  visualSearch: VisualDirectionSearchReceipt
+): SemanticDesignTokensV2 {
+  assertVisualDirectionSearchBinding(input, visualSearch);
+  const selectedCandidate = visualSearch.candidates.find((candidate) => candidate.id === visualSearch.selectedCandidateId);
+  if (!selectedCandidate) throw new Error("visual direction search receipt has no selected candidate");
+  const selected = visualSearch.selectedDirection;
   const palette = PALETTES[stableIndex(`${input.brief.pageType}:${selected.colorStrategy}`, PALETTES.length)]!;
   const editorial = selected.density === "airy";
   const displayFamily = selected.typography === "editorial-serif" ? "Georgia" : selected.typography === "display-contrast" ? "Arial Black" : "Inter";
@@ -99,7 +113,13 @@ export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesig
   return {
     schema: "website-design-compiler/semantic-design-tokens/v2",
     project: input.project,
-    sourceVisualDirection: visual.selectedCandidateId,
+    sourceVisualDirection: {
+      schema: visualSearch.schema,
+      inputSha256: visualSearch.inputSha256,
+      seed: visualSearch.seed,
+      candidateId: visualSearch.selectedCandidateId,
+      candidateSignature: selectedCandidate.signature
+    },
     color: { mode: "light", ...palette, onAccent, contrastPolicy: "WCAG_AA_TEXT", contrastEvidence: { textOnBackground, mutedTextOnBackground, onAccentOnAccent, focusOnBackground, minimumText: 4.5, minimumFocus: 3 } },
     typography: {
       display: { family: displayFamily, fallback: ["system-ui", "sans-serif"], weight: selected.typeContrast === "dramatic" ? 700 : 600, lineHeight: 1.08, letterSpacingEm: -0.025 },
@@ -118,27 +138,44 @@ export function compileSemanticDesignTokens(input: CompilerInput): SemanticDesig
     elevation: { low: "0 1px 3px rgb(0 0 0 / 0.08)", high: "0 18px 48px rgb(0 0 0 / 0.14)" },
     motionMs: selected.motionIntensity === "expressive" ? { fast: 100, base: 220, slow: 520 } : selected.motionIntensity === "minimal" ? { fast: 120, base: 180, slow: 280 } : { fast: 110, base: 200, slow: 380 },
     media: { treatment: selected.mediaStrategy, gradientPolicy: selected.colorStrategy, blurMaxPx: 24, noiseOpacityMax: 0.06 },
-    interaction: { focusRingPx: 3, focusOffsetPx: 2, rawValueBypass: false }
+    interaction: { focusRingPx: 3, focusOffsetPx: 2, minTargetPx: 48, hoverLiftPx: 1, rawValueBypass: false }
   };
 }
 
 export function projectSemanticTokensToCss(tokens: SemanticDesignTokensV2): string {
   const s = tokens.spacingPx;
+  const desktopScale = tokens.typography.scalePx.desktop;
+  const tabletScale = tokens.typography.scalePx.tablet;
+  const mobileScale = tokens.typography.scalePx.mobile;
   return [
     ":root {",
     `  --wdc-color-background: ${tokens.color.background};`, `  --wdc-color-surface: ${tokens.color.surface};`, `  --wdc-color-text-primary: ${tokens.color.text};`, `  --wdc-color-text-muted: ${tokens.color.mutedText};`, `  --wdc-color-accent: ${tokens.color.accent};`, `  --wdc-color-on-accent: ${tokens.color.onAccent};`, `  --wdc-color-focus: ${tokens.color.focus};`,
     `  --wdc-font-display: ${JSON.stringify(tokens.typography.display.family)}, ${tokens.typography.display.fallback.join(", ")};`, `  --wdc-font-body: ${JSON.stringify(tokens.typography.body.family)}, ${tokens.typography.body.fallback.join(", ")};`,
+    `  --wdc-type-display-weight: ${tokens.typography.display.weight};`, `  --wdc-type-display-line-height: ${tokens.typography.display.lineHeight};`, `  --wdc-type-display-letter-spacing: ${tokens.typography.display.letterSpacingEm}em;`,
+    `  --wdc-type-body-weight: ${tokens.typography.body.weight};`, `  --wdc-type-body-line-height: ${tokens.typography.body.lineHeight};`, `  --wdc-type-body-measure: ${tokens.typography.body.measureCh}ch;`,
+    ...desktopScale.map((value, index) => `  --wdc-type-scale-${index}: ${value}px;`),
+    ...s.map((value, index) => `  --wdc-space-${index}: ${value}px;`),
     `  --wdc-space-xs: ${s[1]}px;`, `  --wdc-space-sm: ${s[2]}px;`, `  --wdc-space-md: ${s[3]}px;`, `  --wdc-space-lg: ${s[4]}px;`, `  --wdc-space-xl: ${s[5]}px;`,
-    `  --wdc-radius-md: ${tokens.radiiPx.md}px;`, `  --wdc-radius-lg: ${tokens.radiiPx.lg}px;`, `  --wdc-motion-fast: ${tokens.motionMs.fast}ms;`, `  --wdc-motion-base: ${tokens.motionMs.base}ms;`,
+    `  --wdc-radius-sm: ${tokens.radiiPx.sm}px;`, `  --wdc-radius-md: ${tokens.radiiPx.md}px;`, `  --wdc-radius-lg: ${tokens.radiiPx.lg}px;`, `  --wdc-radius-pill: ${tokens.radiiPx.pill}px;`,
+    `  --wdc-border-width: ${tokens.border.widthPx}px;`, `  --wdc-border-style: ${tokens.border.style};`, `  --wdc-border-color: ${tokens.border.color};`,
+    `  --wdc-elevation-low: ${tokens.elevation.low};`, `  --wdc-elevation-high: ${tokens.elevation.high};`,
+    `  --wdc-motion-fast: ${tokens.motionMs.fast}ms;`, `  --wdc-motion-base: ${tokens.motionMs.base}ms;`, `  --wdc-motion-slow: ${tokens.motionMs.slow}ms;`,
+    `  --wdc-media-treatment: ${tokens.media.treatment};`, `  --wdc-media-gradient-policy: ${tokens.media.gradientPolicy};`, `  --wdc-media-blur-max: ${tokens.media.blurMaxPx}px;`, `  --wdc-media-noise-opacity-max: ${tokens.media.noiseOpacityMax};`,
+    `  --wdc-focus-ring: ${tokens.interaction.focusRingPx}px;`, `  --wdc-focus-offset: ${tokens.interaction.focusOffsetPx}px;`, `  --wdc-target-min: ${tokens.interaction.minTargetPx}px;`, `  --wdc-hover-lift: ${tokens.interaction.hoverLiftPx}px;`,
+    `  --wdc-breakpoint-tablet: ${tokens.layout.breakpointsPx.tablet}px;`, `  --wdc-breakpoint-desktop: ${tokens.layout.breakpointsPx.desktop}px;`,
     `  --wdc-container-max: ${tokens.layout.containerMaxPx.desktop}px;`, `  --wdc-grid-columns: ${tokens.layout.columns.desktop};`, `  --wdc-gutter: ${tokens.layout.gutterPx.desktop}px;`, "}",
-    `@media (max-width: 1199px) { :root { --wdc-container-max: ${tokens.layout.containerMaxPx.tablet}px; --wdc-grid-columns: ${tokens.layout.columns.tablet}; --wdc-gutter: ${tokens.layout.gutterPx.tablet}px; } }`,
-    `@media (max-width: 767px) { :root { --wdc-container-max: ${tokens.layout.containerMaxPx.mobile}px; --wdc-grid-columns: ${tokens.layout.columns.mobile}; --wdc-gutter: ${tokens.layout.gutterPx.mobile}px; } }`,
+    `@media (max-width: 1199px) { :root { ${tabletScale.map((value, index) => `--wdc-type-scale-${index}: ${value}px;`).join(" ")} --wdc-container-max: ${tokens.layout.containerMaxPx.tablet}px; --wdc-grid-columns: ${tokens.layout.columns.tablet}; --wdc-gutter: ${tokens.layout.gutterPx.tablet}px; } }`,
+    `@media (max-width: 767px) { :root { ${mobileScale.map((value, index) => `--wdc-type-scale-${index}: ${value}px;`).join(" ")} --wdc-container-max: ${tokens.layout.containerMaxPx.mobile}px; --wdc-grid-columns: ${tokens.layout.columns.mobile}; --wdc-gutter: ${tokens.layout.gutterPx.mobile}px; } }`,
     ""
   ].join("\n");
 }
 
-export async function writeSemanticDesignTokens(input: CompilerInput, outputDirectory: string): Promise<string[]> {
-  const tokens = compileSemanticDesignTokens(input);
+export async function writeSemanticDesignTokens(
+  input: CompilerInput,
+  outputDirectory: string,
+  visualSearch: VisualDirectionSearchReceipt
+): Promise<string[]> {
+  const tokens = compileSemanticDesignTokens(input, visualSearch);
   await validateAgainstSchema(tokens, "semantic-design-tokens-v2.schema.json");
   const directory = join(outputDirectory, "semantic-design-tokens");
   await mkdir(directory, { recursive: true });

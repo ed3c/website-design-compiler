@@ -167,6 +167,7 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
     "information-architecture",
     "content-architecture",
     "visual-direction-search",
+    "semantic-design-tokens",
     "design-system-compiler",
     "page-architect",
     "frontend-builder",
