@@ -49,7 +49,7 @@
           "items": ["Omit the list until feature evidence is supplied."]
         },
         "provenance": {
-          "heading": "information-architecture:features",
+          "heading": "ia.fallback:features",
           "items": "ia.fallback:features"
         },
         "tokenRef": "semantic-design-tokens/v2"
@@ -83,7 +83,7 @@
           "action": { "label": "Continue", "href": "#navigation" }
         },
         "provenance": {
-          "headline": "information-architecture:conversion",
+          "headline": "ia.fallback:conversion",
           "action": "ia.fallback:conversion"
         },
         "tokenRef": "semantic-design-tokens/v2"
