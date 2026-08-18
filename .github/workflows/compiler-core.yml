@@ -29,6 +29,7 @@ jobs:
       - run: pnpm test
       - run: pnpm exec playwright install --with-deps chromium
       - name: Produce browser-bound visual reference evidence
+        id: reference-browser
         run: pnpm reference:browser-fixture
       - name: Verify v2 natural-language brief normalization and IA compilation
         run: pnpm v2:brief-ia
@@ -37,6 +38,8 @@ jobs:
       - name: Verify six-category claim-safe content architecture
         run: pnpm v2:content-architecture
       - name: Verify deterministic multi-candidate visual direction search
+        env:
+          WDC_REFERENCE_BROWSER_RECEIPT_SHA256: ${{ steps.reference-browser.outputs.receipt_sha256 }}
         run: pnpm v2:visual-directions
       - name: Verify concrete semantic tokens and production projection drift
         run: pnpm v2:semantic-tokens
@@ -83,6 +86,7 @@ jobs:
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
         env:
+          WDC_REFERENCE_BROWSER_RECEIPT_SHA256: ${{ steps.reference-browser.outputs.receipt_sha256 }}
           WDC_STORYBOOK_VISUAL_ADMISSION_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_ADMISSION_SHA256 }}
         run: |
           set +e

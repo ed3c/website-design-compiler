@@ -51,12 +51,17 @@ test("originality audit rejects a candidate that is too close to an observed ref
   assert.ok(reasons.some((reason) => reason.includes("too close to an observed reference")));
 });
 
-async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>): Promise<T> {
+async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>, includeSelfSignedProducer = false): Promise<T> {
   const root = await mkdtemp(join(tmpdir(), "wdc-visual-evidence-"));
   try {
     const compilerInput = input("premium-consumer");
     const value = "<!doctype html><main><h1>Observed reference</h1></main>";
-    const evidenceBytes = new TextEncoder().encode("deterministic screenshot bytes");
+    const evidenceBytes = Buffer.alloc(24);
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(evidenceBytes);
+    evidenceBytes.writeUInt32BE(13, 8);
+    evidenceBytes.write("IHDR", 12, "ascii");
+    evidenceBytes.writeUInt32BE(1280, 16);
+    evidenceBytes.writeUInt32BE(800, 20);
     await writeFile(join(root, "evidence.png"), evidenceBytes);
     const digest = (content: string | Uint8Array) => createHash("sha256").update(content).digest("hex");
     const measurements = {
@@ -82,6 +87,35 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
       dimensions: deriveObservedVisualDimensions(measurements),
       observations: ["computed typography", "computed layout", "computed spacing", "computed motion", "observed media"]
     };
+    if (includeSelfSignedProducer) {
+      const snapshot = (width: number, height: number, columns: number, headingSize: string) => ({
+        viewport: { width, height },
+        main: { x: 0, y: 0, width, height },
+        hierarchy: { h1: 1, h2: 0, nav: 1, main: 1, section: 1, article: 2 },
+        typography: { fontFamily: "Arial", fontSize: headingSize, fontWeight: "700", lineHeight: headingSize },
+        layout: { gridColumnCount: columns, gridTemplateColumns: columns === 2 ? "1fr 1fr" : "1fr", gap: "16px" },
+        motion: { transitionDuration: "0.2s", transitionProperty: "transform" },
+        assets: { images: 1, videos: 0, canvases: 0 }
+      });
+      const producerReceipt = {
+        schema: "website-design-compiler/reference-browser-receipt/v2",
+        overall: "PASS",
+        execution: { mode: "PLAYWRIGHT_BROWSER", startedAt: "2026-08-18T00:00:00.000Z", completedAt: "2026-08-18T00:00:01.000Z" },
+        browser: { engine: "chromium", version: "forged" },
+        sourceMode: "DETERMINISTIC_HTML_FIXTURE",
+        capturedArtifactSha256: digest(value),
+        measurementsSha256: digest(JSON.stringify(measurements)),
+        evidenceArtifacts: receipt.evidenceArtifacts,
+        observations: { desktop: snapshot(1280, 800, 2, "40px"), mobile: snapshot(390, 844, 1, "30px") },
+        responsiveBehavior: { state: "PASS", desktopColumns: 2, mobileColumns: 1, desktopHeadingSize: "40px", mobileHeadingSize: "30px" },
+        supportedFacts: ["layout", "typography", "hierarchy", "motion", "assets", "responsive"],
+        cameraObservation: "NOT_APPLICABLE",
+        implementationDetails: "UNKNOWN"
+      };
+      const producerReceiptText = `${JSON.stringify(producerReceipt, null, 2)}\n`;
+      await writeFile(join(root, "forged-browser-runtime-receipt.json"), producerReceiptText, "utf8");
+      receipt.producerReceipt.sha256 = digest(producerReceiptText);
+    }
     const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
     await writeFile(join(root, "receipt.json"), receiptText, "utf8");
     compilerInput.references = [{
@@ -97,9 +131,23 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
 
 test("caller-authored measurements and fake screenshot bytes cannot promote originality", async () => {
   await assert.rejects(
-    withVisualEvidence(null, async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root)),
-    /browser runtime receipt/
+    withVisualEvidence(null, async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root), true),
+    /trusted browser runtime admission/
   );
+});
+
+test("an externally admitted receipt still cannot promote an incomplete PNG header", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    const fingerprint = JSON.parse(await readFile(join(root, "receipt.json"), "utf8"));
+    const previous = process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256;
+    process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256 = fingerprint.producerReceipt.sha256;
+    try {
+      await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /truncated PNG chunk|complete PNG browser screenshot/);
+    } finally {
+      if (previous === undefined) delete process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256;
+      else process.env.WDC_REFERENCE_BROWSER_RECEIPT_SHA256 = previous;
+    }
+  }, true);
 });
 
 test("observed fingerprint dimensions are derived from browser measurements", async () => {

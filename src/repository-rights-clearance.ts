@@ -152,7 +152,20 @@ export async function scanShippedAssets(root: string): Promise<RightsSubject[]> 
     }
     for (const entry of entries) {
       const path = join(dir, entry.name);
-      if (entry.isDirectory()) await walk(path);
+      if (entry.isSymbolicLink()) {
+        const repositoryPath = relative(root, path);
+        subjects.push({
+          id: `asset:${repositoryPath}`,
+          kind: "asset",
+          name: relative(publicDir, path),
+          versionOrIdentity: "SYMLINK_NOT_ADMITTED",
+          licenseExpression: null,
+          state: "UNKNOWN",
+          evidence: [repositoryPath, "diagnostic:public-tree:SYMLINK_NOT_ADMITTED"],
+          attributionRequired: false,
+          distributed: true
+        });
+      } else if (entry.isDirectory()) await walk(path);
       else if (entry.isFile()) {
         const repositoryPath = relative(root, path);
         const declared = evidenceIndex[repositoryPath];

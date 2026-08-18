@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -91,6 +91,27 @@ test("unmanifested or hash-mismatched public assets fail closed as UNKNOWN", asy
     })}\n`);
     subjects = await scanShippedAssets(root);
     assert.equal(subjects[0]?.state, "UNKNOWN");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("public asset symlinks fail closed without following their targets", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-rights-symlink-"));
+  try {
+    const publicDirectory = join(root, "apps/site/public");
+    await mkdir(publicDirectory, { recursive: true });
+    const outsideTarget = join(root, "untracked-third-party.png");
+    await writeFile(outsideTarget, "unknown third-party bytes", "utf8");
+    await symlink(outsideTarget, join(publicDirectory, "linked-third-party.png"));
+
+    const subjects = await scanShippedAssets(root);
+    assert.equal(subjects.length, 1);
+    assert.equal(subjects[0]?.id, "asset:apps/site/public/linked-third-party.png");
+    assert.equal(subjects[0]?.state, "UNKNOWN");
+    assert.equal(subjects[0]?.distributed, true);
+    assert.equal(subjects[0]?.versionOrIdentity, "SYMLINK_NOT_ADMITTED");
+    assert.match(subjects[0]?.evidence.join(" ") ?? "", /SYMLINK_NOT_ADMITTED/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

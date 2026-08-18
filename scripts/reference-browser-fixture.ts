@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observation-fixture.js";
@@ -181,6 +181,10 @@ try {
   const outputPath = join(outputDirectory, "reference-browser-receipt.json");
   const producerReceiptText = `${JSON.stringify(receipt, null, 2)}\n`;
   await writeFile(outputPath, producerReceiptText, "utf8");
+  const producerReceiptSha256 = sha256(producerReceiptText);
+  if (process.env.GITHUB_OUTPUT) {
+    await appendFile(process.env.GITHUB_OUTPUT, `receipt_sha256=${producerReceiptSha256}\n`, "utf8");
+  }
   const visualFingerprint = {
     schema: "website-design-compiler/observed-visual-fingerprint/v3",
     state: "PASS",
@@ -190,7 +194,7 @@ try {
     producerReceipt: {
       schema: "website-design-compiler/reference-browser-receipt/v2",
       path: "artifacts/reference-browser/reference-browser-receipt.json",
-      sha256: sha256(producerReceiptText)
+      sha256: producerReceiptSha256
     },
     evidenceArtifacts,
     measurements,
@@ -206,7 +210,7 @@ try {
   await validateAgainstSchema(visualFingerprint, "observed-visual-fingerprint-v3.schema.json");
   const fingerprintPath = join(outputDirectory, "observed-visual-fingerprint.json");
   await writeFile(fingerprintPath, `${JSON.stringify(visualFingerprint, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify({ outputPath, fingerprintPath, overall: receipt.overall, responsiveBehavior: receipt.responsiveBehavior }));
+  console.log(JSON.stringify({ outputPath, fingerprintPath, producerReceiptSha256, overall: receipt.overall, responsiveBehavior: receipt.responsiveBehavior }));
   if (receipt.overall !== "PASS") process.exitCode = 1;
 } finally {
   await browser.close();
