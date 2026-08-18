@@ -87,3 +87,15 @@ test("observable text cannot leak credentials or machine-private paths",async()=
   assert.equal(serialized.includes("do-not-publish"),false);
   assert.equal(serialized.includes("/Users/person"),false);
 });
+
+test("live capture applies one deadline across DNS and transport",async()=>{
+  const receipt=await verifyLiveReferences(admit,{
+    ...injected,
+    timeoutMs:20,
+    maxAttempts:1,
+    resolveHost:async()=>{await new Promise((resolve)=>setTimeout(resolve,15));return["93.184.216.34"];},
+    transport:async({resolvedAddress})=>{await new Promise((resolve)=>setTimeout(resolve,15));return{status:200,headers:{"content-type":"text/html"},body:html,connectedAddress:resolvedAddress};}
+  });
+  assert.equal(receipt.targets[0]?.state,"FAIL");
+  assert.match(receipt.targets[0]?.reason??"",/total deadline exceeded during transport/);
+});

@@ -4,6 +4,12 @@ import { readFile } from "node:fs/promises";
 import { isIP } from "node:net";
 import { resolve } from "node:path";
 import type { CompilerReference, EvidenceState } from "./contracts.js";
+import {
+  injectedFetchTransport,
+  productionPinnedTransport,
+  sameNetworkAddress,
+  type PinnedTransport
+} from "./pinned-http-transport.js";
 
 export interface CaptureProvenance {
   adapter: string;
@@ -13,6 +19,8 @@ export interface CaptureProvenance {
   httpStatus?: number;
   contentType?: string;
   responseSha256?: string;
+  connectedAddress?: string;
+  transportMode?: "PRODUCTION" | "INJECTED";
 }
 
 export interface CapturedReference {
@@ -25,8 +33,10 @@ export interface CapturedReference {
 export interface RemoteCaptureDependencies {
   resolveHost?: (hostname: string) => Promise<string[]>;
   fetchImpl?: typeof globalThis.fetch;
+  transport?: PinnedTransport;
   maxRedirects?: number;
   maxBytes?: number;
+  timeoutMs?: number;
 }
 
 function decodeEntities(value: string): string {
@@ -99,28 +109,28 @@ async function readHtmlReference(value: string): Promise<{ html: string; mode: "
 function isPublicIpv4(address: string): boolean {
   const parts = address.split(".").map(Number);
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [a, b] = parts as [number, number, number, number];
+  const [a, b, c] = parts as [number, number, number, number];
   if (a === 0 || a === 10 || a === 127) return false;
   if (a === 100 && b >= 64 && b <= 127) return false;
   if (a === 169 && b === 254) return false;
   if (a === 172 && b >= 16 && b <= 31) return false;
   if (a === 192 && b === 168) return false;
   if (a === 192 && b === 0) return false;
+  if (a === 192 && b === 88 && c === 99) return false;
   if (a === 198 && (b === 18 || b === 19)) return false;
+  if (a === 198 && b === 51 && c === 100) return false;
+  if (a === 203 && b === 0 && c === 113) return false;
   if (a >= 224) return false;
   return true;
 }
 
 function isPublicIpv6(address: string): boolean {
   const normalized = address.toLowerCase().split("%")[0] ?? "";
-  if (normalized === "::" || normalized === "::1") return false;
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return false;
-  if (/^fe[89ab]/.test(normalized)) return false;
-  if (normalized.startsWith("ff")) return false;
-  if (normalized.startsWith("2001:db8")) return false;
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(normalized)?.[1];
-  if (mapped) return isPublicIpv4(mapped);
-  return true;
+  const firstHextet = normalized.split(":")[0];
+  if (!firstHextet) return false;
+  const prefix = Number.parseInt(firstHextet, 16);
+  if (!Number.isInteger(prefix) || prefix < 0x2000 || prefix > 0x3fff) return false;
+  return !/^2001:db8(?:$|:)/.test(normalized);
 }
 
 export function isPublicIpAddress(address: string): boolean {
@@ -135,62 +145,84 @@ async function defaultResolveHost(hostname: string): Promise<string[]> {
   return records.map((record) => record.address);
 }
 
-async function validateRemoteTarget(url: URL, resolveHost: (hostname: string) => Promise<string[]>): Promise<void> {
+async function withDeadline<T>(operation: Promise<T>, deadlineAt: number, label: string): Promise<T> {
+  const remaining = Math.max(0, Math.ceil(deadlineAt - Date.now()));
+  if (remaining === 0) throw new Error(`remote reference total deadline exceeded before ${label}`);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await new Promise<T>((resolveOperation, rejectOperation) => {
+      timer = setTimeout(() => rejectOperation(new Error(`remote reference total deadline exceeded during ${label}`)), remaining);
+      void operation.then(resolveOperation, rejectOperation);
+    });
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+async function validateRemoteTarget(url: URL, resolveHost: (hostname: string) => Promise<string[]>, deadlineAt: number): Promise<string[]> {
   if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("remote reference protocol must be http or https");
   if (url.username || url.password) throw new Error("remote reference URL credentials are forbidden");
   if (url.port && url.port !== "80" && url.port !== "443") throw new Error("remote reference non-standard ports are forbidden");
-  const addresses = isIP(url.hostname) ? [url.hostname] : await resolveHost(url.hostname);
+  const addresses = isIP(url.hostname) ? [url.hostname] : await withDeadline(resolveHost(url.hostname), deadlineAt, "DNS resolution");
   if (addresses.length === 0) throw new Error("remote reference hostname resolved to no addresses");
   if (addresses.some((address) => !isPublicIpAddress(address))) throw new Error("remote reference resolved to a non-public address");
+  return addresses;
 }
 
 export async function captureRemoteUrl(value: string, dependencies: RemoteCaptureDependencies = {}): Promise<CapturedReference> {
   const resolveHost = dependencies.resolveHost ?? defaultResolveHost;
-  const fetchImpl = dependencies.fetchImpl ?? globalThis.fetch;
+  if (dependencies.fetchImpl && dependencies.transport) throw new Error("remote reference accepts either fetchImpl or transport, not both");
+  const transport = dependencies.transport ?? (dependencies.fetchImpl ? injectedFetchTransport(dependencies.fetchImpl) : productionPinnedTransport);
   const maxRedirects = dependencies.maxRedirects ?? 3;
   const maxBytes = dependencies.maxBytes ?? 2 * 1024 * 1024;
+  const timeoutMs = dependencies.timeoutMs ?? 10_000;
+  const deadlineAt = Date.now() + timeoutMs;
   let current = new URL(value);
 
   try {
     for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
-      await validateRemoteTarget(current, resolveHost);
-      const response = await fetchImpl(current, {
-        method: "GET",
-        redirect: "manual",
-        headers: {
-          accept: "text/html,application/xhtml+xml;q=0.9",
-          "user-agent": "website-design-compiler-reference-capture/1"
-        }
-      });
+      const addresses = await validateRemoteTarget(current, resolveHost, deadlineAt);
+      const selectedAddress = addresses[0]!;
+      const response = await withDeadline(
+        transport({ url: current, resolvedAddress: selectedAddress, deadlineAt, maxBytes }),
+        deadlineAt,
+        "transport"
+      );
+      if (!sameNetworkAddress(response.connectedAddress, selectedAddress)) {
+        throw new Error("connected peer address does not match pinned DNS resolution");
+      }
 
       if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("location");
+        const location = response.headers.location;
         if (!location) throw new Error("remote reference redirect missing Location header");
         if (redirectCount === maxRedirects) throw new Error("remote reference redirect limit exceeded");
         current = new URL(location, current);
         continue;
       }
 
-      if (!response.ok) throw new Error(`remote reference returned HTTP ${response.status}`);
-      const contentType = (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+      if (response.status < 200 || response.status >= 300) throw new Error(`remote reference returned HTTP ${response.status}`);
+      const contentType = (response.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
       if (contentType !== "text/html" && contentType !== "application/xhtml+xml") {
         throw new Error(`remote reference content type is not HTML: ${contentType || "missing"}`);
       }
-      const body = new Uint8Array(await response.arrayBuffer());
+      const body = response.body;
       if (body.byteLength > maxBytes) throw new Error(`remote reference exceeds ${maxBytes} byte limit`);
       const html = new TextDecoder("utf-8", { fatal: false }).decode(body);
       return {
-        state: "PASS",
+        state: response.mode === "PRODUCTION" ? "PASS" : "NOT_EXERCISED",
         facts: observeHtml(html),
         provenance: {
-          adapter: "remote-url-observer/v1",
+          adapter: "remote-url-observer/v2",
           sourceKind: "url",
           sourceMode: "REMOTE",
           finalUrl: current.toString(),
           httpStatus: response.status,
           contentType,
-          responseSha256: createHash("sha256").update(body).digest("hex")
-        }
+          responseSha256: createHash("sha256").update(body).digest("hex"),
+          connectedAddress: response.connectedAddress,
+          transportMode: response.mode
+        },
+        ...(response.mode === "INJECTED" ? { reason: "Injected transport exercises deterministic controls but cannot promote production remote evidence to PASS." } : {})
       };
     }
     throw new Error("remote reference redirect state exhausted");
@@ -198,7 +230,7 @@ export async function captureRemoteUrl(value: string, dependencies: RemoteCaptur
     return {
       state: "FAIL",
       facts: [],
-      provenance: { adapter: "remote-url-observer/v1", sourceKind: "url", sourceMode: "REMOTE", finalUrl: current.toString() },
+      provenance: { adapter: "remote-url-observer/v2", sourceKind: "url", sourceMode: "REMOTE", finalUrl: current.toString() },
       reason: error instanceof Error ? error.message : "remote URL capture failed"
     };
   }
@@ -228,7 +260,7 @@ export async function captureReference(reference: CompilerReference): Promise<Ca
       return {
         state: "NOT_EXERCISED",
         facts: [],
-        provenance: { adapter: "remote-url-observer/v1", sourceKind: reference.kind, sourceMode: "UNEXERCISED" },
+        provenance: { adapter: "remote-url-observer/v2", sourceKind: reference.kind, sourceMode: "UNEXERCISED" },
         reason: "Remote URL capture is implemented but disabled unless WDC_REFERENCE_NETWORK=1; deterministic release fixtures do not depend on external network state."
       };
     }

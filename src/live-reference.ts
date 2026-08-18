@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
-import { request } from "node:https";
 import { isIP } from "node:net";
 import { isPublicIpAddress, observeHtml } from "./reference-capture.js";
+import { productionPinnedTransport, sameNetworkAddress } from "./pinned-http-transport.js";
 
 export interface LiveReferenceAdmit{
   schema:"website-design-compiler/live-reference-admit/v1";
@@ -11,7 +11,7 @@ export interface LiveReferenceAdmit{
   targets:string[];
 }
 export interface LiveTransportResponse{status:number;headers:Record<string,string>;body:Uint8Array;connectedAddress:string;}
-export interface LiveTransportRequest{url:URL;resolvedAddress:string;timeoutMs:number;maxBytes:number;}
+export interface LiveTransportRequest{url:URL;resolvedAddress:string;deadlineAt:number;timeoutMs:number;maxBytes:number;}
 export type LiveTransport=(request:LiveTransportRequest)=>Promise<LiveTransportResponse>;
 export interface LiveReferenceDependencies{
   resolveHost?:(hostname:string)=>Promise<string[]>;
@@ -76,25 +76,21 @@ export function assertPublicLiveReceipt(receipt:LiveReferenceReceipt):void{
   if(forbidden.some((pattern)=>pattern.test(serialized)))throw new Error("live reference receipt contains credential or machine-private state");
 }
 function sameAddress(left:string,right:string):boolean{
-  const normalize=(value:string)=>value.toLowerCase().replace(/^::ffff:/,"").split("%")[0]??"";
-  return normalize(left)===normalize(right);
+  return sameNetworkAddress(left,right);
 }
 async function productionTransport(input:LiveTransportRequest):Promise<LiveTransportResponse>{
-  return new Promise((resolve,reject)=>{
-    const chunks:Buffer[]=[];let byteCount=0;
-    const req=request(input.url,{method:"GET",headers:{accept:"text/html,application/xhtml+xml;q=0.9","user-agent":"website-design-compiler-live-reference/2"},lookup:(_hostname,_options,callback)=>callback(null,input.resolvedAddress,isIP(input.resolvedAddress))},(response)=>{
-      response.on("data",(chunk:Buffer)=>{
-        byteCount+=chunk.byteLength;
-        if(byteCount>input.maxBytes){req.destroy(new Error(`live reference exceeds ${input.maxBytes} byte limit`));return;}
-        chunks.push(chunk);
-      });
-      response.on("end",()=>resolve({status:response.statusCode??0,headers:Object.fromEntries(Object.entries(response.headers).flatMap(([key,value])=>value===undefined?[]:[[key,Array.isArray(value)?value.join(", "):value]])),body:new Uint8Array(Buffer.concat(chunks)),connectedAddress:response.socket.remoteAddress??""}));
-    });
-    req.setTimeout(input.timeoutMs,()=>req.destroy(new Error(`availability timeout after ${input.timeoutMs}ms`)));
-    req.on("error",reject);req.end();
-  });
+  const response=await productionPinnedTransport({url:input.url,resolvedAddress:input.resolvedAddress,deadlineAt:input.deadlineAt,maxBytes:input.maxBytes});
+  return{status:response.status,headers:response.headers,body:response.body,connectedAddress:response.connectedAddress};
 }
 function availabilityError(error:unknown):boolean{return /availability|timeout|ECONN|ENOTFOUND|EAI_AGAIN|HTTP 429|HTTP 5\d\d/i.test(error instanceof Error?error.message:String(error));}
+
+async function withDeadline<T>(operation:Promise<T>,deadlineAt:number,label:string):Promise<T>{
+  const remaining=Math.max(0,Math.ceil(deadlineAt-Date.now()));
+  if(remaining===0)throw new Error(`availability total deadline exceeded before ${label}`);
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{return await new Promise<T>((resolve,reject)=>{timer=setTimeout(()=>reject(new Error(`availability total deadline exceeded during ${label}`)),remaining);void operation.then(resolve,reject);});}
+  finally{if(timer!==undefined)clearTimeout(timer);}
+}
 
 async function captureTarget(target:string,dependencies:Required<Pick<LiveReferenceDependencies,"resolveHost"|"transport"|"now"|"sleep"|"previousHashes"|"timeoutMs"|"maxBytes"|"maxRedirects"|"maxAttempts"|"retryBackoffMs">>):Promise<LiveReferenceTargetReceipt>{
   const observedAt=dependencies.now().toISOString();
@@ -107,14 +103,15 @@ async function captureTarget(target:string,dependencies:Required<Pick<LiveRefere
     attempts=attempt;
     let endpointAvailable=false;
     try{
+      const deadlineAt=Date.now()+dependencies.timeoutMs;
       for(let redirectCount=0;redirectCount<=dependencies.maxRedirects;redirectCount+=1){
-        const addresses=isIP(current.hostname)?[current.hostname]:await dependencies.resolveHost(current.hostname);
+        const addresses=isIP(current.hostname)?[current.hostname]:await withDeadline(dependencies.resolveHost(current.hostname),deadlineAt,"DNS resolution");
         if(addresses.length===0)throw new Error("availability hostname resolved to no addresses");
         if(addresses.some((address)=>!isPublicIpAddress(address)))throw new Error("live reference resolved to a non-public address");
         lastPublicUrl=current.toString();
         if(pendingRedirect){redirects.push(pendingRedirect);pendingRedirect=null;}
         const selectedAddress=addresses[0]!;
-        const response=await dependencies.transport({url:current,resolvedAddress:selectedAddress,timeoutMs:dependencies.timeoutMs,maxBytes:dependencies.maxBytes});
+        const response=await withDeadline(dependencies.transport({url:current,resolvedAddress:selectedAddress,deadlineAt,timeoutMs:dependencies.timeoutMs,maxBytes:dependencies.maxBytes}),deadlineAt,"transport");
         if(!sameAddress(response.connectedAddress,selectedAddress))throw new Error("connected peer address does not match pinned DNS resolution");
         endpointAvailable=true;
         dns.push({hostname:current.hostname,addresses:[...addresses].sort(),selectedAddress,connectedAddress:response.connectedAddress});
