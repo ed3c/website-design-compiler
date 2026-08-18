@@ -13,6 +13,11 @@ export interface MediaModelPolicyEntry {
   provenanceSubjectId: string;
   outputTermsSubjectId: string;
   serviceTermsSubjectId: string;
+  productionIdentity?: {
+    providerId: string;
+    serviceRevision: string;
+    modelRevision: string;
+  };
   reason?: string;
 }
 
@@ -117,6 +122,16 @@ export function validateMediaModelPolicy(policy: MediaModelPolicy): string[] {
     if (!entry.provenanceSubjectId) errors.push(`model ${entry.id} is missing provenanceSubjectId`);
     if (!entry.outputTermsSubjectId) errors.push(`model ${entry.id} is missing outputTermsSubjectId`);
     if (!entry.serviceTermsSubjectId) errors.push(`model ${entry.id} is missing serviceTermsSubjectId`);
+    if (entry.admission === "DENY" && entry.adapter !== "mock") {
+      if (!entry.productionIdentity) errors.push(`denied production model ${entry.id} must bind an explicit production identity`);
+      else {
+        if (!entry.productionIdentity.providerId) errors.push(`denied production model ${entry.id} is missing providerId`);
+        if (!entry.productionIdentity.serviceRevision) errors.push(`denied production model ${entry.id} is missing serviceRevision`);
+        if (entry.productionIdentity.modelRevision !== `commit:${entry.versionOrCommit}`) {
+          errors.push(`denied production model ${entry.id} modelRevision must bind versionOrCommit`);
+        }
+      }
+    }
     if (entry.kind === "3d" && entry.adapter !== "mock" && entry.adapter !== "three-d-worker") errors.push(`3d model ${entry.id} must use the isolated three-d-worker boundary`);
     if (entry.kind === "image" && entry.adapter !== "mock" && entry.adapter !== "diffusers-image") errors.push(`image model ${entry.id} must use the diffusers-image boundary`);
     if (entry.kind === "video" && entry.adapter !== "mock" && entry.adapter !== "diffusers-video") errors.push(`video model ${entry.id} must use the diffusers-video boundary`);

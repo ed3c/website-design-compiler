@@ -3,13 +3,25 @@
   "$id": "https://example.invalid/website-design-compiler/media-candidate-rejection.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "overall", "decision", "generatedAt", "git", "bindings", "candidates"],
+  "required": ["schema", "overall", "decision", "generatedAt", "git", "evidenceAdmission", "bindings", "candidates"],
   "properties": {
-    "schema": { "const": "website-design-compiler/media-candidate-rejection/v1" },
-    "overall": { "const": "PASS" },
+    "schema": { "const": "website-design-compiler/media-candidate-rejection/v2" },
+    "overall": { "enum": ["PASS", "NOT_EXERCISED"] },
     "decision": { "const": "REJECT" },
     "generatedAt": { "type": "string", "format": "date-time" },
     "git": { "$ref": "#/$defs/git" },
+    "evidenceAdmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "channel", "observedSha256", "trustedSha256", "trustedGitTree"],
+      "properties": {
+        "state": { "enum": ["PASS", "NOT_EXERCISED"] },
+        "channel": { "const": "PROTECTED_SHA256" },
+        "observedSha256": { "$ref": "#/$defs/sha256" },
+        "trustedSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+        "trustedGitTree": { "oneOf": [{ "type": "string", "pattern": "^[a-f0-9]{40}$" }, { "const": "ABSENT" }] }
+      }
+    },
     "bindings": {
       "type": "object",
       "additionalProperties": false,
@@ -45,12 +57,14 @@
           "routing": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["requestSha256", "overall", "workerCalls", "reason"],
+            "required": ["route", "requestSha256", "overall", "admissionState", "transportCalls", "reason"],
             "properties": {
+              "route": { "const": "PRODUCTION_PROVIDER" },
               "requestSha256": { "$ref": "#/$defs/sha256" },
-              "overall": { "const": "FAIL" },
-              "workerCalls": { "const": 0 },
-              "reason": { "type": "string", "pattern": "DENY" }
+              "overall": { "const": "NOT_EXERCISED" },
+              "admissionState": { "const": "DENIED" },
+              "transportCalls": { "const": 0 },
+              "reason": { "type": "string", "pattern": "rights state is DENY" }
             }
           },
           "rejectionReasons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
@@ -58,6 +72,16 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] },
+      "then": { "properties": { "evidenceAdmission": { "type": "object", "properties": { "state": { "const": "PASS" }, "trustedSha256": { "$ref": "#/$defs/sha256" }, "trustedGitTree": { "type": "string", "pattern": "^[a-f0-9]{40}$" } } } } }
+    },
+    {
+      "if": { "properties": { "overall": { "const": "NOT_EXERCISED" } }, "required": ["overall"] },
+      "then": { "properties": { "evidenceAdmission": { "type": "object", "properties": { "state": { "const": "NOT_EXERCISED" }, "trustedSha256": { "const": "ABSENT" }, "trustedGitTree": { "const": "ABSENT" } } } } }
+    }
+  ],
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "git": {

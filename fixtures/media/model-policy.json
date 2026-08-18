@@ -32,6 +32,11 @@
       "provenanceSubjectId": "model:stabilityai-svd-1.1-tensorrt",
       "outputTermsSubjectId": "generated-output:stabilityai-svd-1.1-tensorrt",
       "serviceTermsSubjectId": "service:local-tensorrt-svd-1.1",
+      "productionIdentity": {
+        "providerId": "local-tensorrt-svd-1.1",
+        "serviceRevision": "commit:32eaa3e7d521d402740f134d3390c9697fb99f3e",
+        "modelRevision": "commit:32eaa3e7d521d402740f134d3390c9697fb99f3e"
+      },
       "reason": "The pinned model license excludes production use and hosted service/API use; output commercial rights are unproven."
     },
     {
@@ -43,6 +48,11 @@
       "provenanceSubjectId": "model:facebook-vfusion3d",
       "outputTermsSubjectId": "generated-output:facebook-vfusion3d",
       "serviceTermsSubjectId": "service:local-vfusion3d",
+      "productionIdentity": {
+        "providerId": "local-vfusion3d",
+        "serviceRevision": "commit:0aeeaaca12806a10d7ba326992f84b0922f41188",
+        "modelRevision": "commit:0aeeaaca12806a10d7ba326992f84b0922f41188"
+      },
       "reason": "The pinned model is non-commercial and has conflicting CC-BY-NC version declarations; output and production service rights are unproven."
     }
   ]

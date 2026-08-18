@@ -1,7 +1,10 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { buildUnconfiguredProductionProviderStatus } from "../src/production-media-provider.js";
+import { validateMediaCandidateRejectionReadback, type MediaCandidateRejectionBinding } from "../src/media-candidate-rejection-readback.js";
+import type { MediaCandidateRejectionReceipt } from "../src/media-candidate-rejection.js";
 import { CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH, executeProductionProviderConfiguration, validateProductionProviderExecutionConfig, type ProductionProviderExecutionConfig } from "../src/production-provider-execution.js";
 import type { SignedMediaRequest } from "../src/media-router.js";
 import type { ProductionProviderPolicy, ProductionProviderReceipt } from "../src/production-media-provider.js";
@@ -15,6 +18,8 @@ let status = buildUnconfiguredProductionProviderStatus();
 let executionReceipt: ProductionProviderReceipt | undefined;
 let generatedAsset:{bytes:Uint8Array;mediaType:string;extension:string}|undefined;
 let executionEvidence:Awaited<ReturnType<typeof executeProductionProviderConfiguration>>["executionEvidence"]|undefined;
+let candidateRejectionBinding:MediaCandidateRejectionBinding|undefined;
+const directory = resolve("artifacts/media-generator");
 
 async function readJson<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, "utf8")) as T;
@@ -45,6 +50,28 @@ if (configPath) {
   if (!requestSecret || !providerCredential) {
     status = buildUnconfiguredProductionProviderStatus("configured production provider execution is NOT_EXERCISED because dedicated runtime credentials are absent");
   } else {
+    const candidatePath=resolve(directory,"media-candidate-rejection.json");
+    const candidateBytes=await readFile(candidatePath);
+    const candidateReceipt=await validateAgainstSchema<MediaCandidateRejectionReceipt>(JSON.parse(candidateBytes.toString("utf8")),"media-candidate-rejection.schema.json");
+    if(candidateReceipt.evidenceAdmission.trustedSha256==="ABSENT"||candidateReceipt.evidenceAdmission.trustedGitTree==="ABSENT")throw new Error("production candidate rejection is not externally admitted");
+    candidateRejectionBinding={
+      path:"media-candidate-rejection.json",
+      schema:candidateReceipt.schema,
+      sha256:createHash("sha256").update(candidateBytes).digest("hex"),
+      bytes:candidateBytes.byteLength,
+      sourceAdmissionSha256:candidateReceipt.evidenceAdmission.trustedSha256,
+      trustedGitTree:candidateReceipt.evidenceAdmission.trustedGitTree
+    };
+    const trustedRightsEvidenceSha256=process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256?.trim();
+    const trustedGitTree=process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE?.trim();
+    const candidateErrors=await validateMediaCandidateRejectionReadback({
+      root:process.cwd(),
+      binding:candidateRejectionBinding,
+      expectedGit:{...git,tree:execFileSync("git",["rev-parse",`${git.sha}^{tree}`],{encoding:"utf8"}).trim()},
+      ...(trustedRightsEvidenceSha256?{trustedRightsEvidenceSha256}:{}),
+      ...(trustedGitTree?{trustedGitTree}:{})
+    });
+    if(candidateErrors.length>0)throw new Error(`production candidate rejection evidence is invalid: ${candidateErrors.join("; ")}`);
     const configDirectory = dirname(absoluteConfigPath);
     const [signed, policy, canonicalRights, admissionPacket, admissionPublicKeyPem] = await Promise.all([
       readJson<SignedMediaRequest>(await resolveConfigFile(configDirectory, config.signedRequestPath)),
@@ -72,7 +99,6 @@ if (configPath) {
   }
 }
 
-const directory = resolve("artifacts/media-generator");
 const receiptPath = "artifacts/media-generator/production-provider-status.json";
 const outputPath = resolve(receiptPath);
 
@@ -81,6 +107,7 @@ let artifacts:undefined|{
   executionInput:{path:string;sha256:string;bytes:number};
   executionReceipt:{path:string;sha256:string;bytes:number};
   asset:{path:string;sha256:string;bytes:number;mediaType:string};
+  candidateRejection:MediaCandidateRejectionBinding;
 };
 if (executionReceipt) {
   await validateAgainstSchema(executionReceipt,"production-provider-receipt.schema.json");
@@ -103,7 +130,8 @@ if (executionReceipt) {
     if(assetSha256!==executionReceipt.asset.sha256||assetReadback.byteLength!==executionReceipt.asset.bytes)throw new Error("persisted production asset does not match execution receipt");
     if(executionInputSha256!==executionReceipt.executionInputSha256)throw new Error("persisted production execution input does not match execution receipt");
     status={...status,executionReceiptSha256:executionSha256,assetSha256,executedAt:executionEvidence.executedAt};
-    artifacts={executionInput:{path:"production-provider-execution-input.json",sha256:executionInputSha256,bytes:inputReadback.byteLength},executionReceipt:{path:"production-provider-execution-receipt.json",sha256:executionSha256,bytes:receiptReadback.byteLength},asset:{path:assetPathName,sha256:assetSha256,bytes:assetReadback.byteLength,mediaType:executionReceipt.asset.mediaType}};
+    if(!candidateRejectionBinding)throw new Error("PASS production provider execution lacks candidate rejection evidence");
+    artifacts={executionInput:{path:"production-provider-execution-input.json",sha256:executionInputSha256,bytes:inputReadback.byteLength},executionReceipt:{path:"production-provider-execution-receipt.json",sha256:executionSha256,bytes:receiptReadback.byteLength},asset:{path:assetPathName,sha256:assetSha256,bytes:assetReadback.byteLength,mediaType:executionReceipt.asset.mediaType},candidateRejection:candidateRejectionBinding};
   }
 }
 const receipt = {...status,...(artifacts?{artifacts}:{}),git};

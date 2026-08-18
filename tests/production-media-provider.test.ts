@@ -178,6 +178,31 @@ test("production provider is not called without explicit human, credential, and 
   assert.match(result.receipt.reason, /human admission|credentials|budget/i);
 });
 
+test("known non-ALLOW rights are denied before human admission or production transport",async()=>{
+  let calls=0;
+  const transport:ProductionProviderTransport={
+    identity:policy.identity,
+    async generate(){calls+=1;throw new Error("must not execute");}
+  };
+  const deniedSubjects=rightsReceipt.subjects.map((entry)=>{
+    if(entry.id===policy.rights.modelWeight.subjectId)return{...entry,state:"DENY" as const};
+    if(entry.id===policy.rights.generatedOutput.subjectId||entry.id===policy.rights.hostedService.subjectId)return{...entry,state:"UNKNOWN" as const};
+    return entry;
+  });
+  const deniedRights:RepositoryClearanceReceipt={
+    ...rightsReceipt,
+    subjects:deniedSubjects,
+    counts:{ALLOW:0,REVIEW_REQUIRED:0,DENY:1,UNKNOWN:2,NOT_DISTRIBUTED:0}
+  };
+  const result=await routeProductionMediaGeneration({signed:signed(),secret,policy,rightsReceipt:deniedRights,transport});
+  assert.equal(calls,0);
+  assert.equal(result.receipt.overall,"NOT_EXERCISED");
+  assert.equal(result.receipt.admissionState,"DENIED");
+  assert.match(result.receipt.reason,/model:fixture-model rights state is DENY/);
+  assert.match(result.receipt.reason,/generated-output:fixture-model rights state is UNKNOWN/);
+  assert.match(result.receipt.reason,/service:fixture-provider rights state is UNKNOWN/);
+});
+
 test("durable production admission satisfies its strict schema and exact digest bindings", async () => {
   const packet = admissionFor();
   await validateAgainstSchema(packet, "production-provider-admission.schema.json");

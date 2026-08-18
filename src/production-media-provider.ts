@@ -143,7 +143,7 @@ export interface ProductionProviderReceipt {
 }
 
 export interface ProductionProviderStatusReceipt {
-  schema: "website-design-compiler/production-provider-status/v2";
+  schema: "website-design-compiler/production-provider-status/v3";
   gate: "PRODUCTION_PROVIDER";
   overall: "PASS" | "FAIL" | "NOT_EXERCISED";
   admissionState: "ADMITTED" | "NEEDS_HUMAN_ADMIT" | "DENIED" | "REVOKED";
@@ -162,7 +162,7 @@ export interface ProductionProviderStatusReceipt {
 
 export function buildUnconfiguredProductionProviderStatus(reason?: string): ProductionProviderStatusReceipt {
   return {
-    schema: "website-design-compiler/production-provider-status/v2",
+    schema: "website-design-compiler/production-provider-status/v3",
     gate: "PRODUCTION_PROVIDER",
     overall: "NOT_EXERCISED",
     admissionState: "NEEDS_HUMAN_ADMIT",
@@ -191,7 +191,7 @@ export function buildConfiguredProductionProviderStatus(args: {
     kind: args.receipt.provider.kind
   };
   return {
-    schema: "website-design-compiler/production-provider-status/v2",
+    schema: "website-design-compiler/production-provider-status/v3",
     gate: "PRODUCTION_PROVIDER",
     overall: args.receipt.overall,
     admissionState: args.receipt.admissionState,
@@ -404,6 +404,36 @@ export function validateProductionProviderPolicy(policy: ProductionProviderPolic
   return errors;
 }
 
+function productionRightsDenialReasons(
+  policy: ProductionProviderPolicy,
+  receipt: RepositoryClearanceReceipt
+): string[] {
+  const reasons: string[] = [];
+  const bindings = [
+    { label: "model-weight", kind: "model", ...policy.rights.modelWeight },
+    { label: "generated-output", kind: "generated-output", ...policy.rights.generatedOutput },
+    { label: "hosted-service", kind: "service", ...policy.rights.hostedService }
+  ] as const;
+  for (const binding of bindings) {
+    const subject = receipt.subjects.find((entry) => entry.id === binding.subjectId);
+    if (!subject) {
+      reasons.push(`${binding.label} rights subject ${binding.subjectId} is ABSENT`);
+      continue;
+    }
+    if (subject.kind !== binding.kind || subject.versionOrIdentity !== binding.expectedIdentity) {
+      reasons.push(`${binding.label} rights subject ${binding.subjectId} does not match the admitted identity`);
+    }
+    if (!Array.isArray(subject.geographicRestrictions) || !Array.isArray(subject.usageRestrictions)) {
+      reasons.push(`${binding.subjectId} geographic and usage restriction declarations are ABSENT`);
+    }
+    if (subject.state !== "ALLOW") {
+      reasons.push(`${binding.subjectId} rights state is ${subject.state}`);
+    }
+  }
+  if (receipt.overall !== "PASS") reasons.push("repository-wide rights clearance is not PASS");
+  return reasons;
+}
+
 export async function routeProductionMediaGeneration(args: {
   signed: SignedMediaRequest;
   secret: string;
@@ -531,6 +561,28 @@ export async function routeProductionMediaGeneration(args: {
     };
   }
 
+  if (!verifyMediaRequest(args.signed, args.secret)) {
+    return {
+      receipt: {
+        ...base,
+        overall: "FAIL",
+        admissionState: "DENIED",
+        reason: "production media request authentication failed"
+      }
+    };
+  }
+
+  const rightsDenialReasons = productionRightsDenialReasons(args.policy, args.rightsReceipt);
+  if (rightsDenialReasons.length > 0) {
+    return {
+      receipt: {
+        ...base,
+        admissionState: "DENIED",
+        reason: rightsDenialReasons.join("; ")
+      }
+    };
+  }
+
   const admission = args.executionAdmission;
   if (!admission) {
     return { receipt: base };
@@ -559,17 +611,6 @@ export async function routeProductionMediaGeneration(args: {
     };
   }
 
-  if (!verifyMediaRequest(args.signed, args.secret)) {
-    return {
-      receipt: {
-        ...base,
-        overall: "FAIL",
-        admissionState: "DENIED",
-        reason: "production media request authentication failed"
-      }
-    };
-  }
-
   const revocation = args.policy.revocations.find((entry) =>
     entry.providerId === args.policy.identity.providerId &&
     entry.modelId === args.policy.identity.modelId &&
@@ -586,60 +627,6 @@ export async function routeProductionMediaGeneration(args: {
           effectiveAt: revocation.effectiveAt,
           reasonSha256: sha256(revocation.reason)
         }
-      }
-    };
-  }
-
-  const rightsBindings = [
-    { label: "model-weight", kind: "model", ...args.policy.rights.modelWeight },
-    { label: "generated-output", kind: "generated-output", ...args.policy.rights.generatedOutput },
-    { label: "hosted-service", kind: "service", ...args.policy.rights.hostedService }
-  ] as const;
-  for (const binding of rightsBindings) {
-    const subject = args.rightsReceipt.subjects.find((entry) => entry.id === binding.subjectId);
-    if (!subject) {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.label} rights subject ${binding.subjectId} is ABSENT`
-        }
-      };
-    }
-    if (subject.kind !== binding.kind || subject.versionOrIdentity !== binding.expectedIdentity) {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.label} rights subject ${binding.subjectId} does not match the admitted identity`
-        }
-      };
-    }
-    if (!Array.isArray(subject.geographicRestrictions) || !Array.isArray(subject.usageRestrictions)) {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.subjectId} geographic and usage restriction declarations are ABSENT`
-        }
-      };
-    }
-    if (subject.state !== "ALLOW") {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.subjectId} rights state is ${subject.state}`
-        }
-      };
-    }
-  }
-  if (args.rightsReceipt.overall !== "PASS") {
-    return {
-      receipt: {
-        ...base,
-        admissionState: "DENIED",
-        reason: "repository-wide rights clearance is not PASS"
       }
     };
   }

@@ -16,6 +16,7 @@ import { buildGraphics3DPlan } from "./graphics-3d.js";
 import { buildMotionDirectorPlan } from "./motion-director.js";
 import { GENERATED_PAGE_CANONICAL_VIEWPORTS, validateTrustedGeneratedPageBrowserAdmission } from "./generated-page-browser-admission.js";
 import { validateProductionMediaAssetContent } from "./media-asset-validation.js";
+import { validateMediaCandidateRejectionReadback, type MediaCandidateRejectionBinding } from "./media-candidate-rejection-readback.js";
 import { canonicalMediaValue, sha256 as sha256Value } from "./media-router.js";
 import { assertPngEvidence } from "./png-evidence.js";
 import { buildReferenceManifest } from "./reference-intelligence.js";
@@ -63,7 +64,7 @@ const JSON_SCHEMA_FILES: Record<string, string> = {
   "website-design-compiler/generated-page-visual-observation/v1": "generated-page-visual-observation.schema.json",
   "website-design-compiler/live-reference-receipt/v2": "live-reference-receipt.schema.json",
   "website-design-compiler/webgpu-runtime-receipt/v1": "webgpu-runtime-receipt.schema.json",
-  "website-design-compiler/production-provider-status/v2": "production-provider-status.schema.json",
+  "website-design-compiler/production-provider-status/v3": "production-provider-status.schema.json",
   "website-design-compiler/production-provider-execution-evidence/v1": "production-provider-execution-evidence.schema.json",
   "website-design-compiler/production-provider-receipt/v2": "production-provider-receipt.schema.json",
   "website-design-compiler/design-quality-eval-receipt/v3": "design-quality-eval-receipt-v3.schema.json"
@@ -72,7 +73,7 @@ const jsonSchemaValidators = new Map<string, ValidateFunction>();
 const READBACK_REQUIRED_SCHEMAS = new Set([
   "website-design-compiler/runtime-receipt/v1",
   "website-design-compiler/design-quality-eval-receipt/v3",
-  "website-design-compiler/production-provider-status/v2"
+  "website-design-compiler/production-provider-status/v3"
 ]);
 const RUNTIME_ARTIFACT_SPECS: Record<string, { path: string; schema: string | null }> = {
   "reference-intelligence": { path: "reference-intelligence/reference-manifest.json", schema: "website-design-compiler/reference-manifest/v1" },
@@ -105,7 +106,7 @@ export const RELEASE_CAPABILITY_SPECS = {
   liveReference: { path: "artifacts/live-reference/live-reference-receipt.json", schema: "website-design-compiler/live-reference-receipt/v2" },
   webgpu: { path: "artifacts/graphics-3d/webgpu-receipt.json", schema: "website-design-compiler/webgpu-runtime-receipt/v1" },
   repositoryRights: { path: RELEASE_CHILD_SPECS.rights.path, schema: RELEASE_CHILD_SPECS.rights.schema },
-  productionProvider: { path: "artifacts/media-generator/production-provider-status.json", schema: "website-design-compiler/production-provider-status/v2" },
+  productionProvider: { path: "artifacts/media-generator/production-provider-status.json", schema: "website-design-compiler/production-provider-status/v3" },
   premiumQuality: { path: "artifacts/v3/design-quality/design-quality-eval-receipt.json", schema: "website-design-compiler/design-quality-eval-receipt/v3" }
 } as const;
 
@@ -566,7 +567,7 @@ function validateProductionProviderStatus(value: JsonRecord): string[] {
     if(typeof value.executedAt!=="string"||Number.isNaN(Date.parse(value.executedAt))||new Date(value.executedAt).toISOString()!==value.executedAt)errors.push("PASS provider status lacks an exact execution timestamp");
     const artifacts=isRecord(value.artifacts)?value.artifacts:null;
     if(!artifacts)errors.push("PASS provider status lacks persisted artifact bindings");
-    else for(const key of ["executionInput","executionReceipt","asset"] as const)if(!isRecord(artifacts[key]))errors.push(`PASS provider status lacks ${key} artifact binding`);
+    else for(const key of ["executionInput","executionReceipt","asset","candidateRejection"] as const)if(!isRecord(artifacts[key]))errors.push(`PASS provider status lacks ${key} artifact binding`);
   }else if(value.productionReleaseEligible!==false)errors.push("non-PASS provider status cannot be release eligible");
   requireString(value.reason, "reason", errors);
   return errors;
@@ -621,7 +622,7 @@ const STRUCTURAL_VALIDATORS: Record<string, (value: JsonRecord) => string[]> = {
   "website-design-compiler/release-gate-receipt/v2": validateCoreReceipt,
   "website-design-compiler/live-reference-receipt/v2": validateLiveReferenceReceipt,
   "website-design-compiler/webgpu-runtime-receipt/v1": validateWebgpuReceipt,
-  "website-design-compiler/production-provider-status/v2": validateProductionProviderStatus,
+  "website-design-compiler/production-provider-status/v3": validateProductionProviderStatus,
   "website-design-compiler/design-quality-eval-receipt/v3": validatePremiumQualityReceipt
 };
 
@@ -748,13 +749,14 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
   return errors;
 }
 
-async function validateProductionProviderArtifacts(root:string,receipt:JsonRecord):Promise<string[]>{
+async function validateProductionProviderArtifacts(root:string,receipt:JsonRecord,expectedGit?:{sha:string;ref:string;tree?:string}):Promise<string[]>{
   if(receipt.overall!=="PASS")return[];
   const errors:string[]=[];
   const artifacts=isRecord(receipt.artifacts)?receipt.artifacts:null;
   const executionInput=artifacts&&isRecord(artifacts.executionInput)?artifacts.executionInput:null;
   const execution=artifacts&&isRecord(artifacts.executionReceipt)?artifacts.executionReceipt:null;
   const asset=artifacts&&isRecord(artifacts.asset)?artifacts.asset:null;
+  const candidateRejection=artifacts&&isRecord(artifacts.candidateRejection)?artifacts.candidateRejection:null;
   const readBound=async(binding:JsonRecord|null,label:string):Promise<Buffer|null>=>{
     if(!binding||typeof binding.path!=="string"||!/^[A-Za-z0-9._-]+$/.test(binding.path)){errors.push(`${label} path is unsafe`);return null;}
     const path=binding.path;
@@ -800,6 +802,17 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
 
   const git=isRecord(input.git)?input.git:null;const statusGit=isRecord(receipt.git)?receipt.git:null;const rightsGit=isRecord(rights.git)?rights.git:null;
   if(!git||!statusGit||!rightsGit||!jsonEqual(git,statusGit)||!jsonEqual(rightsGit,statusGit))errors.push("provider input, rights, and status do not bind the same Git subject");
+  if(candidateRejection&&typeof statusGit?.sha==="string"&&typeof statusGit.ref==="string"){
+    const trustedRightsEvidenceSha256=process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256?.trim();
+    const trustedGitTree=process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE?.trim();
+    errors.push(...await validateMediaCandidateRejectionReadback({
+      root,
+      binding:candidateRejection as unknown as MediaCandidateRejectionBinding,
+      expectedGit:{sha:statusGit.sha,ref:statusGit.ref,...(expectedGit?.tree?{tree:expectedGit.tree}:{})},
+      ...(trustedRightsEvidenceSha256?{trustedRightsEvidenceSha256}:{}),
+      ...(trustedGitTree?{trustedGitTree}:{})
+    }));
+  }else errors.push("production provider status lacks a candidate rejection binding");
   if(input.executedAt!==receipt.executedAt)errors.push("provider status does not bind the execution timestamp");
   if(executed.executionInputSha256!==sha256Value(inputBytes)||executionInput?.sha256!==executed.executionInputSha256)errors.push("execution receipt does not bind the exact execution input bytes");
   if(executed.overall!=="PASS"||executed.admissionState!=="ADMITTED"||executed.productionReleaseEligible!==true)errors.push("production execution receipt is not an admitted PASS");
@@ -1100,7 +1113,7 @@ export async function readBoundReleaseEvidence(
   root: string,
   path: string,
   expectedSchema: string,
-  expectedGit: { sha: string; ref: string }
+  expectedGit: { sha: string; ref: string; tree?: string }
 ): Promise<ReleaseEvidenceFileBinding> {
   try {
     const bytes = await readFile(join(root, path));
@@ -1114,8 +1127,8 @@ export async function readBoundReleaseEvidence(
       const premiumArtifactErrors = expectedSchema === "website-design-compiler/design-quality-eval-receipt/v3" && isRecord(receipt)
         ? await validatePremiumArtifacts(root, receipt)
         : [];
-      const providerArtifactErrors=expectedSchema==="website-design-compiler/production-provider-status/v2"&&isRecord(receipt)
-        ?await validateProductionProviderArtifacts(root,receipt)
+      const providerArtifactErrors=expectedSchema==="website-design-compiler/production-provider-status/v3"&&isRecord(receipt)
+        ?await validateProductionProviderArtifacts(root,receipt,expectedGit)
         :[];
       const errors = [...binding.errors, ...runtimeArtifactErrors, ...premiumArtifactErrors,...providerArtifactErrors];
       return { ...binding, state: errors.length === 0 ? binding.state : "FAIL", errors, path, sha256 };
@@ -1164,7 +1177,7 @@ function capabilityEvidenceState(value: unknown, capability: Capability): Capabi
   throw new Error(`${capability} receipt has invalid overall state`);
 }
 
-export async function readCapabilityEvidence(root: string, capability: Capability): Promise<CapabilityEvidence> {
+export async function readCapabilityEvidence(root: string, capability: Capability, expectedGit?:{sha:string;ref:string;tree?:string}): Promise<CapabilityEvidence> {
   const contract = CAPABILITY_RECEIPT_CONTRACTS[capability];
   let bytes: Buffer;
   try {
@@ -1186,7 +1199,7 @@ export async function readCapabilityEvidence(root: string, capability: Capabilit
   if(typeof git.ref!=="string"||!git.ref.startsWith("refs/"))throw new Error(`${capability} receipt has no exact git ref`);
   const structural=bindReleaseEvidenceStructure(receipt,contract.identity,{sha:git.sha,ref:git.ref});
   const artifactErrors=capability==="productionProvider"
-    ?await validateProductionProviderArtifacts(root,receipt)
+    ?await validateProductionProviderArtifacts(root,receipt,expectedGit)
     :capability==="premiumQuality"
       ?await validatePremiumArtifacts(root,receipt)
       :[];

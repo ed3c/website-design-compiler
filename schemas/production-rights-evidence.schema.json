@@ -5,18 +5,19 @@
   "additionalProperties": false,
   "required": ["schema", "subjects"],
   "properties": {
-    "schema": { "const": "website-design-compiler/production-rights-evidence/v1" },
+    "schema": { "const": "website-design-compiler/production-rights-evidence/v2" },
     "subjects": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "kind", "name", "versionOrIdentity", "licenseExpression", "evidence", "attributionRequired", "distributed", "geographicRestrictions", "usageRestrictions"],
+        "required": ["id", "kind", "name", "sourceRevision", "versionOrIdentity", "licenseExpression", "evidence", "attributionRequired", "distributed", "geographicRestrictions", "usageRestrictions"],
         "properties": {
           "id": { "type": "string", "pattern": "^(model|generated-output|service):[A-Za-z0-9._:@/+,-]+$" },
           "kind": { "enum": ["model", "generated-output", "service"] },
           "name": { "type": "string", "minLength": 1 },
+          "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
           "versionOrIdentity": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$" },
           "licenseExpression": { "type": "string", "minLength": 1 },
           "evidence": {

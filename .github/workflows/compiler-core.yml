@@ -69,6 +69,9 @@ jobs:
       - name: Verify pinned external design skill registry
         run: pnpm external-skills:receipt
       - name: Verify deterministic authenticated media worker
+        env:
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: pnpm media:fixture
       - name: Materialize protected production provider inputs
         id: production-provider-config
@@ -81,6 +84,8 @@ jobs:
           WDC_PRODUCTION_PROVIDER_CONFIG: ${{ steps.production-provider-config.outputs.config_path }}
           WDC_PRODUCTION_REQUEST_SECRET: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_REQUEST_SECRET || '' }}
           WDC_PRODUCTION_PROVIDER_CREDENTIAL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_PROVIDER_CREDENTIAL || '' }}
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: pnpm media:production-status
       - name: Verify governed Puck authoring projection
         run: pnpm authoring:receipt
@@ -107,6 +112,8 @@ jobs:
           WDC_STORYBOOK_VISUAL_GOLDENS_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_GOLDENS_SHA256 }}
           WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256 }}
           WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64: ${{ secrets.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64 }}
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: |
           set +e
           pnpm storybook:build
@@ -174,6 +181,8 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           WDC_RELEASE_PROFILE: COMMERCIAL_PRODUCTION
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: pnpm release:v2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         id: compiler-core-evidence

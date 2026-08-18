@@ -351,10 +351,11 @@ test("production provider rights enter the canonical scan as human-review-requir
       { id: "service:provider", kind: "service", versionOrIdentity: "provider@date:2026-08-19" }
     ] as const;
     await writeFile(join(root, "rights-production-evidence.json"), `${JSON.stringify({
-      schema: "website-design-compiler/production-rights-evidence/v1",
+      schema: "website-design-compiler/production-rights-evidence/v2",
       subjects: identities.map((identity) => ({
         ...identity,
         name: identity.id,
+        sourceRevision: "c".repeat(40),
         licenseExpression: "Provider commercial terms",
         evidence: [{ url: "https://provider.example/terms", sha256: "b".repeat(64), bytes: 128, verifiedAt: "2026-08-19T00:00:00.000Z" }],
         attributionRequired: false,
@@ -395,7 +396,7 @@ test("malformed production rights evidence fails the canonical receipt", async (
     await writeFile(pnpmPath, "#!/bin/sh\nprintf '%s\\n' '[]'\n", "utf8");
     await chmod(pnpmPath, 0o755);
     process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
-    await writeFile(join(root, "rights-production-evidence.json"), JSON.stringify({ schema: "website-design-compiler/production-rights-evidence/v1", subjects: [{ kind: "model" }] }), "utf8");
+    await writeFile(join(root, "rights-production-evidence.json"), JSON.stringify({ schema: "website-design-compiler/production-rights-evidence/v2", subjects: [{ kind: "model" }] }), "utf8");
 
     const receipt = await scanRepositoryRights(root, [], new Date("2026-08-19T01:00:00.000Z"));
     assert.equal(receipt.overall, "FAIL");

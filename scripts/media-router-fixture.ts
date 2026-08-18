@@ -49,7 +49,7 @@ const rejection = await buildMediaCandidateRejectionReceipt(root, {
   sha: process.env.GITHUB_SHA ?? execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim(),
   ref: process.env.GITHUB_REF ?? execFileSync("git", ["symbolic-ref", "--quiet", "HEAD"], { encoding: "utf8" }).trim()
-});
+},new Date(),process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256?.trim()||undefined,process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE?.trim()||undefined);
 await writeFile(join(outputDirectory, "media-candidate-rejection.json"), `${JSON.stringify(rejection, null, 2)}\n`, "utf8");
-console.log(JSON.stringify({ overall: result.receipt.overall, assetSha256: result.receipt.asset?.sha256, bytes: result.receipt.asset?.bytes, rejectedCandidates: rejection.candidates.map((candidate) => candidate.modelId) }));
+console.log(JSON.stringify({ overall: result.receipt.overall, assetSha256: result.receipt.asset?.sha256, bytes: result.receipt.asset?.bytes, candidateRejection:rejection.overall,rejectedCandidates: rejection.candidates.map((candidate) => candidate.modelId) }));
 if (result.receipt.overall !== "PASS") process.exitCode = 1;

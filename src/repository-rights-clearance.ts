@@ -40,7 +40,7 @@ interface PackageEvidenceOverride { license: string; source: string; }
 export interface AssetProvenanceEntry { path: string; sha256: string; licenseExpression: string; provenance: { kind: "AUTHORED" | "LICENSED" | "PUBLIC_DOMAIN"; source: string }; attributionRequired: boolean; }
 export interface AssetProvenanceManifest { schema: "website-design-compiler/asset-provenance/v1"; assets: AssetProvenanceEntry[]; }
 interface ProductionRightsEvidenceSource { url: string; sha256: string; bytes: number; verifiedAt: string; }
-interface ProductionRightsEvidenceSubject { id: string; kind: "model" | "generated-output" | "service"; name: string; versionOrIdentity: string; licenseExpression: string; evidence: ProductionRightsEvidenceSource[]; attributionRequired: boolean; distributed: boolean; geographicRestrictions: string[]; usageRestrictions: string[]; }
+interface ProductionRightsEvidenceSubject { id: string; kind: "model" | "generated-output" | "service"; name: string; sourceRevision: string; versionOrIdentity: string; licenseExpression: string; evidence: ProductionRightsEvidenceSource[]; attributionRequired: boolean; distributed: boolean; geographicRestrictions: string[]; usageRestrictions: string[]; }
 interface PackageMetadataScan { index: Map<string, { license: string | null; path: string }>; failuresByName: Map<string, string[]>; globalFailures: string[]; }
 type ExactPackageMetadata = { license: string | null; path: string } | { diagnostic: string };
 
@@ -348,18 +348,18 @@ async function loadProductionRightsEvidence(root: string): Promise<{ subjects: R
     if (errorCode(error) === "ENOENT") return { subjects: [] };
     return { subjects: [], diagnostic: `diagnostic:production-rights:${errorCode(error) === "UNKNOWN" ? "INVALID_JSON" : errorCode(error)}` };
   }
-  if (!isRecord(value) || !exactKeys(value, ["schema", "subjects"]) || value.schema !== "website-design-compiler/production-rights-evidence/v1" || !Array.isArray(value.subjects) || value.subjects.length === 0) {
+  if (!isRecord(value) || !exactKeys(value, ["schema", "subjects"]) || value.schema !== "website-design-compiler/production-rights-evidence/v2" || !Array.isArray(value.subjects) || value.subjects.length === 0) {
     return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
   }
   const subjects: RightsSubject[] = [];
   const ids = new Set<string>();
   for (const candidate of value.subjects) {
-    if (!isRecord(candidate) || !exactKeys(candidate, ["id", "kind", "name", "versionOrIdentity", "licenseExpression", "evidence", "attributionRequired", "distributed", "geographicRestrictions", "usageRestrictions"])) {
+    if (!isRecord(candidate) || !exactKeys(candidate, ["id", "kind", "name", "sourceRevision", "versionOrIdentity", "licenseExpression", "evidence", "attributionRequired", "distributed", "geographicRestrictions", "usageRestrictions"])) {
       return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
     }
     const subject = candidate as unknown as ProductionRightsEvidenceSubject;
     const expectedPrefix = `${subject.kind}:`;
-    if (!["model", "generated-output", "service"].includes(subject.kind) || typeof subject.id !== "string" || !subject.id.startsWith(expectedPrefix) || !/^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$/.test(subject.id) || ids.has(subject.id) || typeof subject.name !== "string" || subject.name.trim().length === 0 || typeof subject.versionOrIdentity !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$/.test(subject.versionOrIdentity) || typeof subject.licenseExpression !== "string" || subject.licenseExpression.trim().length === 0 || typeof subject.attributionRequired !== "boolean" || typeof subject.distributed !== "boolean" || !stringArray(subject.geographicRestrictions) || !stringArray(subject.usageRestrictions) || !Array.isArray(subject.evidence) || subject.evidence.length === 0) {
+    if (!["model", "generated-output", "service"].includes(subject.kind) || typeof subject.id !== "string" || !subject.id.startsWith(expectedPrefix) || !/^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$/.test(subject.id) || ids.has(subject.id) || typeof subject.name !== "string" || subject.name.trim().length === 0 || typeof subject.sourceRevision !== "string" || !/^[a-f0-9]{40}$/.test(subject.sourceRevision) || typeof subject.versionOrIdentity !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$/.test(subject.versionOrIdentity) || typeof subject.licenseExpression !== "string" || subject.licenseExpression.trim().length === 0 || typeof subject.attributionRequired !== "boolean" || typeof subject.distributed !== "boolean" || !stringArray(subject.geographicRestrictions) || !stringArray(subject.usageRestrictions) || !Array.isArray(subject.evidence) || subject.evidence.length === 0) {
       return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
     }
     const evidence: string[] = ["rights-production-evidence.json"];

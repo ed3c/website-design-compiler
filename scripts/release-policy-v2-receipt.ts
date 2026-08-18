@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
@@ -11,11 +12,13 @@ const premiumProfile=JSON.parse(premiumProfileBytes.toString("utf8")) as {schema
 const profile=(process.env.WDC_RELEASE_PROFILE??"CORE") as ReleaseProfile;
 if(!(profile in policy.profiles))throw new Error(`unknown WDC_RELEASE_PROFILE ${profile}`);
 const git={sha:process.env.GITHUB_SHA??"",ref:process.env.GITHUB_REF??"UNBOUND",event:process.env.GITHUB_EVENT_NAME??"UNBOUND"};
+let gitTree="ABSENT";
+try{gitTree=execFileSync("git",["rev-parse",`${git.sha}^{tree}`],{cwd:root,encoding:"utf8"}).trim();}catch{}
 
 const evidence={} as Record<Capability,CapabilityEvidence>;
 const evidenceValidationErrors:Partial<Record<Capability,string[]>>={};
 for(const capability of CAPABILITIES){
-  const observed=await readCapabilityEvidence(root,capability);
+  const observed=await readCapabilityEvidence(root,capability,{sha:git.sha,ref:git.ref,tree:gitTree});
   if(capability!=="core"){evidence[capability]=observed;continue;}
   const verified=await verifyCoreReleaseEvidence(root,{sha:git.sha,ref:git.ref});
   if(verified.errors.length>0)evidenceValidationErrors.core=verified.errors;
