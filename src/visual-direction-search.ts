@@ -153,11 +153,14 @@ const DIVERSITY_THRESHOLD = 60;
 const ORIGINALITY_THRESHOLD = 70;
 export const REFERENCE_BROWSER_TRUST_SOURCE_PATHS = [
   ".github/workflows/compiler-core.yml",
+  "package.json",
   "schemas/observed-visual-fingerprint-v3.schema.json",
   "schemas/reference-browser-admission-v1.schema.json",
   "schemas/reference-browser-receipt.schema.json",
   "scripts/reference-browser-fixture.ts",
+  "scripts/visual-direction-benchmark-receipt.ts",
   "src/reference-browser-observation-fixture.ts",
+  "src/validate.ts",
   "src/visual-direction-search.ts"
 ] as const;
 

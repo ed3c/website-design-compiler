@@ -218,6 +218,17 @@ test("caller-authored measurements and fake screenshot bytes cannot promote orig
   );
 });
 
+test("the external browser admission binds every executable producer and verifier entrypoint", () => {
+  const trustSources = new Set<string>(REFERENCE_BROWSER_TRUST_SOURCE_PATHS);
+  for (const path of [
+    "package.json",
+    "scripts/visual-direction-benchmark-receipt.ts",
+    "src/validate.ts"
+  ]) {
+    assert.ok(trustSources.has(path), `${path} is outside the browser trust source aggregate`);
+  }
+});
+
 test("an externally admitted receipt still cannot promote an incomplete PNG header", async () => {
   await withVisualEvidence(null, async (compilerInput, root) => {
     await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /truncated PNG chunk|complete PNG browser screenshot/);

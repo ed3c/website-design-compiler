@@ -175,6 +175,9 @@ test("a production-graph package with an explicit absent release-target path is 
   const previousPath = process.env.PATH;
   try {
     await mkdir(join(root, "node_modules/.pnpm"), { recursive: true });
+    const stale = join(root, "node_modules/.pnpm/platform-only@1.0.0_stale/node_modules/platform-only");
+    await mkdir(stale, { recursive: true });
+    await writeFile(join(stale, "package.json"), `${JSON.stringify({ name: "platform-only", version: "1.0.0", license: "MIT" })}\n`, "utf8");
     await mkdir(binDirectory);
     const missingTarget = join(root, "node_modules/.pnpm/platform-only@1.0.0/node_modules/platform-only");
     const graph = JSON.stringify([{ dependencies: { "platform-only": { version: "1.0.0", path: missingTarget } } }]);

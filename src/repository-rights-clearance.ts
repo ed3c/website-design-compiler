@@ -283,7 +283,7 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
     const metadataFailures = metadata.failuresByName.get(name) ?? metadata.globalFailures;
     const installPathTraversal = installPath ? relative(root, installPath) : null;
     const installPathIsInsideRoot = installPathTraversal !== null && installPathTraversal.split(/[\\/]/)[0] !== ".." && !isAbsolute(installPathTraversal);
-    if (!installed && installPath && installPathIsInsideRoot && !existsSync(installPath)) {
+    if (installPath && installPathIsInsideRoot && !existsSync(installPath)) {
       return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: override?.license ?? null, state: "NOT_DISTRIBUTED" as const, evidence: [`pnpm production graph:${id}`, "release target package path is absent"], attributionRequired: false, distributed: false };
     }
     if (!installed && installPath && !installPathIsInsideRoot) {
