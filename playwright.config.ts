@@ -5,6 +5,9 @@ if(!Number.isInteger(browserPort)||browserPort<1024||browserPort>65535)throw new
 
 export default defineConfig({
   testDir: "./tests/browser",
+  // Performance and GPU evidence must not compete for the same runner CPU/GPU.
+  // Parallel functional tests made the measured INP depend on unrelated workers.
+  workers: 1,
   outputDir: "artifacts/browser-qa/test-results",
   reporter: [["json", { outputFile: "artifacts/browser-qa/playwright-report.json" }], ["line"]],
   retries: 0,
