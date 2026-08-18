@@ -1,8 +1,17 @@
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { promisify } from "node:util";
 import { collectBrowserProjectResults } from "../src/browser-qa.js";
+import {
+  hashScreenshotSet,
+  validateIndependentVisualReview,
+  type IndependentVisualReview
+} from "../src/storybook-visual-review.js";
 import { validateAgainstSchema } from "../src/validate.js";
+
+const execFileAsync = promisify(execFile);
 
 const root = join(process.cwd(), "artifacts", "storybook");
 const uiDirectory = join(process.cwd(), "apps", "site", "components", "ui");
@@ -18,7 +27,10 @@ type GoldenManifest = {
   schema: "website-design-compiler/storybook-visual-goldens/v3";
   source: {
     kind: "agent-visual-review";
+    subjectCommit: string;
+    subjectTree: string;
     sourceFilesSha256: string;
+    screenshotSetSha256: string;
     reviewReceiptSha256: string;
     node: string;
     playwright: string;
@@ -26,13 +38,6 @@ type GoldenManifest = {
     projects: string[];
   };
   screenshots: Record<string, string>;
-};
-
-type VisualReview = {
-  schema: "website-design-compiler/storybook-visual-review/v1";
-  sourceFilesSha256: string;
-  reviewer: { kind: "agent" | "human"; identity: string };
-  screenshots: Array<{ name: string; sha256: string; verdict: "PASS" | "FAIL"; observations: string[] }>;
 };
 
 type SectionProjection = { kind: string; storyId: string };
@@ -150,7 +155,7 @@ const missingSectionScreenshots = sectionProjections.flatMap((projection) =>
 const staticBuild = files.some((path) => path.endsWith(join("static", "index.html")));
 
 let golden: GoldenManifest | null = null;
-let review: VisualReview | null = null;
+let review: IndependentVisualReview | null = null;
 try {
   const parsed = JSON.parse(await readFile(goldenPath, "utf8")) as GoldenManifest;
   await validateAgainstSchema(parsed, "storybook-visual-goldens-v3.schema.json");
@@ -159,9 +164,9 @@ try {
   diagnostics.push(`cannot load visual golden manifest: ${error instanceof Error ? error.message : String(error)}`);
 }
 try {
-  const parsed = JSON.parse(await readFile(reviewPath, "utf8")) as VisualReview;
-  await validateAgainstSchema(parsed, "storybook-visual-review-v1.schema.json");
-  if (parsed.schema === "website-design-compiler/storybook-visual-review/v1") review = parsed;
+  const parsed = JSON.parse(await readFile(reviewPath, "utf8")) as IndependentVisualReview;
+  await validateAgainstSchema(parsed, "storybook-visual-review-v2.schema.json");
+  if (parsed.schema === "website-design-compiler/storybook-visual-review/v2") review = parsed;
 } catch (error) {
   diagnostics.push(`cannot load visual review receipt: ${error instanceof Error ? error.message : String(error)}`);
 }
@@ -176,6 +181,7 @@ const visualMismatches = expectedNames
   .filter((name) => name in actualHashes && actualHashes[name] !== golden?.screenshots[name])
   .map((name) => ({ name, expected: golden?.screenshots[name] ?? null, actual: actualHashes[name] ?? null }));
 const sourceFilesSha256 = await reviewedSourceSha256();
+const screenshotSetSha256 = hashScreenshotSet(actualHashes);
 const reviewReceiptSha256 = review ? await sha256(reviewPath) : null;
 const duplicateVisualReviews = duplicateValues((review?.screenshots ?? []).map((entry) => entry.name));
 const reviewedByName = new Map((review?.screenshots ?? []).map((entry) => [entry.name, entry]));
@@ -185,10 +191,33 @@ const failedVisualReviews = [...reviewedByName.values()]
   .filter((entry) => entry.verdict !== "PASS" || entry.observations.length === 0 || actualHashes[entry.name] !== entry.sha256)
   .map((entry) => entry.name)
   .sort();
+const independentReviewDiagnostics: string[] = [];
+let reviewSubjectTree: string | null = null;
+let reviewSubjectIsAncestor = false;
+if (review) {
+  try {
+    const result = await execFileAsync("git", ["rev-parse", "--verify", `${review.subject.commit}^{tree}`], { cwd: process.cwd() });
+    reviewSubjectTree = result.stdout.trim();
+    if (reviewSubjectTree !== review.subject.tree) independentReviewDiagnostics.push("review subject tree does not match Git");
+    await execFileAsync("git", ["merge-base", "--is-ancestor", review.subject.commit, "HEAD"], { cwd: process.cwd() });
+    reviewSubjectIsAncestor = true;
+  } catch (error) {
+    independentReviewDiagnostics.push(`review subject is not a verifiable ancestor: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!golden) independentReviewDiagnostics.push("visual golden manifest is absent");
+  else independentReviewDiagnostics.push(...validateIndependentVisualReview(review, {
+    subjectCommit: golden.source.subjectCommit,
+    subjectTree: golden.source.subjectTree,
+    sourceFilesSha256,
+    screenshotHashes: actualHashes
+  }));
+}
 const visualReviewPass = golden !== null && review !== null &&
   golden.source.sourceFilesSha256 === sourceFilesSha256 &&
-  review.sourceFilesSha256 === sourceFilesSha256 &&
+  golden.source.screenshotSetSha256 === screenshotSetSha256 &&
+  golden.source.screenshotSetSha256 === hashScreenshotSet(golden.screenshots) &&
   golden.source.reviewReceiptSha256 === reviewReceiptSha256 &&
+  reviewSubjectIsAncestor && independentReviewDiagnostics.length === 0 &&
   duplicateScreenshotNames.length === 0 && duplicateVisualReviews.length === 0 &&
   missingVisualReviews.length === 0 && unexpectedVisualReviews.length === 0 && failedVisualReviews.length === 0;
 const visualRegressionPass = golden !== null && visualReviewPass && missingGoldenScreenshots.length === 0 && unexpectedScreenshots.length === 0 && visualMismatches.length === 0;
@@ -225,6 +254,7 @@ const receipt = {
   duplicateScreenshotNames,
   reviewedSourceRoots,
   sourceFilesSha256,
+  screenshotSetSha256,
   diagnostics,
   richSections: {
     expectedCount: sectionProjections.length,
@@ -233,8 +263,12 @@ const receipt = {
   },
   visualRegression: visualRegressionPass ? "PASS" : "FAIL",
   visualReview: review ? {
+    subject: review.subject,
     reviewer: review.reviewer,
     reviewReceiptSha256,
+    reviewSubjectTree,
+    reviewSubjectIsAncestor,
+    independentReviewDiagnostics,
     expectedCount: actualNames.length,
     reviewedCount: review.screenshots.length,
     missingVisualReviews,

@@ -9,10 +9,13 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "sourceFilesSha256", "reviewReceiptSha256", "node", "playwright", "browser", "projects"],
+      "required": ["kind", "subjectCommit", "subjectTree", "sourceFilesSha256", "screenshotSetSha256", "reviewReceiptSha256", "node", "playwright", "browser", "projects"],
       "properties": {
         "kind": { "const": "agent-visual-review" },
+        "subjectCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "subjectTree": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
         "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "screenshotSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "reviewReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "node": { "type": "string", "minLength": 1 },
         "playwright": { "type": "string", "minLength": 1 },
