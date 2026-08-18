@@ -62,15 +62,30 @@ if (!matrix || matrix.schema !== "website-design-compiler/arena-benchmark-matrix
 const receipts = new Map<string, RuntimeReceipt>();
 const benchmarkArtifacts: Array<{ id: string; input: string; runtimeReceipt: string }> = [];
 const diagnostics: string[] = [];
-const visualEvidenceReceiptPath = join(root, "artifacts", "reference-browser", "observed-visual-fingerprint.json");
-const visualEvidenceReceiptSha256 = createHash("sha256").update(await readFile(visualEvidenceReceiptPath)).digest("hex");
 const visualDirectionReceipt = await readJson<{ overall?: unknown }>(join(root, "artifacts", "v2", "visual-direction-search", "receipt.json"));
+const visualEvidenceReceiptPath = join(root, "artifacts", "reference-browser", "observed-visual-fingerprint.json");
+const visualEvidenceReceiptSha256 = visualDirectionReceipt?.overall === "PASS"
+  ? await readFile(visualEvidenceReceiptPath).then((bytes) => createHash("sha256").update(bytes).digest("hex")).catch(() => null)
+  : null;
 
 for (const benchmark of matrix.categories) {
   const benchmarkDirectory = join(outputRoot, benchmark.id);
   await mkdir(benchmarkDirectory, { recursive: true });
   const inputPath = join(benchmarkDirectory, "compiler-input.json");
   const compilerOutput = join(benchmarkDirectory, "compiler-output");
+  if (visualDirectionReceipt?.overall !== "PASS" || !visualEvidenceReceiptSha256) {
+    diagnostics.push(
+      visualDirectionReceipt?.overall !== "PASS"
+        ? `${benchmark.id}: visual-direction benchmark receipt is ${evidenceState(visualDirectionReceipt?.overall)}`
+        : `${benchmark.id}: observed visual fingerprint is absent`
+    );
+    benchmarkArtifacts.push({
+      id: benchmark.id,
+      input: `artifacts/arena/${benchmark.id}/compiler-input.json`,
+      runtimeReceipt: `artifacts/arena/${benchmark.id}/compiler-output/runtime-receipt.json`
+    });
+    continue;
+  }
   const baseInput: CompilerInput = {
     schema: "website-design-compiler/input/v1",
     project: `arena-${benchmark.id}`,
@@ -99,15 +114,6 @@ for (const benchmark of matrix.categories) {
     authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, benchmarkAuthoredContent(slot, benchmark.id)]))
   };
   await writeFile(inputPath, `${JSON.stringify(input, null, 2)}\n`, "utf8");
-  if (visualDirectionReceipt?.overall !== "PASS") {
-    diagnostics.push(`${benchmark.id}: visual-direction benchmark receipt is ${evidenceState(visualDirectionReceipt?.overall)}`);
-    benchmarkArtifacts.push({
-      id: benchmark.id,
-      input: `artifacts/arena/${benchmark.id}/compiler-input.json`,
-      runtimeReceipt: `artifacts/arena/${benchmark.id}/compiler-output/runtime-receipt.json`
-    });
-    continue;
-  }
   try {
     execFileSync("pnpm", ["exec", "tsx", "src/cli.ts", inputPath, compilerOutput], { cwd: root, stdio: "pipe" });
   } catch {

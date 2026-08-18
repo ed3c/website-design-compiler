@@ -11,7 +11,7 @@ const execFileAsync = promisify(execFile);
 test("Arena writes a current FAIL receipt instead of retaining stale PASS when visual direction is blocked", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-arena-fail-receipt-"));
   try {
-    for (const path of ["fixtures/arena/benchmark-matrix.json", "fixtures/content/proof-evidence.txt", "artifacts/reference-browser/observed-visual-fingerprint.json"]) {
+    for (const path of ["fixtures/arena/benchmark-matrix.json", "fixtures/content/proof-evidence.txt"]) {
       await mkdir(dirname(join(root, path)), { recursive: true });
       await copyFile(resolve(path), join(root, path));
     }
