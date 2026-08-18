@@ -431,7 +431,27 @@ function validateAuthoringReceipt(value: JsonRecord): string[] {
   return errors;
 }
 
-const CMS_TRUE_CHECKS = ["draftPublishedDistinguishable", "publishedProjectionMatchesSource", "draftProjectionValid", "versionCountAtLeastTwo", "guestCanReadPublished", "guestCannotReadMediaMetadata", "guestCannotReadLatestDraft", "mediaProvenanceLinked", "localizationReady", "compiledPageGraphCountSix", "compiledPageGraphFingerprintsMatch", "compiledPageGraphsRenderThroughPuckRegistry", "compiledDraftPublishedDistinguishable", "guestCannotReadCompiledDraft"];
+const CMS_TRUE_CHECKS = [
+  "draftPublishedDistinguishable",
+  "publishedProjectionMatchesSource",
+  "draftProjectionValid",
+  "versionCountAtLeastTwo",
+  "guestCanReadPublished",
+  "guestCannotReadMediaMetadata",
+  "guestCannotReadLatestDraft",
+  "mediaProvenanceLinked",
+  "localizationReady",
+  "compiledPageGraphCountSix",
+  "compiledPageGraphsAreReadyProduction",
+  "compiledPageGraphProvenanceComplete",
+  "compiledPageGraphFingerprintsMatch",
+  "compiledPageGraphsValidateForPuckRegistry",
+  "compiledDraftPublishedDistinguishable",
+  "guestCanReadCompiledPublished",
+  "guestCannotReadCompiledDraft",
+  "invalidCompiledGraphRejected",
+  "invalidCompiledFingerprintRejected"
+];
 
 function validateCmsReceipt(value: JsonRecord): string[] {
   const errors: string[] = [];

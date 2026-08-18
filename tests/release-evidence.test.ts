@@ -111,7 +111,7 @@ function validReceipts(): Record<string, Record<string, unknown>> {
       schema: "website-design-compiler/payload-cms-receipt/v2", overall: "PASS", git,
       payload: { version: "3.86.0", adapter: "@payloadcms/db-sqlite", database: "EPHEMERAL_ARTIFACT", secretSource: "RUNTIME_RANDOM_ONLY", ciSchemaSync: "DEVELOPMENT_PUSH", productionSchemaSync: "MIGRATIONS_REQUIRED", productionCredentialSource: "ENVIRONMENT_ONLY" },
       ownership: { compilerSchema: "website-design-compiler/frontend-plan/v1", authoringSchema: "website-design-compiler/governed-authoring/v1", payloadCollection: "pages", compiledPageGraphCollection: "compiled-pages", productionRegistryProjection: "apps/site/generated/payload-published-authoring-data.json" },
-      checks: { sourceValidation: "PASS", publishedStatus: "published", draftStatus: "draft", draftPublishedDistinguishable: true, publishedProjectionMatchesSource: true, draftProjectionValid: true, versionCountAtLeastTwo: true, guestCanReadPublished: true, guestCannotReadMediaMetadata: true, guestCannotReadLatestDraft: true, mediaProvenanceLinked: true, localizationReady: true, secretPersistedInReceipt: false, productionCredentialInSource: false, compiledPageGraphCountSix: true, compiledPageGraphFingerprintsMatch: true, compiledPageGraphsRenderThroughPuckRegistry: true, compiledDraftPublishedDistinguishable: true, guestCannotReadCompiledDraft: true },
+      checks: { sourceValidation: "PASS", publishedStatus: "published", draftStatus: "draft", draftPublishedDistinguishable: true, publishedProjectionMatchesSource: true, draftProjectionValid: true, versionCountAtLeastTwo: true, guestCanReadPublished: true, guestCannotReadMediaMetadata: true, guestCannotReadLatestDraft: true, mediaProvenanceLinked: true, localizationReady: true, secretPersistedInReceipt: false, productionCredentialInSource: false, compiledPageGraphCountSix: true, compiledPageGraphsAreReadyProduction: true, compiledPageGraphProvenanceComplete: true, compiledPageGraphFingerprintsMatch: true, compiledPageGraphsValidateForPuckRegistry: true, compiledDraftPublishedDistinguishable: true, guestCanReadCompiledPublished: true, guestCannotReadCompiledDraft: true, invalidCompiledGraphRejected: true, invalidCompiledFingerprintRejected: true },
       compiledPageGraphs: Array.from({ length: 6 }, (_, index) => ({ category: `fixture-${index}`, fingerprint: hash, declaredFingerprint: hash, restoredFingerprint: hash, puckState: "PASS" })),
       evidence: { database: "artifacts/cms/payload.sqlite", mediaReceipt: "artifacts/media-generator/media-generation-receipt.json", publishedAuthoringFixture: "apps/site/generated/payload-published-authoring-data.json" }
     },
@@ -134,6 +134,18 @@ test("all twelve release child schemas require and accept their formal receipt s
     const hollow = { schema: spec.schema, overall: "PASS", git };
     assert.equal(bindReleaseEvidence(hollow, spec.schema, git).state, "FAIL", `${key} hollow receipt`);
   }
+});
+
+test("CMS release evidence requires production provenance and negative controls", () => {
+  const cms = validReceipts().cms;
+  assert.ok(cms);
+  const checks = cms.checks as Record<string, unknown>;
+  checks.compiledPageGraphProvenanceComplete = false;
+  checks.invalidCompiledFingerprintRejected = false;
+  const binding = bindReleaseEvidence(cms, RELEASE_CHILD_SPECS.cms.schema, git);
+  assert.equal(binding.state, "FAIL");
+  assert.match(binding.errors.join("\n"), /compiledPageGraphProvenanceComplete/);
+  assert.match(binding.errors.join("\n"), /invalidCompiledFingerprintRejected/);
 });
 
 test("a formal Arena FAIL can preserve complete category coverage when compiler receipts are absent", () => {
