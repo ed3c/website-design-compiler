@@ -14,6 +14,14 @@ type WorkflowStep = {
 };
 type WorkflowJob = { steps?: WorkflowStep[] };
 
+test("site typecheck materializes the same generated Next contract that the production build consumes",async()=>{
+  const manifest=JSON.parse(await readFile("apps/site/package.json","utf8")) as {scripts?:Record<string,unknown>};
+  const nextEnvironment=await readFile("apps/site/next-env.d.ts","utf8");
+  assert.equal(manifest.scripts?.typecheck,"next typegen && tsc --noEmit");
+  assert.match(nextEnvironment,/\.next\/types\/routes\.d\.ts/);
+  assert.match(nextEnvironment,/This file should not be edited/);
+});
+
 test("compiler workflow avoids duplicate branch runs while verifying every published PR head", async () => {
   const workflow = parse(await readFile(".github/workflows/compiler-core.yml", "utf8")) as {
     on?: {
