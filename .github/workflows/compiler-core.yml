@@ -71,7 +71,7 @@ jobs:
       - run: pnpm browser:typecheck
       - run: pnpm storybook:typecheck
       - run: pnpm arena:typecheck
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install chromium
       - name: Verify deterministic reference image/video decode evidence
         run: pnpm reference:media-fixture
       - name: Verify browser-derived reference layout/typography/responsive evidence
