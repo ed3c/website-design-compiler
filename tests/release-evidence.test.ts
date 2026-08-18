@@ -2,8 +2,15 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
+import { writeDesignContracts } from "../src/design-contracts.js";
+import { writeFrontendPlan } from "../src/frontend-builder.js";
+import { writeGraphics2DPlan } from "../src/graphics-2d.js";
+import { writeGraphics3DArtifacts } from "../src/graphics-3d.js";
+import { writeMotionDirectorPlan } from "../src/motion-director.js";
+import { writeReferenceIntelligenceArtifacts } from "../src/reference-intelligence.js";
+import { validateCompilerInput } from "../src/validate.js";
 import {
   RELEASE_CHILD_SPECS,
   RELEASE_CAPABILITY_SPECS,
@@ -121,7 +128,8 @@ test("all twelve release child schemas require and accept their formal receipt s
   assert.deepEqual(Object.keys(RELEASE_CHILD_SPECS), Object.keys(receipts));
   for (const [key, spec] of Object.entries(RELEASE_CHILD_SPECS)) {
     const receipt = receipts[key];
-    assert.equal(bindReleaseEvidence(receipt, spec.schema, git).state, "PASS", key);
+    const expectedState = key === "runtime" ? "FAIL" : "PASS";
+    assert.equal(bindReleaseEvidence(receipt, spec.schema, git).state, expectedState, key);
     const hollow = { schema: spec.schema, overall: "PASS", git };
     assert.equal(bindReleaseEvidence(hollow, spec.schema, git).state, "FAIL", `${key} hollow receipt`);
   }
@@ -160,17 +168,17 @@ async function writeCoreFixture(root: string): Promise<Record<string, unknown>> 
     const bytes = `${JSON.stringify(receipts[key], null, 2)}\n`;
     await writeFile(path, bytes, "utf8");
     if (key === "runtime") {
-      const runtime = receipts.runtime!;
-      for (const stage of runtime.stages as Array<{ artifacts: string[] }>) {
-        for (const artifact of stage.artifacts) {
-          const artifactPath = join(dirname(path), artifact);
-          if (artifactPath === path) continue;
-          await mkdir(dirname(artifactPath), { recursive: true });
-          await writeFile(artifactPath, `${JSON.stringify({ fixture: artifact })}\n`, "utf8");
-        }
-      }
+      const rawInput = JSON.parse(await readFile(resolve("fixtures/minimal/compiler-input.json"), "utf8")) as unknown;
+      const input = await validateCompilerInput(rawInput);
+      const outputDirectory = dirname(path);
+      await writeReferenceIntelligenceArtifacts(input, outputDirectory);
+      await writeDesignContracts(input, outputDirectory);
+      await writeFrontendPlan(input, outputDirectory);
+      await writeMotionDirectorPlan(input, outputDirectory);
+      await writeGraphics2DPlan(outputDirectory);
+      await writeGraphics3DArtifacts(outputDirectory);
     }
-    evidenceBindings[key] = { ...bindReleaseEvidence(receipts[key], spec.schema, git), path: spec.path, sha256: createHash("sha256").update(bytes).digest("hex") };
+    evidenceBindings[key] = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
     gates[spec.gate] = "PASS";
     evidence[spec.gate] = spec.path;
   }
@@ -229,6 +237,53 @@ test("runtime evidence cannot pass when a claimed stage artifact is absent", asy
     const result = await verifyCoreReleaseEvidence(root, git);
     assert.equal(result.state, "FAIL");
     assert.match(result.errors.join("; "), /missing or unreadable/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("runtime evidence rejects one-byte proof reuse across governed stages", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-runtime-proof-reuse-"));
+  try {
+    const spec = RELEASE_CHILD_SPECS.runtime;
+    const path = join(root, spec.path);
+    await mkdir(dirname(path), { recursive: true });
+    const receipt = structuredClone(validReceipts().runtime!);
+    for (const stage of receipt.stages as Array<{ artifacts: string[] }>) stage.artifacts = ["proof.bin"];
+    await writeFile(join(dirname(path), "proof.bin"), "x", "utf8");
+    await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    const result = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
+    assert.equal(result.state, "FAIL");
+    assert.match(result.errors.join("; "), /canonical artifact|reused/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("premium PASS cannot be promoted without artifact readback", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-premium-artifacts-"));
+  try {
+    const spec = RELEASE_CAPABILITY_SPECS.premiumQuality;
+    const categories = ["b2b-product", "editorial", "premium-consumer-brand", "motion-heavy-creative", "interactive-2d", "interactive-3d"];
+    const evaluations = categories.flatMap((category) => ["mobile", "desktop"].map((viewport) => ({
+      card: { category, viewport, score: 100, originalityAudit: { state: "PASS" } },
+      binding: { gitSha: git.sha, pageGraphSha256: hash, designTokensSha256: hash, screenshotSha256: hash },
+      decision: { overall: "PREMIUM_PASS", evidenceState: "PASS", structuralState: "PASS" },
+      suppliedReferenceAudit: { originalityState: "PASS", observedReferenceCount: 1 }
+    })));
+    const receipt = {
+      schema: spec.schema, overall: "PASS", git,
+      releaseProfile: { sha256: hash, requiredViewports: ["mobile", "desktop"], premiumQualityThreshold: 78, originalitySimilarityThreshold: 0.82, requireExactEvidenceBinding: true },
+      categoryCount: 6, viewportCoverage: { mobile: 6, desktop: 6 }, exactHeadBound: true, allEvidenceBound: true, allStructuralPass: true, allOriginalityPass: true,
+      premium: { state: "PASS", evaluations }
+    };
+    assert.equal(bindReleaseEvidence(receipt, spec.schema, git).state, "FAIL");
+    const path = join(root, spec.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    const result = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
+    assert.equal(result.state, "FAIL");
+    assert.match(result.errors.join("; "), /artifact readback|source/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

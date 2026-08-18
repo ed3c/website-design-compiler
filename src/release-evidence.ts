@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import { compileCompletePageGraph } from "./complete-page-graph.js";
+import { compileAllSectionPageFixtures } from "./section-page-fixtures.js";
 
 export type ReleaseInputState = "PASS" | "FAIL" | "NOT_IMPLEMENTED" | "NOT_EXERCISED" | "ABSENT" | "SKIPPED_BY_POLICY";
 
@@ -24,11 +26,32 @@ const SHA256 = /^[a-f0-9]{64}$/;
 const RIGHTS_STATES = ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"] as const;
 const REQUIRED_RUNTIME_STAGES = ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"];
 const JSON_SCHEMA_FILES: Record<string, string> = {
+  "website-design-compiler/reference-manifest/v1": "reference-manifest.schema.json",
+  "website-design-compiler/design-read/v1": "design-read.schema.json",
+  "website-design-compiler/frontend-plan/v1": "frontend-plan.schema.json",
+  "website-design-compiler/motion-director/v1": "motion-director.schema.json",
+  "website-design-compiler/graphics-2d-plan/v1": "graphics-2d-plan.schema.json",
+  "website-design-compiler/graphics-3d-plan/v2": "graphics-3d-plan.schema.json",
+  "website-design-compiler/semantic-design-tokens/v2": "semantic-design-tokens-v2.schema.json",
+  "website-design-compiler/generated-page-visual-observation/v1": "generated-page-visual-observation.schema.json",
   "website-design-compiler/live-reference-receipt/v2": "live-reference-receipt.schema.json",
   "website-design-compiler/webgpu-runtime-receipt/v1": "webgpu-runtime-receipt.schema.json",
   "website-design-compiler/production-provider-status/v1": "production-provider-status.schema.json"
 };
 const jsonSchemaValidators = new Map<string, ValidateFunction>();
+const READBACK_REQUIRED_SCHEMAS = new Set([
+  "website-design-compiler/runtime-receipt/v1",
+  "website-design-compiler/design-quality-eval-receipt/v2"
+]);
+const RUNTIME_ARTIFACT_SPECS: Record<string, { path: string; schema: string | null }> = {
+  "reference-intelligence": { path: "reference-intelligence/reference-manifest.json", schema: "website-design-compiler/reference-manifest/v1" },
+  "art-direction": { path: "art-direction/design-read.json", schema: "website-design-compiler/design-read/v1" },
+  "frontend-builder": { path: "frontend-builder/frontend-plan.json", schema: "website-design-compiler/frontend-plan/v1" },
+  "motion-director": { path: "motion-director/motion-plan.json", schema: "website-design-compiler/motion-director/v1" },
+  "graphics-2d": { path: "graphics-2d/graphics-2d-plan.json", schema: "website-design-compiler/graphics-2d-plan/v1" },
+  "graphics-3d": { path: "graphics-3d/graphics-3d-plan.json", schema: "website-design-compiler/graphics-3d-plan/v2" },
+  "release-receipt": { path: "runtime-receipt.json", schema: null }
+};
 
 export const RELEASE_CHILD_SPECS = {
   runtime: { gate: "runtime", path: "artifacts/runtime/minimal/runtime-receipt.json", schema: "website-design-compiler/runtime-receipt/v1" },
@@ -531,13 +554,15 @@ function validatePremiumQualityReceipt(value: JsonRecord): string[] {
     const binding = requireRecord(evaluation.binding, `premium.evaluations[${index}].binding`, errors);
     const decision = requireRecord(evaluation.decision, `premium.evaluations[${index}].decision`, errors);
     const suppliedReferenceAudit = requireRecord(evaluation.suppliedReferenceAudit, `premium.evaluations[${index}].suppliedReferenceAudit`, errors);
+    const source = requireRecord(evaluation.source, `premium.evaluations[${index}].source`, errors);
     if (card) {
       if (typeof card.category !== "string" || !["mobile", "desktop"].includes(String(card.viewport)) || typeof card.score !== "number" || !isRecord(card.originalityAudit) || card.originalityAudit.state !== "PASS") errors.push(`premium.evaluations[${index}].card is malformed`);
       else observedPairs.push(`${card.category}:${card.viewport}`);
     }
-    if (binding && (binding.gitSha !== git?.sha || !["pageGraphSha256", "designTokensSha256", "screenshotSha256"].every((key) => typeof binding[key] === "string" && SHA256.test(String(binding[key]))))) errors.push(`premium.evaluations[${index}].binding is not exact-head evidence`);
+    if (binding && (binding.gitSha !== git?.sha || !["pageGraphSha256", "designTokensSha256", "screenshotSha256"].every((key) => typeof binding[key] === "string" && SHA256.test(String(binding[key]))) || typeof binding.screenshotPath !== "string" || binding.screenshotPath.length === 0 || typeof binding.graphSignature !== "string" || binding.graphSignature.length === 0)) errors.push(`premium.evaluations[${index}].binding is not exact-head evidence`);
     if (decision && (decision.overall !== "PREMIUM_PASS" || decision.evidenceState !== "PASS" || decision.structuralState !== "PASS")) errors.push(`premium.evaluations[${index}].decision did not pass`);
     if (suppliedReferenceAudit && (suppliedReferenceAudit.originalityState !== "PASS" || typeof suppliedReferenceAudit.observedReferenceCount !== "number" || suppliedReferenceAudit.observedReferenceCount < 1)) errors.push(`premium.evaluations[${index}].reference originality was not exercised`);
+    if (source && !["pageGraphPath", "generatedPageReceiptPath", "semanticTokenReceiptPath", "tokenArtifactId", "tokenPath", "visualDirectionReceiptPath", "visualObservationPath", "visualObservationSha256"].every((key) => typeof source[key] === "string" && String(source[key]).length > 0)) errors.push(`premium.evaluations[${index}].source is not artifact-addressable`);
   });
   if (observedPairs.length > 0 && new Set(observedPairs).size !== observedPairs.length) errors.push("premium evaluations contain duplicated category/viewports");
   if (value.overall === "PASS" && (value.categoryCount !== 6 || viewportCoverage?.mobile !== 6 || viewportCoverage?.desktop !== 6 || value.exactHeadBound !== true || value.allEvidenceBound !== true || value.allStructuralPass !== true || value.allOriginalityPass !== true || premium?.state !== "PASS" || !Array.isArray(premium.evaluations) || premium.evaluations.length !== 12 || observedPairs.length !== 12)) errors.push("PASS is inconsistent with premium evidence coverage and bindings");
@@ -564,7 +589,7 @@ const STRUCTURAL_VALIDATORS: Record<string, (value: JsonRecord) => string[]> = {
   "website-design-compiler/design-quality-eval-receipt/v2": validatePremiumQualityReceipt
 };
 
-export function bindReleaseEvidence(
+function bindReleaseEvidenceStructure(
   receipt: unknown,
   expectedSchema: string,
   expectedGit: { sha: string; ref: string }
@@ -596,6 +621,18 @@ export function bindReleaseEvidence(
   };
 }
 
+export function bindReleaseEvidence(
+  receipt: unknown,
+  expectedSchema: string,
+  expectedGit: { sha: string; ref: string }
+): ReleaseEvidenceBinding {
+  const result = bindReleaseEvidenceStructure(receipt, expectedSchema, expectedGit);
+  if (result.state === "PASS" && READBACK_REQUIRED_SCHEMAS.has(expectedSchema)) {
+    return { ...result, state: "FAIL", errors: [...result.errors, `${expectedSchema} PASS requires artifact readback`] };
+  }
+  return result;
+}
+
 function fileFailure(path: string, message: string, sha256: string | null = null): ReleaseEvidenceFileBinding {
   return { state: "FAIL", binding: "ABSENT", schema: null, git: null, errors: [message], path, sha256 };
 }
@@ -604,8 +641,13 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
   const errors: string[] = [];
   if (!Array.isArray(receipt.stages)) return errors;
   const receiptDirectory = dirname(resolve(root, receiptPath));
+  const observedArtifacts = new Set<string>();
   for (const [stageIndex, stage] of receipt.stages.entries()) {
     if (!isRecord(stage) || stage.state !== "PASS" || !Array.isArray(stage.artifacts)) continue;
+    const artifactSpec = RUNTIME_ARTIFACT_SPECS[String(stage.stage)];
+    if (!artifactSpec || !stage.artifacts.includes(artifactSpec.path)) {
+      errors.push(`stages[${stageIndex}] does not declare its canonical artifact`);
+    }
     for (const [artifactIndex, artifact] of stage.artifacts.entries()) {
       if (typeof artifact !== "string" || artifact.length === 0 || isAbsolute(artifact)) {
         errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is not a safe relative path`);
@@ -617,13 +659,121 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
         errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] escapes the runtime receipt directory`);
         continue;
       }
+      if (observedArtifacts.has(artifact)) errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] reuses an artifact declared by another stage`);
+      observedArtifacts.add(artifact);
       try {
         const bytes = await readFile(absolutePath);
         if (bytes.length === 0) errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is empty`);
+        if (artifactSpec?.path === artifact && artifactSpec.schema !== null) {
+          try {
+            const value = JSON.parse(bytes.toString("utf8")) as unknown;
+            errors.push(...validatePublishedSchema(value, artifactSpec.schema).map((error) => `stages[${stageIndex}] canonical artifact ${error}`));
+          } catch {
+            errors.push(`stages[${stageIndex}] canonical artifact is not valid JSON`);
+          }
+        }
       } catch {
         errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is missing or unreadable`);
       }
     }
+  }
+  return errors;
+}
+
+async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Promise<string[]> {
+  if (receipt.overall !== "PASS") return [];
+  const errors: string[] = [];
+  const readArtifact = async (path: unknown, label: string): Promise<{ bytes: Buffer; value: unknown } | null> => {
+    if (typeof path !== "string" || path.length === 0 || isAbsolute(path)) {
+      errors.push(`${label} is not a safe relative path`);
+      return null;
+    }
+    const absolutePath = resolve(root, path);
+    const traversal = relative(root, absolutePath);
+    if (traversal.split(/[\\/]/)[0] === ".." || isAbsolute(traversal)) {
+      errors.push(`${label} escapes the workspace`);
+      return null;
+    }
+    try {
+      const bytes = await readFile(absolutePath);
+      if (bytes.length === 0) {
+        errors.push(`${label} is empty`);
+        return null;
+      }
+      let value: unknown = null;
+      if (path.endsWith(".json")) {
+        try { value = JSON.parse(bytes.toString("utf8")) as unknown; }
+        catch { errors.push(`${label} is not valid JSON`); return null; }
+      }
+      return { bytes, value };
+    } catch {
+      errors.push(`${label} is missing or unreadable`);
+      return null;
+    }
+  };
+  const sha256 = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");
+  const expectedGraphs = new Map(compileAllSectionPageFixtures().map((page) => {
+    const graph = compileCompletePageGraph(page);
+    return [graph.category, Buffer.from(JSON.stringify(graph))] as const;
+  }));
+  const releaseProfile = isRecord(receipt.releaseProfile) ? receipt.releaseProfile : null;
+  const profile = await readArtifact("fixtures/v2/release-profiles/premium.json", "release profile");
+  if (profile && releaseProfile?.sha256 !== sha256(profile.bytes)) errors.push("release profile bytes do not match receipt SHA-256");
+  const profileValue = isRecord(profile?.value) ? profile.value : null;
+  if (!profileValue || !releaseProfile || !["schema", "id", "premiumQualityThreshold", "originalitySimilarityThreshold", "requiredViewports", "requireExactEvidenceBinding"].every((key) => JSON.stringify(profileValue[key]) === JSON.stringify(releaseProfile[key]))) errors.push("release profile fields do not match governed profile bytes");
+
+  const generatedReceiptArtifact = await readArtifact("artifacts/generated-pages/generated-page-browser-receipt.json", "generated-page browser receipt");
+  const tokenReceiptArtifact = await readArtifact("artifacts/v2/semantic-design-tokens/receipt.json", "semantic-token receipt");
+  const visualReceiptArtifact = await readArtifact("artifacts/v2/visual-direction-search/receipt.json", "visual-direction receipt");
+  const generatedReceipt = isRecord(generatedReceiptArtifact?.value) ? generatedReceiptArtifact.value : null;
+  const tokenReceipt = isRecord(tokenReceiptArtifact?.value) ? tokenReceiptArtifact.value : null;
+  const visualReceipt = isRecord(visualReceiptArtifact?.value) ? visualReceiptArtifact.value : null;
+  if (!generatedReceipt || generatedReceipt.schema !== "website-design-compiler/generated-page-browser-receipt/v2" || generatedReceipt.overall !== "PASS") errors.push("generated-page browser receipt is not PASS evidence");
+  const receiptGit = isRecord(receipt.git) ? receipt.git : null;
+  const generatedGit = isRecord(generatedReceipt?.git) ? generatedReceipt.git : null;
+  if (!generatedGit || generatedGit.sha !== receiptGit?.sha || generatedGit.ref !== receiptGit?.ref) errors.push("generated-page browser receipt is not bound to the premium subject");
+  if (!tokenReceipt || tokenReceipt.schema !== "website-design-compiler/semantic-token-benchmark-receipt/v2" || tokenReceipt.overall !== "PASS") errors.push("semantic-token receipt is not PASS evidence");
+  if (!visualReceipt || visualReceipt.schema !== "website-design-compiler/visual-direction-benchmark-receipt/v2" || visualReceipt.overall !== "PASS") errors.push("visual-direction receipt is not PASS evidence");
+
+  const premium = isRecord(receipt.premium) ? receipt.premium : null;
+  const evaluations = Array.isArray(premium?.evaluations) ? premium.evaluations : [];
+  for (const [index, evaluationValue] of evaluations.entries()) {
+    if (!isRecord(evaluationValue)) continue;
+    const card = isRecord(evaluationValue.card) ? evaluationValue.card : null;
+    const binding = isRecord(evaluationValue.binding) ? evaluationValue.binding : null;
+    const source = isRecord(evaluationValue.source) ? evaluationValue.source : null;
+    if (!card || !binding || !source) continue;
+    const label = `premium.evaluations[${index}]`;
+    if (source.generatedPageReceiptPath !== "artifacts/generated-pages/generated-page-browser-receipt.json" || source.semanticTokenReceiptPath !== "artifacts/v2/semantic-design-tokens/receipt.json" || source.visualDirectionReceiptPath !== "artifacts/v2/visual-direction-search/receipt.json") errors.push(`${label}.source changes a governed receipt path`);
+
+    const graph = await readArtifact(source.pageGraphPath, `${label}.pageGraph`);
+    const graphValue = isRecord(graph?.value) ? graph.value : null;
+    const expectedGraphBytes = typeof card.category === "string" ? expectedGraphs.get(card.category) : undefined;
+    if (source.pageGraphPath !== `artifacts/v2/design-quality/page-graphs/${String(card.category)}.json`) errors.push(`${label}.pageGraph path is not canonical`);
+    if (graph && sha256(graph.bytes) !== binding.pageGraphSha256) errors.push(`${label}.pageGraph SHA-256 mismatch`);
+    if (!graph || !expectedGraphBytes || !graph.bytes.equals(expectedGraphBytes)) errors.push(`${label}.pageGraph does not match current compiler output`);
+    if (!graphValue || graphValue.schema !== "website-design-compiler/page-graph/v2" || graphValue.category !== card.category || graphValue.signature !== binding.graphSignature || !Array.isArray(graphValue.nodes) || graphValue.nodes.length < 5) errors.push(`${label}.pageGraph identity is invalid`);
+
+    const tokens = await readArtifact(source.tokenPath, `${label}.designTokens`);
+    if (typeof source.tokenArtifactId !== "string" || (source.tokenArtifactId !== card.category && !source.tokenArtifactId.startsWith(`${String(card.category)}-`)) || source.tokenPath !== `artifacts/v2/semantic-design-tokens/${String(source.tokenArtifactId)}.json`) errors.push(`${label}.designTokens path is not canonical`);
+    if (tokens && sha256(tokens.bytes) !== binding.designTokensSha256) errors.push(`${label}.designTokens SHA-256 mismatch`);
+    if (tokens) errors.push(...validatePublishedSchema(tokens.value, "website-design-compiler/semantic-design-tokens/v2").map((error) => `${label}.designTokens ${error}`));
+
+    const screenshot = await readArtifact(binding.screenshotPath, `${label}.screenshot`);
+    if (screenshot && sha256(screenshot.bytes) !== binding.screenshotSha256) errors.push(`${label}.screenshot SHA-256 mismatch`);
+    const observation = await readArtifact(source.visualObservationPath, `${label}.visualObservation`);
+    if (observation && sha256(observation.bytes) !== source.visualObservationSha256) errors.push(`${label}.visualObservation SHA-256 mismatch`);
+    if (observation) errors.push(...validatePublishedSchema(observation.value, "website-design-compiler/generated-page-visual-observation/v1").map((error) => `${label}.visualObservation ${error}`));
+    const observationValue = isRecord(observation?.value) ? observation.value : null;
+    const expectedProject = card.viewport === "mobile" ? "mobile-chromium" : "desktop-chromium";
+    if (!observationValue || observationValue.category !== card.category || observationValue.project !== expectedProject) errors.push(`${label}.visualObservation identity mismatch`);
+
+    const generatedEvidence = Array.isArray(generatedReceipt?.evidence) ? generatedReceipt.evidence.find((entry) => isRecord(entry) && entry.category === card.category && entry.project === expectedProject) : null;
+    if (!isRecord(generatedEvidence) || `artifacts/generated-pages/${String(generatedEvidence.path)}` !== binding.screenshotPath || generatedEvidence.sha256 !== binding.screenshotSha256 || `artifacts/generated-pages/${String(generatedEvidence.observationPath)}` !== source.visualObservationPath || generatedEvidence.observationSha256 !== source.visualObservationSha256) errors.push(`${label} does not match generated-page browser evidence`);
+    const tokenEntry = Array.isArray(tokenReceipt?.categories) ? tokenReceipt.categories.find((entry) => isRecord(entry) && entry.id === source.tokenArtifactId) : null;
+    if (!isRecord(tokenEntry) || tokenEntry.state !== "PASS") errors.push(`${label} does not match semantic-token evidence`);
+    const visualEntry = Array.isArray(visualReceipt?.categories) ? visualReceipt.categories.find((entry) => isRecord(entry) && entry.id === card.category) : null;
+    if (!isRecord(visualEntry) || JSON.stringify(visualEntry) !== JSON.stringify(evaluationValue.suppliedReferenceAudit)) errors.push(`${label} does not match visual-direction evidence`);
   }
   return errors;
 }
@@ -639,11 +789,14 @@ export async function readBoundReleaseEvidence(
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     try {
       const receipt = JSON.parse(bytes.toString("utf8")) as unknown;
-      const binding = bindReleaseEvidence(receipt, expectedSchema, expectedGit);
+      const binding = bindReleaseEvidenceStructure(receipt, expectedSchema, expectedGit);
       const runtimeArtifactErrors = expectedSchema === "website-design-compiler/runtime-receipt/v1" && isRecord(receipt)
         ? await validateRuntimeArtifacts(root, path, receipt)
         : [];
-      const errors = [...binding.errors, ...runtimeArtifactErrors];
+      const premiumArtifactErrors = expectedSchema === "website-design-compiler/design-quality-eval-receipt/v2" && isRecord(receipt)
+        ? await validatePremiumArtifacts(root, receipt)
+        : [];
+      const errors = [...binding.errors, ...runtimeArtifactErrors, ...premiumArtifactErrors];
       return { ...binding, state: errors.length === 0 ? binding.state : "FAIL", errors, path, sha256 };
     } catch {
       return fileFailure(path, "receipt JSON is malformed", sha256);

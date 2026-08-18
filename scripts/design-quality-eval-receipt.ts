@@ -21,7 +21,9 @@ function tokenEntryFor(category:string,receipt:TokenReceipt):TokenReceiptEntry{
   return entry;
 }
 const outputDirectory=join(process.cwd(),"artifacts","v2","design-quality");
+const pageGraphDirectory=join(outputDirectory,"page-graphs");
 await mkdir(outputDirectory,{recursive:true});
+await mkdir(pageGraphDirectory,{recursive:true});
 const gitSha=process.env.GITHUB_SHA??"UNBOUND";
 const profilePath=join(process.cwd(),"fixtures","v2","release-profiles","premium.json");
 const profileBytes=await readFile(profilePath);
@@ -37,12 +39,15 @@ const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
 const corpus:OriginalitySubject[]=graphs.map((graph)=>({id:graph.category,signature:graph.signature}));
 const evaluations=[];
 for(const graph of graphs){
+  const pageGraphPath=`artifacts/v2/design-quality/page-graphs/${graph.category}.json`;
+  const pageGraphBytes=Buffer.from(JSON.stringify(graph));
+  await writeFile(join(process.cwd(),pageGraphPath),pageGraphBytes);
   const tokenEntry=tokenEntryFor(graph.category,tokenReceipt);
   const originalityCorpus=corpus.filter((entry)=>entry.id!==graph.category);
   for(const viewport of profile.requiredViewports as readonly QualityViewport[]){
     const project=viewport==="mobile"?"mobile-chromium":"desktop-chromium";
     const screenshotEvidence=generatedReceipt.evidence.find((entry)=>entry.category===graph.category&&entry.project===project);
-    const graphSha256=sha256(JSON.stringify(graph));
+    const graphSha256=sha256(pageGraphBytes);
     const tokenPath=join(process.cwd(),"artifacts","v2","semantic-design-tokens",`${tokenEntry.id}.json`);
     const tokenBytes=await readFile(tokenPath);
     const designTokensSha256=sha256(tokenBytes);
@@ -62,7 +67,7 @@ for(const graph of graphs){
     const binding:DesignQualityEvidenceBinding={schema:"website-design-compiler/design-quality-evidence/v2",category:graph.category,viewport,pageGraphSha256:graphSha256,designTokensSha256,screenshotSha256,gitSha,graphSignature:graph.signature,screenshotPath};
     const decision=decidePremiumQuality(card,binding,expected,profile.premiumQualityThreshold);
     const suppliedReferenceAudit=visualDirectionReceipt.categories.find((entry)=>entry.id===graph.category);
-    evaluations.push({card,binding,decision,suppliedReferenceAudit,source:{generatedPageReceipt:generatedReceipt.schema,generatedPageReceiptGitSha:generatedReceipt.git.sha,semanticTokenReceipt:tokenReceipt.schema,tokenArtifactId:tokenEntry.id,tokenPath:`artifacts/v2/semantic-design-tokens/${tokenEntry.id}.json`,visualObservationPath:screenshotEvidence?.observationPath??"ABSENT",originalityCorpus:originalityCorpus.map((entry)=>entry.id)}});
+    evaluations.push({card,binding,decision,suppliedReferenceAudit,source:{pageGraphPath,generatedPageReceipt:generatedReceipt.schema,generatedPageReceiptPath:"artifacts/generated-pages/generated-page-browser-receipt.json",generatedPageReceiptGitSha:generatedReceipt.git.sha,semanticTokenReceipt:tokenReceipt.schema,semanticTokenReceiptPath:"artifacts/v2/semantic-design-tokens/receipt.json",tokenArtifactId:tokenEntry.id,tokenPath:`artifacts/v2/semantic-design-tokens/${tokenEntry.id}.json`,visualDirectionReceiptPath:"artifacts/v2/visual-direction-search/receipt.json",visualObservationPath:screenshotEvidence?`artifacts/generated-pages/${screenshotEvidence.observationPath}`:"ABSENT",visualObservationSha256:screenshotEvidence?.observationSha256??"ABSENT",originalityCorpus:originalityCorpus.map((entry)=>entry.id)}});
   }
 }
 const categories=new Set(evaluations.map((entry)=>entry.card.category));
