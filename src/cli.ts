@@ -6,7 +6,7 @@ import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js
 import { writeDesignContracts } from "./design-contracts.js";
 import { writeInformationArchitecturePlan } from "./information-architecture.js";
 import { writeContentArchitecturePlan } from "./content-architecture.js";
-import { searchVisualDirections, writeVisualDirectionSearch, type VisualDirectionSearchReceipt } from "./visual-direction-search.js";
+import { loadVerifiedVisualReferences, searchVisualDirections, writeVisualDirectionSearch, type VisualDirectionSearchReceipt } from "./visual-direction-search.js";
 import { writeSemanticDesignTokens } from "./semantic-design-tokens.js";
 import { writeDesignSystemPlan } from "./design-system-compiler.js";
 import { writePageArchitecturePlan } from "./page-architect.js";
@@ -50,7 +50,8 @@ async function main(): Promise<void> {
     if (input.requestedStages.includes("information-architecture")) await executeStage("information-architecture", () => writeInformationArchitecturePlan(input, resolvedOutputDirectory));
     if (input.requestedStages.includes("content-architecture")) await executeStage("content-architecture", () => writeContentArchitecturePlan(input, resolvedOutputDirectory));
     if (input.requestedStages.includes("visual-direction-search")) {
-      visualDirectionSearch = searchVisualDirections(input);
+      const verifiedVisualReferences = await loadVerifiedVisualReferences(input);
+      visualDirectionSearch = searchVisualDirections(input, "website-design-compiler/v2", verifiedVisualReferences);
       await executeStage("visual-direction-search", () => writeVisualDirectionSearch(input, resolvedOutputDirectory, visualDirectionSearch));
     }
     if (input.requestedStages.includes("semantic-design-tokens")) {

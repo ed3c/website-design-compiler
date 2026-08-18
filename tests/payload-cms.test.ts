@@ -4,6 +4,7 @@ import authoringFixture from "../apps/site/generated/showcase-authoring-data.jso
 import {
   CMS_LOCALES,
   MediaAssets,
+  PageGraphs,
   Pages,
   PAYLOAD_VERSION,
   Users,
@@ -19,6 +20,8 @@ test("Payload schema is pinned and owns pages, authenticated users, and provenan
   assert.ok(Users.auth);
   assert.equal(Pages.slug, "pages");
   assert.ok(Pages.versions);
+  assert.equal(PageGraphs.slug, "compiled-pages");
+  assert.ok(PageGraphs.versions);
   assert.equal(MediaAssets.slug, "media-assets");
 
   const mediaFieldNames = new Set(MediaAssets.fields.flatMap((field) => "name" in field && field.name ? [field.name] : []));

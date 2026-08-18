@@ -78,7 +78,10 @@ test("section readiness reflects explicit authored content rather than planning 
   const requiredSlots = compileInformationArchitecture(baseInput).sections.flatMap((section) => section.requiredContent);
   const plan = compileInformationArchitecture({
     ...baseInput,
-    authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, `Approved ${slot}`]))
+    authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, {
+      value: `Approved ${slot}`,
+      source: { kind: "benchmark-fixture", uri: `fixture://ia/${slot}` }
+    }]))
   });
 
   assert.ok(plan.sections.every((section) => section.status === "READY"));

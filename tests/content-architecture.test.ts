@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,6 +24,23 @@ function input(pageType: string, objective = "explain the governed product and p
     project: `content-${pageType}`,
     brief: { pageType, audience: "evaluation teams", objective },
     requestedStages: ["information-architecture", "content-architecture", "page-architect"]
+  };
+}
+
+function authored(slot: string, withEvidence = slot === "proof-items") {
+  const source = `fixture://content/${slot}`;
+  const excerpt = `Evidence for ${slot}`;
+  return {
+    value: `Approved ${slot}`,
+    source: { kind: "benchmark-fixture" as const, uri: source },
+    ...(withEvidence ? {
+      evidence: {
+        kind: "source-excerpt" as const,
+        source,
+        excerpt,
+        sha256: createHash("sha256").update(`${source}\0${excerpt}`).digest("hex")
+      }
+    } : {})
   };
 }
 
@@ -117,7 +135,7 @@ test("writer classifies missing authoring inputs as ABSENT runtime evidence", as
 test("explicit authored content makes every required field provenance-bound and executable", async () => {
   const compilerInput = input("product-landing");
   const requiredSlots = compileInformationArchitecture(compilerInput).sections.flatMap((section) => section.requiredContent);
-  const authoredContent = Object.fromEntries(requiredSlots.map((slot) => [slot, `Approved ${slot}`]));
+  const authoredContent = Object.fromEntries(requiredSlots.map((slot) => [slot, authored(slot)]));
   const authoredInput = { ...compilerInput, authoredContent };
   const content = compileContentArchitecture(authoredInput);
 
@@ -137,8 +155,20 @@ test("explicit authored content makes every required field provenance-bound and 
 });
 
 test("authored content with no matching IA slot fails fast", () => {
-  const compilerInput = { ...input("product-landing"), authoredContent: { "unowned-copy": "Do not silently ignore me" } };
+  const compilerInput = { ...input("product-landing"), authoredContent: { "unowned-copy": authored("unowned-copy") } };
   assert.throws(() => compileContentArchitecture(compilerInput), /not owned by this page architecture.*unowned-copy/i);
+});
+
+test("proof copy without source evidence cannot self-promote to publishable", () => {
+  const compilerInput = input("product-landing");
+  const content = compileContentArchitecture({
+    ...compilerInput,
+    authoredContent: { "proof-items": authored("proof-items", false) }
+  });
+  const proof = content.sections.find((section) => section.sectionId === "proof")?.fields[0];
+  assert.equal(proof?.state, "NEEDS_INPUT");
+  assert.equal(proof?.publishable, false);
+  assert.deepEqual(proof?.provenance, ["policy.evidence-required:proof-items"]);
 });
 
 test("page architect carries the full content contract without dropping provenance or policy", () => {

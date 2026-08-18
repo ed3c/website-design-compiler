@@ -25,11 +25,24 @@
     "originality": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["state", "observedReferenceCount", "threshold"],
+      "required": ["state", "observedReferenceCount", "threshold", "observations"],
       "properties": {
         "state": { "enum": ["PASS", "NOT_EXERCISED"] },
         "observedReferenceCount": { "type": "integer", "minimum": 0 },
-        "threshold": { "type": "integer", "minimum": 0, "maximum": 100 }
+        "threshold": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["receiptSha256", "capturedArtifactSha256", "evidenceArtifactSha256"],
+            "properties": {
+              "receiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "capturedArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "evidenceArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        }
       }
     },
     "candidates": {

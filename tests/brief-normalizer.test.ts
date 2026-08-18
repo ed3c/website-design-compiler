@@ -19,6 +19,7 @@ test("explicit natural-language brief normalizes into a compiler-ready contract"
   assert.equal(receipt.fields.pageType.state, "EXPLICIT");
   assert.equal(receipt.fields.audience.value, "design engineering teams");
   assert.equal(receipt.compilerInput?.schema, "website-design-compiler/input/v1");
+  assert.deepEqual(receipt.compilerInput?.artDirection, { primary: ["repo-native"] });
   assert.ok(receipt.compilerInput?.requestedStages.includes("information-architecture"));
   assert.ok(receipt.compilerInput?.requestedStages.includes("visual-direction-search"));
   assert.ok(

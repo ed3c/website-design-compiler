@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
+import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observation-fixture.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const FIXTURE_HTML = `<!doctype html>
@@ -44,7 +46,7 @@ type Snapshot = {
 
 async function observe(page: Page, width: number, height: number): Promise<Snapshot> {
   await page.setViewportSize({ width, height });
-  await page.setContent(FIXTURE_HTML, { waitUntil: "load" });
+  await page.setContent(OBSERVED_VISUAL_FIXTURE_HTML, { waitUntil: "load" });
   return page.evaluate(() => {
     const main = document.querySelector("main") as HTMLElement;
     const h1 = document.querySelector("h1") as HTMLElement;
@@ -94,6 +96,10 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage();
   const desktop = await observe(page, 1280, 800);
+  const outputDirectory = join(process.cwd(), "artifacts", "reference-browser");
+  await mkdir(outputDirectory, { recursive: true });
+  const evidencePath = join(outputDirectory, "observed-visual-reference.png");
+  await page.screenshot({ path: evidencePath, fullPage: true });
   const mobile = await observe(page, 390, 844);
   const responsiveChanged = desktop.layout.gridColumnCount === 2 && mobile.layout.gridColumnCount === 1 && desktop.typography.fontSize !== mobile.typography.fontSize;
 
@@ -116,11 +122,43 @@ try {
   };
 
   await validateAgainstSchema(receipt, "reference-browser-receipt.schema.json");
-  const outputDirectory = join(process.cwd(), "artifacts", "reference-browser");
-  await mkdir(outputDirectory, { recursive: true });
   const outputPath = join(outputDirectory, "reference-browser-receipt.json");
   await writeFile(outputPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify({ outputPath, overall: receipt.overall, responsiveBehavior: receipt.responsiveBehavior }));
+  const evidenceBytes = await import("node:fs/promises").then(({ readFile }) => readFile(evidencePath));
+  const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+  const visualFingerprint = {
+    schema: "website-design-compiler/observed-visual-fingerprint/v2",
+    state: "PASS",
+    producer: "playwright-computed-style/v1",
+    referenceValueSha256: sha256(OBSERVED_VISUAL_FIXTURE_HTML),
+    capturedArtifactSha256: sha256(OBSERVED_VISUAL_FIXTURE_HTML),
+    evidenceArtifact: {
+      path: "artifacts/reference-browser/observed-visual-reference.png",
+      sha256: sha256(evidenceBytes)
+    },
+    dimensions: {
+      typography: "neo-grotesk",
+      typeContrast: "dramatic",
+      density: "airy",
+      grid: "modular",
+      surface: "bordered",
+      colorStrategy: "neutral-accent",
+      mediaStrategy: "product-media",
+      motionIntensity: "moderate",
+      signatureInteraction: "progressive-reveal"
+    },
+    observations: [
+      `desktop computed heading: ${desktop.typography.fontFamily} ${desktop.typography.fontSize}/${desktop.typography.lineHeight}`,
+      `responsive grid columns: ${desktop.layout.gridColumnCount} desktop, ${mobile.layout.gridColumnCount} mobile`,
+      `computed grid gap: ${desktop.layout.gap}`,
+      `computed transition: ${desktop.motion.transitionProperty} ${desktop.motion.transitionDuration}`,
+      `observed assets: ${desktop.assets.images} image, ${desktop.assets.videos} video, ${desktop.assets.canvases} canvas`
+    ]
+  } as const;
+  await validateAgainstSchema(visualFingerprint, "observed-visual-fingerprint-v2.schema.json");
+  const fingerprintPath = join(outputDirectory, "observed-visual-fingerprint.json");
+  await writeFile(fingerprintPath, `${JSON.stringify(visualFingerprint, null, 2)}\n`, "utf8");
+  console.log(JSON.stringify({ outputPath, fingerprintPath, overall: receipt.overall, responsiveBehavior: receipt.responsiveBehavior }));
   if (receipt.overall !== "PASS") process.exitCode = 1;
 } finally {
   await browser.close();

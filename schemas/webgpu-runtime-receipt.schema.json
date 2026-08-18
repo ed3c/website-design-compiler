@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/webgpu-runtime-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "rendererOutcome", "git", "selected", "fallbacks"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/webgpu-runtime-receipt/v1" },
+    "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+    "rendererOutcome": { "enum": ["WEBGPU_PASS", "WEBGL_FALLBACK", "STATIC_FALLBACK", "NOT_EXERCISED"] },
+    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } },
+    "selected": {
+      "type": "object", "additionalProperties": false, "required": ["state", "renderer", "reason", "capabilities", "runtime"],
+      "properties": {
+        "state": { "enum": ["WEBGPU_PASS", "WEBGL_FALLBACK", "STATIC_FALLBACK", "NOT_EXERCISED"] },
+        "renderer": { "enum": ["webgpu", "webgl", "static", "none"] }, "reason": { "type": "string" },
+        "capabilities": { "type": "object", "additionalProperties": false, "required": ["webgpu", "webgl"], "properties": { "webgpu": { "type": "boolean" }, "webgl": { "type": "boolean" } } },
+        "runtime": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object", "additionalProperties": false, "required": ["state", "identity", "budget"],
+              "properties": {
+                "state": { "const": "WEBGPU_PASS" },
+                "identity": {
+                  "type": "object", "additionalProperties": false, "required": ["adapter", "renderer", "rendererVersion", "tslModule", "adapterInfo", "features", "limits"],
+                  "properties": {
+                    "adapter": { "const": "navigator.gpu" },
+                    "renderer": { "const": "three.WebGPURenderer" },
+                    "rendererVersion": { "const": "0.184.0" },
+                    "tslModule": { "const": "three/tsl@0.184.0" },
+                    "adapterInfo": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["vendor", "architecture", "device", "description"],
+                      "properties": {
+                        "vendor": { "type": "string", "minLength": 1 },
+                        "architecture": { "type": "string", "minLength": 1 },
+                        "device": { "type": "string", "minLength": 1 },
+                        "description": { "type": "string", "minLength": 1 }
+                      }
+                    },
+                    "features": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+                    "limits": { "type": "object", "additionalProperties": { "type": ["number", "null"] } }
+                  }
+                },
+                "budget": {
+                  "type": "object", "additionalProperties": false, "required": ["dpr", "drawCalls", "triangles", "textureBytes", "framesRendered", "frameLoop"],
+                  "properties": { "dpr": { "type": "number" }, "drawCalls": { "type": "number" }, "triangles": { "type": "number" }, "textureBytes": { "type": "number" }, "framesRendered": { "type": "number" }, "frameLoop": { "type": "string" } }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "fallbacks": {
+      "type": "object", "additionalProperties": false, "required": ["initializationFailure", "totalGpuFailure", "deviceLoss"],
+      "properties": { "initializationFailure": { "enum": ["PASS", "NOT_EXERCISED"] }, "totalGpuFailure": { "const": "PASS" }, "deviceLoss": { "enum": ["PASS", "NOT_EXERCISED"] } }
+    }
+  }
+}

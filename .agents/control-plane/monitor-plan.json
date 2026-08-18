@@ -1,0 +1,453 @@
+{
+  "automatic_conflict_resolution": false,
+  "automatic_merge": false,
+  "issue_plans": {
+    "ed3c/website-design-compiler#22": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#23": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#25": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#26": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#31": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#32": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#33": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#34": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#35": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    },
+    "ed3c/website-design-compiler#36": {
+      "execution_state": "NOT_EXERCISED",
+      "phase_dispositions": [
+        {
+          "disposition": "REQUIRED",
+          "phase": "BOOTSTRAP",
+          "receipt": "skill-resolution"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SHADOW_ADMISSION",
+          "receipt": "shadow-admission"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "TECH_LEAD_PLAN",
+          "receipt": "task-dag"
+        },
+        {
+          "disposition": "REQUIRED",
+          "phase": "SPATIAL_INVARIANTS",
+          "receipt": "spatial-invariants"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "STACK_DELIVERY",
+          "receipt": "git-town-stack"
+        },
+        {
+          "disposition": "NOT_APPLICABLE_WITH_EVIDENCE",
+          "phase": "FORGE_RECONCILIATION",
+          "receipt": "dual-forge-reconciliation"
+        }
+      ],
+      "required_receipts": [
+        "skill-resolution",
+        "shadow-admission",
+        "task-dag",
+        "spatial-invariants"
+      ]
+    }
+  },
+  "issues": [
+    "ed3c/website-design-compiler#22",
+    "ed3c/website-design-compiler#23",
+    "ed3c/website-design-compiler#25",
+    "ed3c/website-design-compiler#26",
+    "ed3c/website-design-compiler#31",
+    "ed3c/website-design-compiler#32",
+    "ed3c/website-design-compiler#33",
+    "ed3c/website-design-compiler#34",
+    "ed3c/website-design-compiler#35",
+    "ed3c/website-design-compiler#36"
+  ],
+  "schema": "repository-control-plane-monitor-plan/v1",
+  "waves": [
+    [
+      "ed3c/website-design-compiler#22",
+      "ed3c/website-design-compiler#23",
+      "ed3c/website-design-compiler#25",
+      "ed3c/website-design-compiler#31"
+    ],
+    [
+      "ed3c/website-design-compiler#32"
+    ],
+    [
+      "ed3c/website-design-compiler#33",
+      "ed3c/website-design-compiler#34"
+    ],
+    [
+      "ed3c/website-design-compiler#35"
+    ],
+    [
+      "ed3c/website-design-compiler#36"
+    ],
+    [
+      "ed3c/website-design-compiler#26"
+    ]
+  ]
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type Capability = {
   webgpu: boolean;
@@ -18,6 +18,7 @@ function detectCapabilities(): Capability {
 }
 
 export function PixiEvidence() {
+  const titleId=useId();
   const hostRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "fallback">("loading");
   const [renderer, setRenderer] = useState("none");
@@ -124,8 +125,8 @@ export function PixiEvidence() {
   }, []);
 
   return (
-    <section aria-labelledby="graphics-2d-title" data-graphics-state={state} data-renderer={renderer} data-resolution={resolution}>
-      <h2 id="graphics-2d-title">Progressive 2D graphics</h2>
+    <section aria-labelledby={titleId} data-graphics-state={state} data-renderer={renderer} data-resolution={resolution}>
+      <h2 id={titleId}>Progressive 2D graphics</h2>
       <p data-semantic-fallback="true">
         The compiler, runtime receipt, and primary controls remain available without GPU rendering.
       </p>

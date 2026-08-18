@@ -43,13 +43,23 @@ export interface VisualDirectionDimensions {
 export interface CompilerReference {
   kind: "url" | "image" | "video" | "html";
   value: string;
-  visualFingerprint?: {
-    schema: "website-design-compiler/observed-visual-fingerprint/v1";
-    captureState: "PASS";
-    referenceValueSha256: string;
-    capturedArtifactSha256: string;
-    evidenceSha256: string;
-    dimensions: VisualDirectionDimensions;
+  visualEvidence?: {
+    receiptPath: string;
+    receiptSha256: string;
+  };
+}
+
+export interface AuthoredContentEntry {
+  value: string;
+  source: {
+    kind: "user-supplied" | "benchmark-fixture";
+    uri: string;
+  };
+  evidence?: {
+    kind: "source-excerpt";
+    source: string;
+    excerpt: string;
+    sha256: string;
   };
 }
 
@@ -62,7 +72,7 @@ export interface CompilerInput {
     objective: string;
   };
   hardConstraints?: string[];
-  authoredContent?: Record<string, string>;
+  authoredContent?: Record<string, AuthoredContentEntry>;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];

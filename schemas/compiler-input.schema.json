@@ -27,7 +27,7 @@
     "authoredContent": {
       "type": "object",
       "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
-      "additionalProperties": { "type": "string", "minLength": 1 }
+      "additionalProperties": { "$ref": "#/$defs/authoredContentEntry" }
     },
     "references": {
       "type": "array",
@@ -38,17 +38,13 @@
         "properties": {
           "kind": { "enum": ["url", "image", "video", "html"] },
           "value": { "type": "string", "minLength": 1 },
-          "visualFingerprint": {
+          "visualEvidence": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["schema", "captureState", "referenceValueSha256", "capturedArtifactSha256", "evidenceSha256", "dimensions"],
+            "required": ["receiptPath", "receiptSha256"],
             "properties": {
-              "schema": { "const": "website-design-compiler/observed-visual-fingerprint/v1" },
-              "captureState": { "const": "PASS" },
-              "referenceValueSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-              "capturedArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-              "evidenceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-              "dimensions": { "$ref": "#/$defs/visualDirectionDimensions" }
+              "receiptPath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.json$" },
+              "receiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
             }
           }
         }
@@ -72,6 +68,34 @@
     }
   },
   "$defs": {
+    "authoredContentEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "uri"],
+          "properties": {
+            "kind": { "enum": ["user-supplied", "benchmark-fixture"] },
+            "uri": { "type": "string", "minLength": 1 }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "source", "excerpt", "sha256"],
+          "properties": {
+            "kind": { "const": "source-excerpt" },
+            "source": { "type": "string", "minLength": 1 },
+            "excerpt": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
     "visualDirectionDimensions": {
       "type": "object",
       "additionalProperties": false,

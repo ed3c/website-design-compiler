@@ -1,0 +1,18 @@
+{
+  "argparse@2.0.1": {
+    "license": "Python-2.0",
+    "source": "https://github.com/nodeca/argparse/blob/e373563876f1c049826c21bd1c9388f6a5737a3e/package.json"
+  },
+  "sanitize-filename@1.6.3": {
+    "license": "WTFPL OR ISC",
+    "source": "https://github.com/parshap/node-sanitize-filename/blob/v1.6.3/package.json"
+  },
+  "truncate-utf8-bytes@1.0.2": {
+    "license": "WTFPL",
+    "source": "https://github.com/parshap/truncate-utf8-bytes/blob/v1.0.2/package.json"
+  },
+  "utf8-byte-length@1.0.5": {
+    "license": "WTFPL OR MIT",
+    "source": "https://github.com/parshap/utf8-byte-length/blob/v1.0.5/package.json"
+  }
+}

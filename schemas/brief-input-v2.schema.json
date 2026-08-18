@@ -16,7 +16,16 @@
         "required": ["kind", "value"],
         "properties": {
           "kind": { "enum": ["url", "image", "video", "html"] },
-          "value": { "type": "string", "minLength": 1 }
+          "value": { "type": "string", "minLength": 1 },
+          "visualEvidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["receiptPath", "receiptSha256"],
+            "properties": {
+              "receiptPath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.json$" },
+              "receiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
         }
       }
     },
@@ -28,12 +37,57 @@
     "authoredContent": {
       "type": "object",
       "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
-      "additionalProperties": { "type": "string", "minLength": 1 }
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "source"],
+        "properties": {
+          "value": { "type": "string", "minLength": 1 },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "uri"],
+            "properties": {
+              "kind": { "enum": ["user-supplied", "benchmark-fixture"] },
+              "uri": { "type": "string", "minLength": 1 }
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "source", "excerpt", "sha256"],
+            "properties": {
+              "kind": { "const": "source-excerpt" },
+              "source": { "type": "string", "minLength": 1 },
+              "excerpt": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        }
+      }
     },
     "requestedStages": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
+    },
+    "artDirection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary"],
+      "properties": {
+        "primary": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "enum": ["anthropic-frontend-design", "google-stitch", "taste-skill", "repo-native"] }
+        },
+        "reviewers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["anthropic-frontend-design", "google-stitch", "taste-skill", "repo-native"] }
+        }
+      }
     }
   }
 }

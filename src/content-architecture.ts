@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput, StageExecutionEvidence } from "./contracts.js";
@@ -51,6 +52,8 @@ const FORBIDDEN_SLOTS = new Set([
   "performance-claims"
 ]);
 
+const EVIDENCE_REQUIRED_SLOTS = new Set(["proof-items", ...FORBIDDEN_SLOTS]);
+
 const EMPTY_MARKETING_PHRASES = [
   "game-changing",
   "best-in-class",
@@ -86,21 +89,29 @@ function ctaRole(section: IaSection): "PRIMARY" | "SECONDARY" | "NONE" {
   return "NONE";
 }
 
+function evidenceSha256(source: string, excerpt: string): string {
+  return createHash("sha256").update(`${source}\0${excerpt}`).digest("hex");
+}
+
 function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>): ContentFieldContract {
   const maxCharacters = maxCharactersFor(slot);
-  if (forbidden.has(slot) || FORBIDDEN_SLOTS.has(slot)) {
+  const authored = input.authoredContent?.[slot];
+  const evidence = authored?.evidence;
+  const evidenceVerified = evidence !== undefined &&
+    evidence.sha256 === evidenceSha256(evidence.source, evidence.excerpt);
+  if ((forbidden.has(slot) || EVIDENCE_REQUIRED_SLOTS.has(slot)) && !evidenceVerified) {
     return {
       slot,
-      state: "FORBIDDEN",
-      sourceType: "forbidden_invention",
+      state: "NEEDS_INPUT",
+      sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: [`policy.forbidden:${slot}`],
+      provenance: [`policy.evidence-required:${slot}`],
       lengthBudget: { maxCharacters }
     };
   }
 
-  const authoredValue = input.authoredContent?.[slot];
+  const authoredValue = authored?.value;
   const projectValue = slot === "brand-or-project-name" || slot === "project-name" ? input.project : undefined;
   const value = authoredValue ?? projectValue;
   if (!value || value.length > maxCharacters) {
@@ -118,10 +129,16 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   return {
     slot,
     state: "READY",
-    sourceType: "user_supplied_claim",
+    sourceType: evidenceVerified ? "observed_fact" : "user_supplied_claim",
     value,
     publishable: true,
-    provenance: authoredValue ? [`compiler.authoredContent:${slot}`] : planningProvenanceFor(slot, input, section),
+    provenance: authored
+      ? [
+          `compiler.authoredContent:${slot}`,
+          `source:${authored.source.kind}:${authored.source.uri}`,
+          ...(evidenceVerified ? [`evidence:${evidence.source}#sha256=${evidence.sha256}`] : [])
+        ]
+      : planningProvenanceFor(slot, input, section),
     lengthBudget: { maxCharacters }
   };
 }

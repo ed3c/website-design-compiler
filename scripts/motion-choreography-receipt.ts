@@ -1,0 +1,10 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
+import { compileMotionChoreography, validateMotionChoreography } from "../src/motion-choreography.js";
+const plans=compileAllSectionPageFixtures().map(compileMotionChoreography);
+const validations=plans.map((plan)=>({category:plan.category,errors:validateMotionChoreography(plan),effectCount:plan.effects.length,scrollLinkedCount:plan.scrollLinkedCount,engineRouting:plan.engineRouting}));
+const signatures=plans.map((plan)=>plan.effects.map((e)=>`${e.kind}:${e.purpose}:${e.trigger}:${e.engine}`).join("|"));
+const overall=plans.length===6&&new Set(signatures).size>=4&&validations.every((entry)=>entry.errors.length===0)?"PASS":"FAIL";
+const receipt={schema:"website-design-compiler/motion-choreography-receipt/v2",overall,pageCount:plans.length,uniqueChoreographyCount:new Set(signatures).size,validations,plans};
+const dir=resolve("artifacts/v2/motion-choreography");await mkdir(dir,{recursive:true});await writeFile(resolve(dir,"receipt.json"),`${JSON.stringify(receipt,null,2)}\n`);console.log(JSON.stringify({overall,pageCount:plans.length,uniqueChoreographyCount:new Set(signatures).size,validations}));if(overall!=="PASS")process.exitCode=1;

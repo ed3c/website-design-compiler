@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/production-provider-status.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "gate", "overall", "admissionState", "productionReleaseEligible", "providerIdentity", "modelIdentity", "rightsClearance", "runtimeCredentials", "budgetAuthorization", "deterministicMockGate", "reason", "git"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-provider-status/v1" }, "gate": { "const": "PRODUCTION_PROVIDER" },
+    "overall": { "const": "NOT_EXERCISED" }, "admissionState": { "const": "NEEDS_HUMAN_ADMIT" }, "productionReleaseEligible": { "const": false },
+    "providerIdentity": { "const": "ABSENT" }, "modelIdentity": { "const": "ABSENT" }, "rightsClearance": { "const": "ABSENT" },
+    "runtimeCredentials": { "const": "ABSENT" }, "budgetAuthorization": { "const": "ABSENT" }, "deterministicMockGate": { "const": "SEPARATE" },
+    "reason": { "type": "string" },
+    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } }
+  }
+}

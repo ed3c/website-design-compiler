@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CompilerInput, CompilerReference } from "./contracts.js";
+import type { ArtDirectorAuthority, AuthoredContentEntry, CompilerInput, CompilerReference } from "./contracts.js";
 
 export const BRIEF_NORMALIZER_VERSION = "2.0.0";
 export const BRIEF_NORMALIZER_CONFIG = "deterministic-regex-v1";
@@ -12,8 +12,9 @@ export interface NaturalLanguageBriefInput {
   briefText: string;
   references?: CompilerReference[];
   hardConstraints?: string[];
-  authoredContent?: Record<string, string>;
+  authoredContent?: Record<string, AuthoredContentEntry>;
   requestedStages?: string[];
+  artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[] };
 }
 
 export interface NormalizedField {
@@ -185,6 +186,7 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
           objective: objective.value!
         },
         hardConstraints,
+        artDirection: input.artDirection ?? { primary: ["repo-native"] },
         ...(input.authoredContent ? { authoredContent: input.authoredContent } : {}),
         ...(input.references ? { references: input.references } : {}),
         requestedStages

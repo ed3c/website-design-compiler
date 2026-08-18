@@ -9,6 +9,9 @@ import {
   payloadLayoutToAuthoring
 } from "../src/payload-cms.js";
 import { validateAuthoringData, type AuthoringData } from "../src/puck-authoring.js";
+import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
+import { compileCompletePageGraph } from "../src/complete-page-graph.js";
+import { pageGraphFingerprint, pageGraphToPuck, payloadToPuck, puckToPageGraph, puckToPayload, type PayloadPageGraphDocument } from "../src/page-graph-roundtrip.js";
 
 const root = process.cwd();
 const outputDirectory = join(root, "artifacts", "cms");
@@ -38,6 +41,46 @@ try {
     overrideAccess: true,
     data: { email: "fixture-editor@example.invalid", password: randomBytes(24).toString("base64url"), role: "admin" }
   });
+
+  const compiledGraphRows: Array<{category:string;fingerprint:string;declaredFingerprint:string;restoredFingerprint:string;puckState:string}> = [];
+  let compiledDraftPublishedDistinguishable = false;
+  let guestCompiledDraftExposed = false;
+  for (const fixture of compileAllSectionPageFixtures()) {
+    const sourceGraph = compileCompletePageGraph(fixture);
+    const fingerprint = pageGraphFingerprint(sourceGraph);
+    const payloadGraph = puckToPayload(pageGraphToPuck(sourceGraph));
+    const compiled = await api.create({
+      collection: "compiled-pages",
+      overrideAccess: false,
+      user,
+      data: {
+        category: sourceGraph.category,
+        route: sourceGraph.route,
+        graph: payloadGraph,
+        graphFingerprint: fingerprint,
+        editorNote: "Published compiler graph",
+        compilerSchema: sourceGraph.schema,
+        _status: "published"
+      }
+    });
+    if (sourceGraph.category === "b2b-product") {
+      await api.update({collection:"compiled-pages",id:compiled.id,draft:true,overrideAccess:false,user,data:{editorNote:"Draft-only graph note",_status:"draft"}});
+      const publishedVersion = await api.findByID({collection:"compiled-pages",id:compiled.id,draft:false,overrideAccess:false,user});
+      const draftVersion = await api.findByID({collection:"compiled-pages",id:compiled.id,draft:true,overrideAccess:false,user});
+      compiledDraftPublishedDistinguishable = publishedVersion.editorNote !== draftVersion.editorNote;
+      try {
+        const guestDraft = await api.findByID({collection:"compiled-pages",id:compiled.id,draft:true,overrideAccess:false,user:null});
+        guestCompiledDraftExposed = guestDraft?.editorNote === "Draft-only graph note";
+      } catch {
+        guestCompiledDraftExposed = false;
+      }
+    }
+    const publishedCompiled = await api.findByID({collection:"compiled-pages",id:compiled.id,draft:false,overrideAccess:false,user});
+    const persistedPayloadGraph = publishedCompiled.graph as PayloadPageGraphDocument;
+    const persistedPuck = payloadToPuck(persistedPayloadGraph);
+    const restoredGraph = puckToPageGraph(persistedPuck);
+    compiledGraphRows.push({category:sourceGraph.category,fingerprint,declaredFingerprint:String(publishedCompiled.graphFingerprint),restoredFingerprint:pageGraphFingerprint(restoredGraph),puckState:validateAuthoringData(persistedPuck).overall});
+  }
 
   const media = await api.create({
     collection: "media-assets",
@@ -141,7 +184,12 @@ try {
     mediaProvenanceLinked: media.provenanceReceiptPath === "artifacts/media-generator/media-generation-receipt.json" && media.rightsState === "ALLOW",
     localizationReady: true,
     secretPersistedInReceipt: false,
-    productionCredentialInSource: false
+    productionCredentialInSource: false,
+    compiledPageGraphCountSix: compiledGraphRows.length === 6,
+    compiledPageGraphFingerprintsMatch: compiledGraphRows.every((row) => row.fingerprint === row.declaredFingerprint && row.fingerprint === row.restoredFingerprint),
+    compiledPageGraphsRenderThroughPuckRegistry: compiledGraphRows.every((row) => row.puckState === "PASS"),
+    compiledDraftPublishedDistinguishable,
+    guestCannotReadCompiledDraft: !guestCompiledDraftExposed
   };
 
   const overall = checks.sourceValidation === "PASS"
@@ -158,11 +206,17 @@ try {
     && checks.localizationReady
     && checks.secretPersistedInReceipt === false
     && checks.productionCredentialInSource === false;
+  const pageGraphOverall = checks.compiledPageGraphCountSix
+    && checks.compiledPageGraphFingerprintsMatch
+    && checks.compiledPageGraphsRenderThroughPuckRegistry
+    && checks.compiledDraftPublishedDistinguishable
+    && checks.guestCannotReadCompiledDraft;
+  const finalOverall = overall && pageGraphOverall;
 
   await writeFile(publishedFixturePath, `${JSON.stringify(publishedAuthoring, null, 2)}\n`, "utf8");
   const receipt = {
-    schema: "website-design-compiler/payload-cms-receipt/v1",
-    overall: overall ? "PASS" : "FAIL",
+    schema: "website-design-compiler/payload-cms-receipt/v2",
+    overall: finalOverall ? "PASS" : "FAIL",
     git: { sha: process.env.GITHUB_SHA ?? "UNBOUND", ref: process.env.GITHUB_REF ?? "UNBOUND" },
     payload: {
       version: PAYLOAD_VERSION,
@@ -177,9 +231,11 @@ try {
       compilerSchema: "website-design-compiler/frontend-plan/v1",
       authoringSchema: "website-design-compiler/governed-authoring/v1",
       payloadCollection: "pages",
+      compiledPageGraphCollection: "compiled-pages",
       productionRegistryProjection: publishedFixturePath.replace(`${root}/`, "")
     },
     checks,
+    compiledPageGraphs: compiledGraphRows,
     evidence: {
       database: "artifacts/cms/payload.sqlite",
       mediaReceipt: "artifacts/media-generator/media-generation-receipt.json",
@@ -188,7 +244,7 @@ try {
   };
   await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
   console.log(JSON.stringify({ receiptPath, overall: receipt.overall, checks }));
-  if (!overall) process.exitCode = 1;
+  if (!finalOverall) process.exitCode = 1;
 } finally {
   await payload.destroy();
 }

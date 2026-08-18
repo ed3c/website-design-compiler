@@ -1,0 +1,13 @@
+{
+  "schema": "website-design-compiler/release-policy/v2",
+  "profiles": {
+    "CORE": { "required": ["core"] },
+    "NETWORKED_REFERENCE": { "required": ["core", "liveReference"] },
+    "ADVANCED_GPU": { "required": ["core", "webgpu"] },
+    "COMMERCIAL_PRODUCTION": { "required": ["core", "repositoryRights", "productionProvider"] },
+    "FULL_V2": { "required": ["core", "liveReference", "webgpu", "repositoryRights", "productionProvider", "premiumQuality"] }
+  },
+  "premiumQuality": {
+    "profilePath": "fixtures/v2/release-profiles/premium.json"
+  }
+}

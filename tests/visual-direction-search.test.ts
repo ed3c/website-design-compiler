@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
-import { auditCandidateOriginality, searchVisualDirections } from "../src/visual-direction-search.js";
+import { auditCandidateOriginality, loadVerifiedVisualReferences, searchVisualDirections } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
   return {
@@ -47,48 +50,56 @@ test("originality audit rejects a candidate that is too close to an observed ref
   assert.ok(reasons.some((reason) => reason.includes("too close to an observed reference")));
 });
 
-test("source-bound observed fingerprints make originality distance executable", () => {
-  const compilerInput = input("premium-consumer");
-  const observed = searchVisualDirections(compilerInput).candidates[0]!.dimensions;
-  const value = "reference-image-bytes-v1";
-  compilerInput.references = [{
-    kind: "image",
-    value,
-    visualFingerprint: {
-      schema: "website-design-compiler/observed-visual-fingerprint/v1",
-      captureState: "PASS",
-      referenceValueSha256: createHash("sha256").update(value).digest("hex"),
-      capturedArtifactSha256: createHash("sha256").update("captured-reference-bytes").digest("hex"),
-      evidenceSha256: createHash("sha256").update("runtime-observation-receipt").digest("hex"),
-      dimensions: observed
-    }
-  }];
+async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>): Promise<T> {
+  const root = await mkdtemp(join(tmpdir(), "wdc-visual-evidence-"));
+  try {
+    const compilerInput = input("premium-consumer");
+    const observed = searchVisualDirections(compilerInput).candidates[0]!.dimensions;
+    const value = "<!doctype html><main><h1>Observed reference</h1></main>";
+    const evidenceBytes = new TextEncoder().encode("deterministic screenshot bytes");
+    await writeFile(join(root, "evidence.png"), evidenceBytes);
+    const digest = (content: string | Uint8Array) => createHash("sha256").update(content).digest("hex");
+    const receipt = {
+      schema: "website-design-compiler/observed-visual-fingerprint/v2",
+      state: "PASS",
+      producer: "playwright-computed-style/v1",
+      referenceValueSha256: sourceHashOverride ?? digest(value),
+      capturedArtifactSha256: digest(value),
+      evidenceArtifact: { path: "evidence.png", sha256: digest(evidenceBytes) },
+      dimensions: observed,
+      observations: ["computed typography", "computed layout", "computed spacing", "computed motion", "observed media"]
+    };
+    const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
+    await writeFile(join(root, "receipt.json"), receiptText, "utf8");
+    compilerInput.references = [{
+      kind: "html",
+      value,
+      visualEvidence: { receiptPath: "receipt.json", receiptSha256: digest(receiptText) }
+    }];
+    return await run(compilerInput, root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
 
-  const receipt = searchVisualDirections(compilerInput);
-  const selected = receipt.candidates.find((candidate) => candidate.id === receipt.selectedCandidateId)!;
-  assert.equal(receipt.originality.state, "PASS");
-  assert.equal(receipt.originality.observedReferenceCount, 1);
-  assert.ok(receipt.candidates.every((candidate) => candidate.score.originalityDistance !== null));
-  assert.ok((selected.score.originalityDistance ?? 0) >= receipt.originality.threshold);
+test("runtime-artifact-bound observed fingerprints make originality distance executable", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    const verified = await loadVerifiedVisualReferences(compilerInput, root);
+    const receipt = searchVisualDirections(compilerInput, "website-design-compiler/v2", verified);
+    const selected = receipt.candidates.find((candidate) => candidate.id === receipt.selectedCandidateId)!;
+    assert.equal(receipt.originality.state, "PASS");
+    assert.equal(receipt.originality.observedReferenceCount, 1);
+    assert.equal(receipt.originality.observations.length, 1);
+    assert.ok(receipt.candidates.every((candidate) => candidate.score.originalityDistance !== null));
+    assert.ok((selected.score.originalityDistance ?? 0) >= receipt.originality.threshold);
+  });
 });
 
-test("an observed fingerprint with the wrong source hash fails closed", () => {
-  const compilerInput = input("editorial-feature");
-  const observed = searchVisualDirections(compilerInput).candidates[0]!.dimensions;
-  compilerInput.references = [{
-    kind: "image",
-    value: "actual-reference-bytes",
-    visualFingerprint: {
-      schema: "website-design-compiler/observed-visual-fingerprint/v1",
-      captureState: "PASS",
-      referenceValueSha256: "0".repeat(64),
-      capturedArtifactSha256: "2".repeat(64),
-      evidenceSha256: "1".repeat(64),
-      dimensions: observed
-    }
-  }];
-
-  assert.throws(() => searchVisualDirections(compilerInput), /not bound to the supplied reference value/);
+test("an observed fingerprint with the wrong source hash fails closed", async () => {
+  await assert.rejects(
+    withVisualEvidence("0".repeat(64), async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root)),
+    /not bound to the supplied reference value/
+  );
 });
 
 test("same input and seed produces identical ranking and winner", () => {

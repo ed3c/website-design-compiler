@@ -12,6 +12,7 @@ export interface ReleaseGateInputs {
   mediaGenerator: ReleaseInputState;
   authoringStudio: ReleaseInputState;
   payloadCms: ReleaseInputState;
+  repositoryRights: ReleaseInputState;
 }
 
 export interface ReleaseGateEvaluation {

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/storybook-visual-goldens/v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source", "screenshots"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/storybook-visual-goldens/v3" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sourceFilesSha256", "reviewReceiptSha256", "node", "playwright", "browser", "projects"],
+      "properties": {
+        "kind": { "const": "agent-visual-review" },
+        "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "reviewReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "node": { "type": "string", "minLength": 1 },
+        "playwright": { "type": "string", "minLength": 1 },
+        "browser": { "type": "string", "minLength": 1 },
+        "projects": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "screenshots": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "\\.png$" },
+      "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    }
+  }
+}
