@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { ARENA_CATEGORIES, type ArenaCategory } from "./arena.js";
 import { compileContentArchitecture, type SectionContentContract } from "./content-architecture.js";
 import type { AuthoredContentEntry, CompilerInput } from "./contracts.js";
@@ -28,6 +29,9 @@ export interface CompiledSectionPage {
 
 /** Compatibility name for downstream page-graph compilers. The value is compiler output, not a fixture. */
 export type SectionPageFixture = CompiledSectionPage;
+
+const PROOF_SOURCE = "fixtures/content/proof-evidence.txt";
+const PROOF_SOURCE_SHA256 = createHash("sha256").update(readFileSync(PROOF_SOURCE)).digest("hex");
 
 type SectionProjection = {
   kind: SectionKind;
@@ -371,7 +375,7 @@ function benchmarkValue(category: ArenaCategory, slot: string): string {
 }
 
 function benchmarkAuthoredContent(category: ArenaCategory, slot: string): AuthoredContentEntry {
-  const source = `fixture://section-page/${category}/${slot}`;
+  const source = slot === "proof-items" ? PROOF_SOURCE : `fixture://section-page/${category}/${slot}`;
   const value = benchmarkValue(category, slot);
   const excerpt = `Synthetic section-page evidence states: ${value}`;
   return {
@@ -381,8 +385,9 @@ function benchmarkAuthoredContent(category: ArenaCategory, slot: string): Author
       evidence: {
         kind: "source-excerpt",
         source,
+        sourceSha256: PROOF_SOURCE_SHA256,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${PROOF_SOURCE_SHA256}\0${excerpt}\0${value}`).digest("hex")
       }
     } : {})
   };

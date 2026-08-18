@@ -104,10 +104,11 @@
         "evidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "source", "excerpt", "sha256"],
+          "required": ["kind", "source", "sourceSha256", "excerpt", "sha256"],
           "properties": {
             "kind": { "const": "source-excerpt" },
             "source": { "type": "string", "minLength": 1 },
+            "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
             "excerpt": { "type": "string", "minLength": 1 },
             "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
           }

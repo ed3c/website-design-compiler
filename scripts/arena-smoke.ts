@@ -11,6 +11,8 @@ import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observati
 const root = process.cwd();
 const matrixPath = join(root, "fixtures", "arena", "benchmark-matrix.json");
 const outputRoot = join(root, "artifacts", "arena");
+const proofSource = "fixtures/content/proof-evidence.txt";
+const proofSourceSha256 = createHash("sha256").update(await readFile(join(root, proofSource))).digest("hex");
 
 async function readJson<T>(path: string): Promise<T | null> {
   try {
@@ -32,7 +34,7 @@ function passIf(condition: boolean, absent = false): EvidenceState {
 }
 
 function benchmarkAuthoredContent(slot: string, benchmarkId: string) {
-  const source = `fixture://arena/${benchmarkId}/${slot}`;
+  const source = slot === "proof-items" ? proofSource : `fixture://arena/${benchmarkId}/${slot}`;
   const value = `Benchmark ${slot}`;
   const excerpt = `Synthetic Arena evidence states: ${value}`;
   const needsEvidence = slot === "proof-items";
@@ -43,8 +45,9 @@ function benchmarkAuthoredContent(slot: string, benchmarkId: string) {
       evidence: {
         kind: "source-excerpt" as const,
         source,
+        sourceSha256: proofSourceSha256,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${proofSourceSha256}\0${excerpt}\0${value}`).digest("hex")
       }
     } : {})
   };

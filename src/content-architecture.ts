@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import type { CompilerInput, StageExecutionEvidence } from "./contracts.js";
 import { compileInformationArchitecture, type IaSection } from "./information-architecture.js";
 import { validateAgainstSchema } from "./validate.js";
@@ -92,20 +93,38 @@ function ctaRole(section: IaSection): "PRIMARY" | "SECONDARY" | "NONE" {
   return "NONE";
 }
 
-function evidenceSha256(source: string, excerpt: string, value: string): string {
-  return createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex");
+function evidenceSha256(source: string, sourceSha256: string, excerpt: string, value: string): string {
+  return createHash("sha256").update(`${source}\0${sourceSha256}\0${excerpt}\0${value}`).digest("hex");
 }
 
-function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>): ContentFieldContract {
+function workspaceEvidenceBytes(root: string, path: string): Buffer | null {
+  if (isAbsolute(path) || /^[a-z][a-z0-9+.-]*:/i.test(path)) return null;
+  try {
+    const canonicalRoot = realpathSync(root);
+    const resolved = realpathSync(resolve(canonicalRoot, path));
+    const traversal = relative(canonicalRoot, resolved);
+    if (traversal.split(/[\\/]/)[0] === ".." || isAbsolute(traversal)) return null;
+    return readFileSync(resolved);
+  } catch {
+    return null;
+  }
+}
+
+function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>, root: string): ContentFieldContract {
   const maxCharacters = maxCharactersFor(slot);
   const authored = input.authoredContent?.[slot];
   const authoredValue = authored?.value;
   const evidence = authored?.evidence;
+  const evidenceBytes = evidence ? workspaceEvidenceBytes(root, evidence.source) : null;
+  const evidenceText = evidenceBytes?.toString("utf8");
+  const sourceSha256 = evidenceBytes ? createHash("sha256").update(evidenceBytes).digest("hex") : null;
   const evidenceVerified = evidence !== undefined &&
     authored !== undefined &&
     evidence.source === authored.source.uri &&
+    sourceSha256 === evidence.sourceSha256 &&
+    evidenceText?.includes(evidence.excerpt) === true &&
     evidence.excerpt.toLocaleLowerCase("en").includes(authored.value.toLocaleLowerCase("en")) &&
-    evidence.sha256 === evidenceSha256(evidence.source, evidence.excerpt, authored.value);
+    evidence.sha256 === evidenceSha256(evidence.source, evidence.sourceSha256, evidence.excerpt, authored.value);
   if ((forbidden.has(slot) || EVIDENCE_REQUIRED_SLOTS.has(slot)) && !evidenceVerified) {
     return {
       slot,
@@ -158,7 +177,7 @@ function qualityFor(fields: ContentFieldContract[]): SectionContentContract["qua
   return { forbiddenPhraseHits, repeatedPublishableValues };
 }
 
-export function compileContentArchitecture(input: CompilerInput): ContentArchitecturePlan {
+export function compileContentArchitecture(input: CompilerInput, root = process.cwd()): ContentArchitecturePlan {
   const ia = compileInformationArchitecture(input);
   const forbidden = new Set(ia.forbiddenInventions);
   const requiredSlots = new Set(ia.sections.flatMap((section) => section.requiredContent));
@@ -169,7 +188,7 @@ export function compileContentArchitecture(input: CompilerInput): ContentArchite
     throw new Error(`authored content is not owned by this page architecture: ${unownedSlots.join(", ")}`);
   }
   const sections = ia.sections.map<SectionContentContract>((section) => {
-    const fields = section.requiredContent.map((slot) => fieldFor(slot, input, section, forbidden));
+    const fields = section.requiredContent.map((slot) => fieldFor(slot, input, section, forbidden, root));
     return {
       sectionId: section.id,
       sectionType: section.type,

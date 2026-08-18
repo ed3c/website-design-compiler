@@ -58,6 +58,7 @@ export interface AuthoredContentEntry {
   evidence?: {
     kind: "source-excerpt";
     source: string;
+    sourceSha256: string;
     excerpt: string;
     sha256: string;
   };

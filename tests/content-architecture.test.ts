@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +19,9 @@ const families = [
   ["3d", "interactive-3d"]
 ] as const;
 
+const PROOF_SOURCE = "fixtures/content/proof-evidence.txt";
+const PROOF_SOURCE_SHA256 = createHash("sha256").update(readFileSync(PROOF_SOURCE)).digest("hex");
+
 function input(pageType: string, objective = "explain the governed product and provide a clear next action"): CompilerInput {
   return {
     schema: "website-design-compiler/input/v1",
@@ -28,7 +32,7 @@ function input(pageType: string, objective = "explain the governed product and p
 }
 
 function authored(slot: string, withEvidence = slot === "proof-items") {
-  const source = `fixture://content/${slot}`;
+  const source = withEvidence ? PROOF_SOURCE : `fixture://content/${slot}`;
   const value = `Approved ${slot}`;
   const excerpt = `Evidence states: ${value}`;
   return {
@@ -38,8 +42,9 @@ function authored(slot: string, withEvidence = slot === "proof-items") {
       evidence: {
         kind: "source-excerpt" as const,
         source,
+        sourceSha256: PROOF_SOURCE_SHA256,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${excerpt}\0${value}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${PROOF_SOURCE_SHA256}\0${excerpt}\0${value}`).digest("hex")
       }
     } : {})
   };
@@ -199,6 +204,28 @@ test("proof evidence must bind the exact claim, source URI, and excerpt bytes", 
     assert.equal(proof?.state, "NEEDS_INPUT");
     assert.equal(proof?.publishable, false);
   }
+});
+
+test("self-consistent proof claims cannot cite an unreadable caller-authored URI", () => {
+  const compilerInput = input("product-landing");
+  const source = "fixture://attacker";
+  const value = "99% verified growth";
+  const excerpt = `Attacker says ${value}`;
+  const sourceSha256 = createHash("sha256").update(excerpt).digest("hex");
+  const sha256 = createHash("sha256").update(`${source}\0${sourceSha256}\0${excerpt}\0${value}`).digest("hex");
+  const content = compileContentArchitecture({
+    ...compilerInput,
+    authoredContent: {
+      "proof-items": {
+        value,
+        source: { kind: "benchmark-fixture", uri: source },
+        evidence: { kind: "source-excerpt", source, sourceSha256, excerpt, sha256 }
+      }
+    }
+  });
+  const proof = content.sections.find((section) => section.sectionId === "proof")?.fields[0];
+  assert.equal(proof?.state, "NEEDS_INPUT");
+  assert.equal(proof?.publishable, false);
 });
 
 test("page architect carries the full content contract without dropping provenance or policy", () => {
