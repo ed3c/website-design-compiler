@@ -32,9 +32,29 @@ export const PIPELINE_STAGES = [
 export type PipelineStageName = (typeof PIPELINE_STAGES)[number];
 export type ArtDirectorAuthority = "anthropic-frontend-design" | "google-stitch" | "taste-skill" | "repo-native";
 
+export interface VisualDirectionDimensions {
+  typography: "neo-grotesk" | "editorial-serif" | "humanist-sans" | "display-contrast";
+  typeContrast: "restrained" | "balanced" | "dramatic";
+  density: "airy" | "balanced" | "dense";
+  grid: "strict" | "asymmetric" | "modular" | "editorial";
+  surface: "flat" | "layered" | "bordered" | "tonal";
+  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand";
+  mediaStrategy: "text-first" | "product-media" | "editorial-media" | "interactive-stage";
+  motionIntensity: "minimal" | "moderate" | "expressive";
+  signatureInteraction: "none" | "progressive-reveal" | "spatial-focus" | "direct-manipulation";
+}
+
 export interface CompilerReference {
   kind: "url" | "image" | "video" | "html";
   value: string;
+  visualFingerprint?: {
+    schema: "website-design-compiler/observed-visual-fingerprint/v1";
+    captureState: "PASS";
+    referenceValueSha256: string;
+    capturedArtifactSha256: string;
+    evidenceSha256: string;
+    dimensions: VisualDirectionDimensions;
+  };
 }
 
 export interface CompilerInput {

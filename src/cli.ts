@@ -6,7 +6,7 @@ import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js
 import { writeDesignContracts } from "./design-contracts.js";
 import { writeInformationArchitecturePlan } from "./information-architecture.js";
 import { writeContentArchitecturePlan } from "./content-architecture.js";
-import { writeVisualDirectionSearch } from "./visual-direction-search.js";
+import { searchVisualDirections, writeVisualDirectionSearch, type VisualDirectionSearchReceipt } from "./visual-direction-search.js";
 import { writeDesignSystemPlan } from "./design-system-compiler.js";
 import { writePageArchitecturePlan } from "./page-architect.js";
 import { writeFrontendPlan } from "./frontend-builder.js";
@@ -36,6 +36,7 @@ async function main(): Promise<void> {
     const input = await validateCompilerInput(raw);
     const resolvedOutputDirectory = resolve(outputDirectory);
     const executedStages = new Map<string, StageExecutionEvidence>();
+    let visualDirectionSearch: VisualDirectionSearchReceipt | undefined;
 
     const executeStage = async (stage: string, writer: () => Promise<StageWriterOutput>): Promise<void> => {
       const result = await writer();
@@ -52,8 +53,14 @@ async function main(): Promise<void> {
     if (input.requestedStages.includes("art-direction")) await executeStage("art-direction", () => writeDesignContracts(input, resolvedOutputDirectory));
     if (input.requestedStages.includes("information-architecture")) await executeStage("information-architecture", () => writeInformationArchitecturePlan(input, resolvedOutputDirectory));
     if (input.requestedStages.includes("content-architecture")) await executeStage("content-architecture", () => writeContentArchitecturePlan(input, resolvedOutputDirectory));
-    if (input.requestedStages.includes("visual-direction-search")) await executeStage("visual-direction-search", () => writeVisualDirectionSearch(input, resolvedOutputDirectory));
-    if (input.requestedStages.includes("design-system-compiler")) await executeStage("design-system-compiler", () => writeDesignSystemPlan(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("visual-direction-search")) {
+      visualDirectionSearch = searchVisualDirections(input);
+      await executeStage("visual-direction-search", () => writeVisualDirectionSearch(input, resolvedOutputDirectory, visualDirectionSearch));
+    }
+    if (input.requestedStages.includes("design-system-compiler")) {
+      if (!visualDirectionSearch) throw new Error("design-system-compiler requires visual-direction-search in the same invocation");
+      await executeStage("design-system-compiler", () => writeDesignSystemPlan(input, resolvedOutputDirectory, visualDirectionSearch));
+    }
     if (input.requestedStages.includes("page-architect")) await executeStage("page-architect", () => writePageArchitecturePlan(input, resolvedOutputDirectory));
     if (input.requestedStages.includes("frontend-builder")) await executeStage("frontend-builder", () => writeFrontendPlan(input, resolvedOutputDirectory));
     if (input.requestedStages.includes("motion-director")) await executeStage("motion-director", () => writeMotionDirectorPlan(input, resolvedOutputDirectory));

@@ -3,7 +3,7 @@
   "$id": "website-design-compiler/visual-direction-search/v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "seed", "inputSha256", "candidateCount", "selectedCandidateId", "selectedDirection", "candidates"],
+  "required": ["schema", "project", "seed", "inputSha256", "candidateCount", "selectedCandidateId", "selectedDirection", "diversity", "originality", "candidates"],
   "properties": {
     "schema": { "const": "website-design-compiler/visual-direction-search/v2" },
     "project": { "type": "string", "minLength": 1 },
@@ -12,6 +12,26 @@
     "candidateCount": { "type": "integer", "minimum": 3 },
     "selectedCandidateId": { "type": "string", "minLength": 1 },
     "selectedDirection": { "$ref": "#/$defs/dimensions" },
+    "diversity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "minimumPairwiseDistance", "threshold"],
+      "properties": {
+        "state": { "const": "PASS" },
+        "minimumPairwiseDistance": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "threshold": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "originality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "observedReferenceCount", "threshold"],
+      "properties": {
+        "state": { "enum": ["PASS", "NOT_EXERCISED"] },
+        "observedReferenceCount": { "type": "integer", "minimum": 0 },
+        "threshold": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
     "candidates": {
       "type": "array", "minItems": 3,
       "items": {
@@ -56,7 +76,7 @@
         "implementationComplexity": { "type": "integer", "minimum": 0, "maximum": 100 },
         "performanceRisk": { "type": "integer", "minimum": 0, "maximum": 100 },
         "responsiveRobustness": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "originalityDistance": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "originalityDistance": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
         "total": { "type": "integer", "minimum": 0, "maximum": 100 }
       }
     }

@@ -3,7 +3,11 @@ import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildDesignContractBundle } from "./design-contracts.js";
 import { GOVERNED_COMPONENTS } from "./frontend-builder.js";
-import { searchVisualDirections, type VisualDirectionDimensions } from "./visual-direction-search.js";
+import {
+  assertVisualDirectionSearchBinding,
+  type VisualDirectionDimensions,
+  type VisualDirectionSearchReceipt
+} from "./visual-direction-search.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface DesignSystemPlan {
@@ -14,6 +18,7 @@ export interface DesignSystemPlan {
   arbitraryComponentAdmission: false;
   selectedVisualDirection: {
     source: "website-design-compiler/visual-direction-search/v2";
+    searchSeed: string;
     candidateId: string;
     dimensions: VisualDirectionDimensions;
   };
@@ -28,9 +33,9 @@ export interface DesignSystemPlan {
   requiredStateOwnership: Array<{ component: string; states: string[] }>;
 }
 
-export function buildDesignSystemPlan(input: CompilerInput): DesignSystemPlan {
+export function buildDesignSystemPlan(input: CompilerInput, visualSearch: VisualDirectionSearchReceipt): DesignSystemPlan {
   const contract = buildDesignContractBundle();
-  const visualSearch = searchVisualDirections(input);
+  assertVisualDirectionSearchBinding(input, visualSearch);
   return {
     schema: "website-design-compiler/design-system-plan/v1",
     project: input.project,
@@ -39,6 +44,7 @@ export function buildDesignSystemPlan(input: CompilerInput): DesignSystemPlan {
     arbitraryComponentAdmission: false,
     selectedVisualDirection: {
       source: visualSearch.schema,
+      searchSeed: visualSearch.seed,
       candidateId: visualSearch.selectedCandidateId,
       dimensions: { ...visualSearch.selectedDirection }
     },
@@ -56,8 +62,12 @@ export function buildDesignSystemPlan(input: CompilerInput): DesignSystemPlan {
   };
 }
 
-export async function writeDesignSystemPlan(input: CompilerInput, outputDirectory: string): Promise<string> {
-  const plan = buildDesignSystemPlan(input);
+export async function writeDesignSystemPlan(
+  input: CompilerInput,
+  outputDirectory: string,
+  visualSearch: VisualDirectionSearchReceipt
+): Promise<string> {
+  const plan = buildDesignSystemPlan(input, visualSearch);
   await validateAgainstSchema(plan, "design-system-plan.schema.json");
   const directory = join(outputDirectory, "design-system-compiler");
   await mkdir(directory, { recursive: true });

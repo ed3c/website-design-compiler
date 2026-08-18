@@ -19,6 +19,7 @@
   "requestedStages": [
     "reference-intelligence",
     "art-direction",
+    "visual-direction-search",
     "design-system-compiler",
     "page-architect",
     "frontend-builder",

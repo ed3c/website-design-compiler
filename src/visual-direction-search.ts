@@ -1,20 +1,10 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { CompilerInput } from "./contracts.js";
+import type { CompilerInput, VisualDirectionDimensions } from "./contracts.js";
 import { validateAgainstSchema } from "./validate.js";
 
-export interface VisualDirectionDimensions {
-  typography: "neo-grotesk" | "editorial-serif" | "humanist-sans" | "display-contrast";
-  typeContrast: "restrained" | "balanced" | "dramatic";
-  density: "airy" | "balanced" | "dense";
-  grid: "strict" | "asymmetric" | "modular" | "editorial";
-  surface: "flat" | "layered" | "bordered" | "tonal";
-  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand";
-  mediaStrategy: "text-first" | "product-media" | "editorial-media" | "interactive-stage";
-  motionIntensity: "minimal" | "moderate" | "expressive";
-  signatureInteraction: "none" | "progressive-reveal" | "spatial-focus" | "direct-manipulation";
-}
+export type { VisualDirectionDimensions } from "./contracts.js";
 
 export interface VisualDirectionScore {
   briefFit: number;
@@ -24,7 +14,7 @@ export interface VisualDirectionScore {
   implementationComplexity: number;
   performanceRisk: number;
   responsiveRobustness: number;
-  originalityDistance: number;
+  originalityDistance: number | null;
   total: number;
 }
 
@@ -46,8 +36,33 @@ export interface VisualDirectionSearchReceipt {
   candidateCount: number;
   selectedCandidateId: string;
   selectedDirection: VisualDirectionDimensions;
+  diversity: {
+    state: "PASS";
+    minimumPairwiseDistance: number;
+    threshold: number;
+  };
+  originality: {
+    state: "PASS" | "NOT_EXERCISED";
+    observedReferenceCount: number;
+    threshold: number;
+  };
   candidates: VisualDirectionCandidate[];
 }
+
+const DIMENSION_KEYS: Array<keyof VisualDirectionDimensions> = [
+  "typography",
+  "typeContrast",
+  "density",
+  "grid",
+  "surface",
+  "colorStrategy",
+  "mediaStrategy",
+  "motionIntensity",
+  "signatureInteraction"
+];
+
+const DIVERSITY_THRESHOLD = 60;
+const ORIGINALITY_THRESHOLD = 70;
 
 const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
   {
@@ -70,6 +85,24 @@ const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
 
 function hash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function hashText(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function visualDirectionInputSha256(input: CompilerInput): string {
+  return hash(input);
+}
+
+export function assertVisualDirectionSearchBinding(input: CompilerInput, receipt: VisualDirectionSearchReceipt): void {
+  if (receipt.project !== input.project || receipt.inputSha256 !== visualDirectionInputSha256(input)) {
+    throw new Error("visual direction search receipt is not bound to this compiler input");
+  }
+  const selected = receipt.candidates.find((candidate) => candidate.id === receipt.selectedCandidateId);
+  if (!selected || selected.state !== "SELECTED" || JSON.stringify(selected.dimensions) !== JSON.stringify(receipt.selectedDirection)) {
+    throw new Error("visual direction search receipt has an inconsistent selected candidate");
+  }
 }
 
 function boundedScore(hex: string, offset: number, min: number, max: number): number {
@@ -98,17 +131,23 @@ function riskFor(direction: VisualDirectionDimensions): { accessibility: number;
   };
 }
 
-function scoreCandidate(input: CompilerInput, direction: VisualDirectionDimensions, seedHash: string, candidateIndex: number): VisualDirectionScore {
+function scoreCandidate(
+  input: CompilerInput,
+  direction: VisualDirectionDimensions,
+  seedHash: string,
+  candidateIndex: number,
+  differentiation: number,
+  originalityDistance: number | null
+): VisualDirectionScore {
   const risk = riskFor(direction);
-  const offset = candidateIndex * 8;
+  const offset = candidateIndex * 4;
   const briefFit = Math.min(100, boundedScore(seedHash, offset, 72, 88) + pageFitBonus(input.brief.pageType, direction));
-  const differentiation = boundedScore(seedHash, offset + 2, 74, 96);
-  const readability = direction.typeContrast === "dramatic" && direction.density === "dense" ? 72 : boundedScore(seedHash, offset + 4, 82, 97);
-  const originalityDistance = boundedScore(seedHash, offset + 6, 72, 96);
-  const total = Math.round(
-    briefFit * 0.27 + differentiation * 0.18 + readability * 0.18 + risk.responsive * 0.14 + originalityDistance * 0.15 -
-    risk.accessibility * 0.03 - risk.complexity * 0.025 - risk.performance * 0.025
-  );
+  const readability = direction.typeContrast === "dramatic" && direction.density === "dense" ? 72 : boundedScore(seedHash, offset + 2, 82, 97);
+  const positiveWeight = 0.77 + (originalityDistance === null ? 0 : 0.15);
+  const positiveScore = (
+    briefFit * 0.27 + differentiation * 0.18 + readability * 0.18 + risk.responsive * 0.14 + (originalityDistance ?? 0) * 0.15
+  ) / positiveWeight;
+  const total = Math.round(positiveScore - risk.accessibility * 0.03 - risk.complexity * 0.025 - risk.performance * 0.025);
   return {
     briefFit,
     differentiation,
@@ -122,11 +161,24 @@ function scoreCandidate(input: CompilerInput, direction: VisualDirectionDimensio
   };
 }
 
-export function auditCandidateOriginality(candidate: Pick<VisualDirectionCandidate, "signature" | "score">, referenceSignatures: readonly string[]): string[] {
-  const reasons: string[] = [];
-  if (referenceSignatures.includes(candidate.signature)) reasons.push("candidate signature matches a reference signature");
-  if (candidate.score.originalityDistance < 70) reasons.push("originality distance is below the admission threshold");
-  return reasons;
+export function visualDirectionDistance(first: VisualDirectionDimensions, second: VisualDirectionDimensions): number {
+  const differentDimensions = DIMENSION_KEYS.filter((key) => first[key] !== second[key]).length;
+  return Math.round((differentDimensions / DIMENSION_KEYS.length) * 100);
+}
+
+function minimumDistance(direction: VisualDirectionDimensions, references: readonly VisualDirectionDimensions[]): number | null {
+  if (references.length === 0) return null;
+  return Math.min(...references.map((reference) => visualDirectionDistance(direction, reference)));
+}
+
+export function auditCandidateOriginality(
+  candidate: Pick<VisualDirectionCandidate, "dimensions">,
+  observedReferences: readonly VisualDirectionDimensions[]
+): string[] {
+  const distance = minimumDistance(candidate.dimensions, observedReferences);
+  return distance !== null && distance < ORIGINALITY_THRESHOLD
+    ? [`candidate is too close to an observed reference (${distance} < ${ORIGINALITY_THRESHOLD})`]
+    : [];
 }
 
 function rotateDirections(seedHash: string): VisualDirectionDimensions[] {
@@ -135,13 +187,30 @@ function rotateDirections(seedHash: string): VisualDirectionDimensions[] {
 }
 
 export function searchVisualDirections(input: CompilerInput, seed = "website-design-compiler/v2"): VisualDirectionSearchReceipt {
-  const inputSha256 = hash(input);
+  const inputSha256 = visualDirectionInputSha256(input);
   const seedHash = hash({ seed, inputSha256, project: input.project });
-  const referenceSignatures = (input.references ?? []).map((reference) => hash({ kind: reference.kind, value: reference.value }));
-  const initial = rotateDirections(seedHash).map((dimensions, index) => {
-    const score = scoreCandidate(input, dimensions, seedHash, index);
+  const observedReferences = (input.references ?? []).flatMap((reference) => {
+    const fingerprint = reference.visualFingerprint;
+    if (!fingerprint) return [];
+    if (fingerprint.referenceValueSha256 !== hashText(reference.value)) {
+      throw new Error("observed visual fingerprint is not bound to the supplied reference value");
+    }
+    return [fingerprint.dimensions];
+  });
+  const directions = rotateDirections(seedHash);
+  const pairwiseDistances = directions.flatMap((direction, index) =>
+    directions.slice(index + 1).map((other) => visualDirectionDistance(direction, other))
+  );
+  const minimumPairwiseDistance = Math.min(...pairwiseDistances);
+  if (minimumPairwiseDistance < DIVERSITY_THRESHOLD) {
+    throw new Error(`visual direction diversity is below threshold (${minimumPairwiseDistance} < ${DIVERSITY_THRESHOLD})`);
+  }
+  const initial = directions.map((dimensions, index) => {
+    const differentiation = Math.min(...directions.filter((_, otherIndex) => otherIndex !== index).map((other) => visualDirectionDistance(dimensions, other)));
+    const originalityDistance = minimumDistance(dimensions, observedReferences);
+    const score = scoreCandidate(input, dimensions, seedHash, index, differentiation, originalityDistance);
     const signature = hash(dimensions);
-    const rejectionReasons = auditCandidateOriginality({ signature, score }, referenceSignatures);
+    const rejectionReasons = auditCandidateOriginality({ dimensions }, observedReferences);
     return { id: `direction-${index + 1}`, dimensions, score, signature, rejectionReasons };
   });
 
@@ -170,12 +239,26 @@ export function searchVisualDirections(input: CompilerInput, seed = "website-des
     candidateCount: ranked.length,
     selectedCandidateId: selectedId,
     selectedDirection: { ...selected.dimensions },
+    diversity: {
+      state: "PASS",
+      minimumPairwiseDistance,
+      threshold: DIVERSITY_THRESHOLD
+    },
+    originality: {
+      state: observedReferences.length > 0 ? "PASS" : "NOT_EXERCISED",
+      observedReferenceCount: observedReferences.length,
+      threshold: ORIGINALITY_THRESHOLD
+    },
     candidates: ranked
   };
 }
 
-export async function writeVisualDirectionSearch(input: CompilerInput, outputDirectory: string): Promise<string> {
-  const receipt = searchVisualDirections(input);
+export async function writeVisualDirectionSearch(
+  input: CompilerInput,
+  outputDirectory: string,
+  receipt = searchVisualDirections(input)
+): Promise<string> {
+  assertVisualDirectionSearchBinding(input, receipt);
   await validateAgainstSchema(receipt, "visual-direction-search-v2.schema.json");
   const directory = join(outputDirectory, "visual-direction-search");
   await mkdir(directory, { recursive: true });

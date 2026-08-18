@@ -11,8 +11,8 @@ natural-language brief -> brief-normalization -> structured compiler input
 structured compiler input -> information-architecture
 information-architecture -> content-architecture
 references -> reference-intelligence
-reference-intelligence -> art-direction -> design-system-compiler
-information-architecture + content-architecture + design-system-compiler
+reference-intelligence -> art-direction -> visual-direction-search -> design-system-compiler
+information-architecture + content-architecture + selected visual direction + design-system-compiler
   -> page-architect
   -> frontend-builder
   -> motion / 2d / 3d / media specialists
@@ -45,6 +45,13 @@ Turns each IA content requirement into a provenance-bound authoring field with a
 
 Required output:
 - `content-architecture.json`
+
+### Visual direction search
+
+Generates multiple structured candidates, measures pairwise diversity, and selects exactly one direction. Originality distance is computed only from source-bound observed visual fingerprints; when none are supplied, the artifact reports `NOT_EXERCISED` instead of manufacturing a score from unrelated hashes. The selected search receipt is passed directly to the design-system compiler and cannot be silently rerun with another seed.
+
+Required output:
+- `visual-direction-search.json`
 
 ### Reference intelligence
 Produces observable facts only. It may describe layout, typography, motion, assets, hierarchy, and interaction patterns, but must not claim unknown implementation details as facts.
