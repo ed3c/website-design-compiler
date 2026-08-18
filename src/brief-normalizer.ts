@@ -181,6 +181,15 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
           audience: audience.value!,
           objective: objective.value!
         },
+        hardConstraints,
+        briefSourceEvidence: {
+          inputSha256: hash(input),
+          fields: {
+            pageType: { state: pageType.state as "EXPLICIT" | "INFERRED", sourceExcerpt: pageType.sourceExcerpt! },
+            audience: { state: audience.state as "EXPLICIT" | "INFERRED", sourceExcerpt: audience.sourceExcerpt! },
+            objective: { state: objective.state as "EXPLICIT" | "INFERRED", sourceExcerpt: objective.sourceExcerpt! }
+          }
+        },
         ...(input.references ? { references: input.references } : {}),
         requestedStages
       }

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildFrontendPlan } from "./frontend-builder.js";
 import { compileInformationArchitecture, type IaSectionStatus, type IaPriority } from "./information-architecture.js";
-import { compileContentArchitecture, type ContentFieldState } from "./content-architecture.js";
+import { compileContentArchitecture, type ContentFieldContract } from "./content-architecture.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface PageArchitecturePlan {
@@ -28,7 +28,9 @@ export interface PageArchitecturePlan {
     fallback: string;
     contentContract: {
       state: "READY" | "NEEDS_INPUT";
-      fields: Array<{ slot: string; state: ContentFieldState; publishable: boolean }>;
+      localePolicy: { sourceLocale: "en"; localizationReady: true };
+      fields: ContentFieldContract[];
+      quality: { forbiddenPhraseHits: string[]; repeatedPublishableValues: string[] };
     };
   }>;
   optionalEnhancements: Array<{
@@ -71,7 +73,7 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
     ],
     sectionIntents: ia.sections.map((section) => {
       const contentSection = contentBySection.get(section.id);
-      const fields = contentSection?.fields.map((field) => ({ slot: field.slot, state: field.state, publishable: field.publishable })) ?? [];
+      const fields = structuredClone(contentSection?.fields ?? []);
       const contentState = fields.some((field) => field.state === "NEEDS_INPUT") ? "NEEDS_INPUT" : "READY";
       return {
         id: section.id,
@@ -83,7 +85,9 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
         fallback: section.fallback,
         contentContract: {
           state: contentState,
-          fields
+          localePolicy: structuredClone(contentSection?.localePolicy ?? { sourceLocale: "en", localizationReady: true }),
+          fields,
+          quality: structuredClone(contentSection?.quality ?? { forbiddenPhraseHits: [], repeatedPublishableValues: [] })
         }
       };
     }),
