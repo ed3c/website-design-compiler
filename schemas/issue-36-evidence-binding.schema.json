@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "website-design-compiler/issue-36-evidence-binding/v1",
+  "$id": "website-design-compiler/issue-36-evidence-binding/v2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "overall", "git", "predecessor", "evaluator", "browser", "inventory", "negativeControls", "residual", "failures"],
   "properties": {
-    "schema": { "const": "website-design-compiler/issue-36-evidence-binding/v1" },
+    "schema": { "const": "website-design-compiler/issue-36-evidence-binding/v2" },
     "overall": { "$ref": "#/$defs/state" },
     "git": { "$ref": "#/$defs/git" },
     "predecessor": { "$ref": "#/$defs/evidence" },
@@ -13,19 +13,23 @@
       "type": "object", "additionalProperties": false,
       "required": ["path", "sha256", "schema", "state", "sameLineage", "result", "releaseProfile"],
       "properties": {
-        "path": { "const": "artifacts/v2/design-quality/design-quality-eval-receipt.json" },
-        "sha256": { "$ref": "#/$defs/hash" }, "schema": { "const": "website-design-compiler/design-quality-eval-receipt/v2" },
+        "path": { "const": "artifacts/v3/design-quality/design-quality-eval-receipt.json" },
+        "sha256": { "$ref": "#/$defs/hash" }, "schema": { "const": "website-design-compiler/design-quality-eval-receipt/v3" },
         "state": { "$ref": "#/$defs/state" }, "sameLineage": { "$ref": "#/$defs/state" }, "result": { "$ref": "#/$defs/state" },
         "releaseProfile": {
           "type": "object",
-          "additionalProperties": true,
-          "required": ["schema", "id", "sha256", "premiumQualityThreshold", "originalitySimilarityThreshold"],
+          "additionalProperties": false,
+          "required": ["schema", "id", "sha256", "premiumQualityThreshold", "originalitySimilarityThreshold", "requiredViewports", "requireExactEvidenceBinding", "evaluator", "calibrationReceipt"],
           "properties": {
-            "schema": { "type": "string", "minLength": 1 },
+            "schema": { "const": "website-design-compiler/design-quality-release-profile/v3" },
             "id": { "type": "string", "minLength": 1 },
             "sha256": { "$ref": "#/$defs/hash" },
-            "premiumQualityThreshold": { "type": "number", "minimum": 0, "maximum": 100 },
-            "originalitySimilarityThreshold": { "type": "number", "minimum": 0, "maximum": 1 }
+            "premiumQualityThreshold": { "type": "number", "minimum": 78, "maximum": 100 },
+            "originalitySimilarityThreshold": { "type": "number", "minimum": 0.82, "maximum": 1 },
+            "requiredViewports":{"const":["mobile","desktop"]},
+            "requireExactEvidenceBinding":{"const":true},
+            "evaluator": { "type":"object","additionalProperties":false,"required":["schema","scoreModel","structuralSimilarity","visualSimilarity"],"properties":{"schema":{"const":"website-design-compiler/design-quality-evaluator-config/v3"},"scoreModel":{"const":"runtime-evidence-weighted/v3"},"structuralSimilarity":{"const":"ordered-page-graph/v1"},"visualSimilarity":{"const":"calibrated-visual/v1"}} },
+            "calibrationReceipt":{"type":"object","additionalProperties":false,"required":["path","schema"],"properties":{"path":{"const":"artifacts/v3/design-quality-calibration/design-quality-calibration-receipt.json"},"schema":{"const":"website-design-compiler/design-quality-calibration-receipt/v2"}}}
           }
         }
       }
@@ -53,6 +57,17 @@
     },
     "failures": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
   },
+  "allOf": [{
+    "if": { "type": "object", "properties": { "overall": { "const": "PASS" } } },
+    "then": { "type": "object", "properties": {
+      "predecessor": { "type": "object", "properties": { "state": { "const": "PASS" }, "sameLineage": { "const": "PASS" } } },
+      "evaluator": { "type": "object", "properties": { "state": { "const": "PASS" }, "sameLineage": { "const": "PASS" } } },
+      "browser": { "type": "object", "properties": { "runtime": { "type": "object", "properties": { "state": { "const": "PASS" }, "sameLineage": { "const": "PASS" } } }, "generatedPages": { "type": "object", "properties": { "state": { "const": "PASS" }, "sameLineage": { "const": "PASS" } } } } },
+      "inventory": { "type": "object", "properties": { "state": { "const": "PASS" }, "observed": { "const": 12 } } },
+      "negativeControls": { "type": "object", "properties": { "state": { "const": "PASS" } } },
+      "failures": { "type": "array", "maxItems": 0 }
+    } }
+  }],
   "$defs": {
     "state": { "enum": ["PASS", "FAIL"] },
     "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
@@ -98,18 +113,23 @@
       "required": ["category", "viewport", "state", "binding", "checks", "evaluator", "source", "score"],
       "properties": {
         "category": { "type": "string" }, "viewport": { "enum": ["mobile", "desktop"] }, "state": { "$ref": "#/$defs/state" }, "binding": { "$ref": "#/$defs/binding" }, "checks": { "$ref": "#/$defs/checks" },
-        "evaluator": { "type": "object", "additionalProperties": false, "required": ["schema", "releaseProfileSha256", "threshold"], "properties": { "schema": { "const": "website-design-compiler/design-quality-eval/v2" }, "releaseProfileSha256": { "$ref": "#/$defs/hash" }, "threshold": { "type": "number", "minimum": 0, "maximum": 100 } } },
+        "evaluator": { "type": "object", "additionalProperties": false, "required": ["schema", "releaseProfileSha256", "threshold"], "properties": { "schema": { "const": "website-design-compiler/design-quality-eval/v3" }, "releaseProfileSha256": { "$ref": "#/$defs/hash" }, "threshold": { "type": "number", "minimum": 78, "maximum": 100 } } },
         "source": {
           "type": "object",
-          "additionalProperties": true,
-          "required": ["qualityObservationPath", "qualityObservationSha256", "productionProjectionPath", "productionProjectionSha256", "semanticTokensSourceSha256", "browserReceiptSha256"],
+          "additionalProperties": false,
+          "required": ["generatedPageReceipt", "generatedPageReceiptGitSha", "qualityObservationPath", "qualityObservationSha256", "productionProjection", "productionProjectionPath", "productionProjectionSha256", "semanticTokensSourceSha256", "structuralOriginalityCorpus", "visualOriginalityCorpus", "browserReceiptSha256"],
           "properties": {
+            "generatedPageReceipt":{"const":"website-design-compiler/generated-page-browser-receipt/v3"},
+            "generatedPageReceiptGitSha":{"type":"string","minLength":1},
             "qualityObservationPath": { "type": "string", "minLength": 1 },
             "qualityObservationSha256": { "$ref": "#/$defs/hash" },
             "productionProjectionPath": { "const": "apps/site/generated/benchmark-page-graphs.json" },
+            "productionProjection":{"const":"website-design-compiler/site-page-graph-projection/v2"},
             "productionProjectionSha256": { "$ref": "#/$defs/hash" },
             "semanticTokensSourceSha256": { "$ref": "#/$defs/hash" },
-            "browserReceiptSha256": { "$ref": "#/$defs/hash" }
+            "browserReceiptSha256": { "$ref": "#/$defs/hash" },
+            "structuralOriginalityCorpus":{"type":"array","minItems":5,"items":{"type":"string","minLength":1}},
+            "visualOriginalityCorpus":{"type":"array","minItems":5,"items":{"type":"string","minLength":1}}
           }
         },
         "score": { "type": "object", "additionalProperties": false, "required": ["value", "overall", "dimensions", "reasons"], "properties": { "value": { "type": "number", "minimum": 0, "maximum": 100 }, "overall": { "$ref": "#/$defs/state" }, "dimensions": { "$ref": "#/$defs/dimensions" }, "reasons": { "type": "array", "items": { "type": "string" } } } }

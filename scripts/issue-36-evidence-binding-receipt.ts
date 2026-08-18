@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import type { CompletePageGraph } from "../src/complete-page-graph.js";
 import { compileCompletePageGraph } from "../src/complete-page-graph.js";
 import { decidePremiumQuality, type DesignQualityEvidenceBinding, type ExpectedDesignQualityEvidence } from "../src/design-quality-evidence.js";
-import { evaluateDesignQuality, type DesignQualityScorecard } from "../src/design-quality-eval.js";
+import { evaluateDesignQualityV3, type DesignQualityScorecardV3 } from "../src/design-quality-eval.js";
 import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
@@ -17,7 +17,7 @@ const alteredHash = (value: string) => `${value[0] === "a" ? "b" : "a"}${value.s
 
 type GitSubject = { ref: string; sha: string; tree: string };
 type Evaluation = {
-  card: DesignQualityScorecard;
+  card: DesignQualityScorecardV3;
   binding: DesignQualityEvidenceBinding;
   decision: ReturnType<typeof decidePremiumQuality>;
   source: {
@@ -32,7 +32,7 @@ type EvalReceipt = {
   schema: string;
   overall: "PASS" | "FAIL";
   git: { sha: string; ref: string };
-  releaseProfile: { schema: string; id: string; sha256: string; premiumQualityThreshold: number; originalitySimilarityThreshold: number };
+  releaseProfile: { schema: "website-design-compiler/design-quality-release-profile/v3"; id: string; sha256: string; premiumQualityThreshold: number; originalitySimilarityThreshold: number; requiredViewports:("mobile"|"desktop")[];requireExactEvidenceBinding:boolean;evaluator: { schema: string; scoreModel: string; structuralSimilarity: string; visualSimilarity: string }; calibrationReceipt: { path: string; schema: string } };
   premium: { state: "PASS" | "FAIL"; evaluations: Evaluation[] };
 };
 
@@ -68,7 +68,7 @@ export function evaluateIssue36NegativeControls(evaluations: Evaluation[], thres
       mediaHook: { ...firstNode.mediaHook, renderer: "three" as const }
     }))
   } as CompletePageGraph;
-  const poorCard = evaluateDesignQuality(poor, "desktop", threshold);
+  const poorCard = evaluateDesignQualityV3(poor, "desktop", { premiumQualityThreshold:threshold });
   cases.push({
     id: "repetitive-gpu-heavy-fixture",
     expected: "FAIL",
@@ -92,19 +92,21 @@ async function main() {
     return { bytes, value };
   };
   const predecessorPath = "artifacts/handoff/issue-35-local-closure.json";
-  const evaluatorPath = "artifacts/v2/design-quality/design-quality-eval-receipt.json";
+  const evaluatorPath = "artifacts/v3/design-quality/design-quality-eval-receipt.json";
   const browserPath = "artifacts/browser-qa/browser-qa.json";
   const generatedPath = "artifacts/generated-pages/generated-page-browser-receipt.json";
   const predecessor = await readJson<{ overall: string; git: GitSubject & { trackedWorktreeClean: boolean } }>(predecessorPath, "issue-35-local-closure.schema.json");
-  const evaluator = await readJson<EvalReceipt>(evaluatorPath, "design-quality-eval-receipt.schema.json");
+  const evaluator = await readJson<EvalReceipt>(evaluatorPath, "design-quality-eval-receipt-v3.schema.json");
   const browser = await readJson<{ schema: string; overall: string; git: { sha: string; ref: string } }>(browserPath);
   const generated = await readJson<{ schema: string; overall: string; git: { sha: string; ref: string } }>(generatedPath, "generated-page-browser-receipt-v3.schema.json");
   const sameGit = (subject: { sha: string; ref: string }) => subject.sha === git.sha && subject.ref === git.ref;
   const predecessorPass = predecessor.value.overall === "PASS" && predecessor.value.git.sha === git.sha && predecessor.value.git.tree === git.tree && predecessor.value.git.ref === git.ref;
-  const evaluatorPass = sameGit(evaluator.value.git);
+  const thresholdsPass=evaluator.value.releaseProfile.premiumQualityThreshold>=78&&evaluator.value.releaseProfile.originalitySimilarityThreshold>=.82;
+  const evaluatorPass = sameGit(evaluator.value.git)&&thresholdsPass;
   const browserPass = browser.value.overall === "PASS" && generated.value.overall === "PASS" && sameGit(browser.value.git) && sameGit(generated.value.git);
   if (!predecessorPass) failures.push("predecessor:issue-35-lineage");
-  if (!evaluatorPass) failures.push("evaluator:lineage");
+  if (!sameGit(evaluator.value.git)) failures.push("evaluator:lineage");
+  if(!thresholdsPass)failures.push("evaluator:thresholds");
   if (!browserPass) failures.push("browser:lineage-or-state");
 
   const projectionPath = "apps/site/generated/benchmark-page-graphs.json";
@@ -158,7 +160,7 @@ async function main() {
   if (!negativePass) failures.push("negative-controls");
   const allPass = predecessorPass && evaluatorPass && browserPass && inventoryPass && negativePass && failures.length === 0;
   const receipt = {
-    schema: "website-design-compiler/issue-36-evidence-binding/v1",
+    schema: "website-design-compiler/issue-36-evidence-binding/v2",
     overall: allPass ? "PASS" : "FAIL",
     git,
     predecessor: { path: predecessorPath, sha256: hash(predecessor.bytes), state: predecessorPass ? "PASS" : "FAIL", sameLineage: predecessorPass ? "PASS" : "FAIL" },
