@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompletePageGraph } from "../../src/complete-page-graph";
 import { pageGraphFingerprint, pageGraphToPuck } from "../../src/page-graph-roundtrip";
 import { validateAgainstSchema } from "../../src/validate";
+import { exactGitIdentity } from "./evidence-git.js";
 
 test("governed authoring render uses production registry components", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -89,11 +89,7 @@ test("Puck editor consumes every production benchmark page graph", async ({ page
   const propertyResponse = await request.post("/api/studio/publish", { data: extraProperty });
   expect(propertyResponse.status()).toBe(422);
 
-  const git = {
-    ref: `refs/heads/${execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" }).trim()}`,
-    sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-    tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim()
-  };
+  const git = exactGitIdentity();
   const receipt = {
     schema: "website-design-compiler/issue-35-puck-runtime/v1",
     overall: "PASS",
