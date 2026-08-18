@@ -1,5 +1,5 @@
 import type { SectionKind } from "./section-grammar";
-import type { SectionPageFixture } from "./section-page-fixtures";
+import type { SectionPageSource } from "./section-page-source.js";
 import { compileResponsiveSectionPolicy } from "./responsive-composition";
 
 export type MotionPurpose="orient"|"reveal-causality"|"confirm-action"|"spatial-continuity"|"emphasize-hierarchy"|"express-brand";
@@ -16,7 +16,7 @@ function purposeFor(kind:SectionKind):MotionPurpose{
   return"reveal-causality";
 }
 function isScrollLinked(kind:SectionKind):boolean{return kind==="editorial-prose"||kind==="graphics-2d-stage"||kind==="graphics-3d-stage"||kind==="product-showcase";}
-export function compileMotionChoreography(page:SectionPageFixture):MotionChoreographyPlan{
+export function compileMotionChoreography(page:SectionPageSource):MotionChoreographyPlan{
   const effects:ChoreographyEffect[]=page.sections.map((section,index)=>{
     const responsive=compileResponsiveSectionPolicy(section.kind);
     const scroll=isScrollLinked(section.kind);

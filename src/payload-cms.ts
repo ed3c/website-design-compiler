@@ -37,7 +37,7 @@ function validateStoredPageGraph(value:unknown):true|string{
     const {blockType:_,...node}=entry;
     return node;
   });
-  const graph={schema:"website-design-compiler/page-graph/v2",category:value.category,route:value.route,readiness:value.readiness,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature,missingEvidence:value.missingEvidence,nodes} as unknown as CompletePageGraph;
+  const graph={schema:"website-design-compiler/page-graph/v2",project:value.project,category:value.category,route:value.route,source:value.source,readiness:value.readiness,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature,missingEvidence:value.missingEvidence,nodes} as unknown as CompletePageGraph;
   const errors=validateCompletePageGraph(graph);
   return errors.length===0?true:errors.join("; ");
 }

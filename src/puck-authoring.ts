@@ -62,7 +62,7 @@ function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringV
 
   const root=value.root as {props:Record<string,unknown>};
   hasOnlyKeys(root,["props"],"data.root",errors);
-  hasOnlyKeys(root.props,["category","route","readiness","semanticOrder","conversionPath","sharedChrome","contracts","signature","missingEvidence"],"data.root.props",errors);
+  hasOnlyKeys(root.props,["project","category","route","source","readiness","semanticOrder","conversionPath","sharedChrome","contracts","signature","missingEvidence"],"data.root.props",errors);
   const nodes:CompletePageNode[]=[];
   (value.content as unknown[]).forEach((entry,index)=>{
     const path=`data.content[${index}]`;
@@ -70,24 +70,30 @@ function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringV
     hasOnlyKeys(entry,["type","props"],path,errors);
     if(entry.type!=="GovernedPageSection"){errors.push(`${path}.type is not GovernedPageSection`);return;}
     if(!isRecord(entry.props)){errors.push(`${path}.props must be an object`);return;}
-    hasOnlyKeys(entry.props,["id","kind","variant","section","tokenRef","responsive","motionHook","mediaHook","semanticIndex"],`${path}.props`,errors);
+    hasOnlyKeys(entry.props,["id","kind","variant","section","tokenRef","responsive","motionHook","mediaHook","contentContract","semanticIndex"],`${path}.props`,errors);
     if(!isRecord(entry.props.section)){errors.push(`${path}.props.section must be an object`);return;}
     const node=entry.props as unknown as CompletePageNode;
     if(node.id!==node.section.id)errors.push(`${path}.props.id drifted from section.id`);
-    for(const error of validateSectionInstance(node.section))errors.push(`${path}.props.section: ${error}`);
+    for(const error of validateSectionInstance(node.section)){
+      const missing=error.match(/^missing (?:required field|provenance for) (.+)$/)?.[1];
+      const governedDraft=root.props.readiness==="NEEDS_INPUT"&&missing&&Array.isArray(root.props.missingEvidence)&&(root.props.missingEvidence as unknown[]).includes(`${node.id}.${missing}`);
+      if(!governedDraft)errors.push(`${path}.props.section: ${error}`);
+    }
     nodes.push(node);
   });
   if(errors.length>0)return{overall:"FAIL",errors};
   if(!Array.isArray(root.props.semanticOrder)||!Array.isArray(root.props.conversionPath)||!Array.isArray(root.props.missingEvidence))errors.push("data.root.props graph arrays are invalid");
-  if(!isRecord(root.props.sharedChrome)||!isRecord(root.props.contracts))errors.push("data.root.props graph contracts are invalid");
-  if(typeof root.props.category!=="string"||typeof root.props.route!=="string"||typeof root.props.signature!=="string")errors.push("data.root.props graph identity is invalid");
+  if(!isRecord(root.props.sharedChrome)||!isRecord(root.props.contracts)||!isRecord(root.props.source))errors.push("data.root.props graph contracts are invalid");
+  if(typeof root.props.project!=="string"||typeof root.props.category!=="string"||typeof root.props.route!=="string"||typeof root.props.signature!=="string")errors.push("data.root.props graph identity is invalid");
   if(root.props.readiness!=="READY"&&root.props.readiness!=="NEEDS_INPUT")errors.push("data.root.props.readiness is invalid");
   if(errors.length>0)return{overall:"FAIL",errors};
 
   const graph:CompletePageGraph={
     schema:"website-design-compiler/page-graph/v2",
+    project:root.props.project as string,
     category:root.props.category as string,
-    route:root.props.route as "/",
+    route:root.props.route as string,
+    source:root.props.source as unknown as CompletePageGraph["source"],
     readiness:root.props.readiness as CompletePageGraph["readiness"],
     missingEvidence:root.props.missingEvidence as string[],
     semanticOrder:root.props.semanticOrder as string[],
