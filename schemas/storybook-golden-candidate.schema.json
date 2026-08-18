@@ -11,7 +11,7 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["git", "workflow", "screenshotArtifact", "runnerImage", "browser", "fonts", "projects", "qualification"],
+      "required": ["git", "runtimeGit", "workflow", "screenshotArtifact", "runnerImage", "browser", "fonts", "projects", "qualification"],
       "properties": {
         "git": {
           "type": "object",

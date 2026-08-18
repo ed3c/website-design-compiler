@@ -36,7 +36,7 @@ async function candidateFixture(options: { duplicatePixels?: boolean; mobileStat
     outputPath: candidatePath,
     environment: {
       gitSha: "a".repeat(40),
-      gitRef: "refs/pull/42/merge",
+      gitRef: "refs/heads/codex/review",
       runtimeGitSha: "c".repeat(40),
       runtimeGitRef: "refs/pull/42/merge",
       repository: "ed3c/website-design-compiler",
@@ -252,6 +252,42 @@ test("formal admission rejects legacy v2 manifests without independent review", 
     },
     screenshots: fixture.candidate.screenshots
   }), /Only a reviewed Storybook visual-goldens\/v3 manifest/);
+});
+
+test("formal admission rejects a candidate without the screenshot-producing runtime Git subject", async () => {
+  const fixture = await candidateFixture();
+  const candidate = structuredClone(fixture.candidate) as unknown as {
+    source: { runtimeGit?: { sha: string; ref: string } };
+  };
+  delete candidate.source.runtimeGit;
+  await assert.rejects(
+    validateAgainstSchema(candidate, "storybook-golden-candidate.schema.json", process.cwd()),
+    /required property 'runtimeGit'/
+  );
+});
+
+test("formal admission rejects an incoherent candidate and runtime Git relationship", async () => {
+  const fixture = await candidateFixture();
+  const candidate = structuredClone(fixture.candidate);
+  candidate.source.runtimeGit.ref = candidate.source.git.ref;
+  const document = `${JSON.stringify(candidate, null, 2)}\n`;
+  const candidateSha256 = sha256(document);
+  await assert.rejects(validateReviewedGoldenManifest({
+    schema: "website-design-compiler/storybook-visual-goldens/v3",
+    candidateArtifact: { sha256: candidateSha256, document },
+    review: {
+      schema: "website-design-compiler/storybook-golden-review/v1",
+      candidateSha256,
+      decision: "ADMIT",
+      reviewer: { identity: "tech-lead", context: "separate-visual-review", independence: "SEPARATE_REVIEW_CONTEXT" },
+      reviewedAt: "2026-08-18T12:00:00.000Z",
+      inspectedScreenshots: Object.entries(candidate.screenshots).map(([name, screenshotSha256]) => ({
+        name,
+        sha256: screenshotSha256,
+        observation: `Inspected ${name}`
+      }))
+    }
+  }), /same ref must bind the same SHA/);
 });
 
 test("formal admission returns an explicit failure instead of leaving stale receipt evidence", async () => {
