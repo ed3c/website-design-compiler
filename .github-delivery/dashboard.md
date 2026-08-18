@@ -1,6 +1,6 @@
 # website-design-compiler delivery dashboard
 
-> Snapshot: `2026-08-18T22:22:15Z`。本頁是 GitHub event truth 的時間點快照，
+> Snapshot: `2026-08-18T22:40:49Z`。本頁是 GitHub event truth 的時間點快照，
 > 不是 registry 的第二份真相，也不是個人生產力排名。
 
 ## Truth boundary
@@ -19,7 +19,7 @@
 - Repository: `ed3c/website-design-compiler` (`PUBLIC`)
 - Remote tree: `9e524b79e19d7b6792484de786afdcddd2407625` (321 files, orphan root: `YES`)
 - Public ready: `NO`
-- Blockers: `license-missing, export-tree-drift, open-delivery-slices`
+- Blockers: `license-missing, export-tree-drift, open-delivery-slices, open-delivery-prs`
 - Project: [Website Design Compiler](https://github.com/users/ed3c/projects/6)
 
 ## Flow health
@@ -27,7 +27,7 @@
 | Signal | Value |
 |---|---:|
 | accepted slices | 0 |
-| WIP | 0 |
+| WIP | 1 |
 | blocked | 0 |
 | throughput 7d / 28d | 0 / 0 |
 | closed_without_merge | 34 |
@@ -36,7 +36,8 @@
 
 | Status | Items |
 |---|---:|
-| Todo | 2 |
+| In Progress | 1 |
+| Todo | 1 |
 
 `closed_without_merge` 是證據缺口，不計入 throughput。p50/p85 只在有 merge event 樣本時顯示。
 
@@ -78,7 +79,7 @@
 | #35 | CLOSED | — | — | UNKNOWN | 0 |
 | #36 | CLOSED | — | — | UNKNOWN | 0 |
 | #37 | CLOSED | — | — | UNKNOWN | 0 |
-| #43 | OPEN | — | — | UNKNOWN | 0 |
+| #43 | OPEN | 44 | — | UNKNOWN | 0 |
 
 ## Human gate
 

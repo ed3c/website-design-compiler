@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-18T22:22:15Z",
+  "fetched_at": "2026-08-18T22:40:49Z",
   "github_repo": "ed3c/website-design-compiler",
   "github_repository_id": "R_kgDOT5yxHQ",
   "line": "website-design-compiler",
@@ -17,8 +17,8 @@
       "p85": null
     },
     "queue_seconds": {
-      "p50": null,
-      "p85": null
+      "p50": 932,
+      "p85": 932
     },
     "review_seconds": {
       "p50": null,
@@ -653,14 +653,14 @@
       "issue_number": 43,
       "issue_state": "OPEN",
       "lead_seconds": null,
-      "queue_seconds": null,
+      "queue_seconds": 932,
       "reference_causality": {
         "attribution": "known-or-absent",
         "unknown_current_body_refs": []
       },
       "reopened": false,
       "review_seconds": null,
-      "started_pr": null,
+      "started_pr": 44,
       "title": "Land fail-closed evidence convergence without closing production admission"
     }
   ],
@@ -672,6 +672,6 @@
     "throughput_7d": 0,
     "total_slices": 35,
     "unknown_reference_attributions": 0,
-    "wip": 0
+    "wip": 1
   }
 }

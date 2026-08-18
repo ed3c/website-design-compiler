@@ -46,11 +46,12 @@
     "https://github.com/ed3c/website-design-compiler/pull/39",
     "https://github.com/ed3c/website-design-compiler/pull/40",
     "https://github.com/ed3c/website-design-compiler/pull/41",
-    "https://github.com/ed3c/website-design-compiler/pull/42"
+    "https://github.com/ed3c/website-design-compiler/pull/42",
+    "https://github.com/ed3c/website-design-compiler/pull/44"
   ],
   "prd_issue_url": "https://github.com/ed3c/website-design-compiler/issues/25",
   "project_url": "https://github.com/users/ed3c/projects/6",
   "schema": "github-delivery-receipt/v1",
-  "source_commit": "a883d17ad9060bbed7bbdcffe7529390609036c2",
-  "synced_at": "2026-08-18T22:22:15Z"
+  "source_commit": "16ba691b23f1933d7049b3d5b29e7ffc2a893ad7",
+  "synced_at": "2026-08-18T22:40:49Z"
 }
