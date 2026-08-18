@@ -4,35 +4,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import type { CompilerInput, StageExecutionEvidence } from "./contracts.js";
 import { compileInformationArchitecture, type IaSection } from "./information-architecture.js";
+import { maxCharactersForContentSlot, qualityForContentFields, validContentValue, validateSectionContentContract, type ContentFieldContract, type ContentValue, type SectionContentContract } from "./content-contract.js";
 import { validateAgainstSchema } from "./validate.js";
-
-export type ContentSourceType = "observed_fact" | "user_supplied_claim" | "derived_copy" | "placeholder_required" | "forbidden_invention";
-export type ContentFieldState = "READY" | "NEEDS_INPUT" | "FORBIDDEN";
-
-export interface ContentFieldContract {
-  slot: string;
-  state: ContentFieldState;
-  sourceType: ContentSourceType;
-  value: string | null;
-  publishable: boolean;
-  provenance: string[];
-  lengthBudget: { maxCharacters: number };
-}
-
-export interface SectionContentContract {
-  sectionId: string;
-  sectionType: string;
-  messageGoal: string;
-  audienceQuestion: string;
-  ctaRole: "PRIMARY" | "SECONDARY" | "NONE";
-  fallback: string;
-  localePolicy: { sourceLocale: "en"; localizationReady: true };
-  fields: ContentFieldContract[];
-  quality: {
-    forbiddenPhraseHits: string[];
-    repeatedPublishableValues: string[];
-  };
-}
+export { validateSectionContentContract } from "./content-contract.js";
+export type { ContentFieldContract, ContentFieldState, ContentSourceType, ContentValue, SectionContentContract } from "./content-contract.js";
 
 export interface ContentArchitecturePlan {
   schema: "website-design-compiler/content-architecture/v2";
@@ -55,32 +30,11 @@ const FORBIDDEN_SLOTS = new Set([
 
 const EVIDENCE_REQUIRED_SLOTS = new Set(["proof-items", ...FORBIDDEN_SLOTS]);
 
-const EMPTY_MARKETING_PHRASES = [
-  "game-changing",
-  "best-in-class",
-  "world-class",
-  "revolutionary",
-  "cutting-edge",
-  "seamless"
-];
-
-function maxCharactersFor(slot: string): number {
-  if (slot.includes("headline")) return 120;
-  if (slot.includes("action") || slot.includes("cta")) return 36;
-  if (slot.includes("name")) return 64;
-  if (slot.includes("description") || slot.includes("proposition") || slot === "task") return 220;
-  return 280;
-}
-
-function planningProvenanceFor(slot: string, input: CompilerInput, section: IaSection): string[] {
-  if (slot === "brand-or-project-name" || slot === "project-name") return [`compiler.project:${input.project}`];
-  const objectiveEvidence = input.briefSourceEvidence
-    ? `brief-input:${input.briefSourceEvidence.inputSha256}#objective`
-    : `brief.objective:${input.brief.objective}`;
-  if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task" || slot === "dek") return [objectiveEvidence];
-  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return [objectiveEvidence, `ia.section:${section.id}`];
-  if (slot === "scene-purpose" || slot === "interaction-purpose") return [`ia.section:${section.id}`, ...section.evidence];
-  return [];
+function scopedContentValue(input: CompilerInput, section: IaSection, slot: string): ContentValue | undefined {
+  if (input.contentEvidence?.source !== "USER_SUPPLIED") return undefined;
+  const fields = input.contentEvidence.sections[section.id];
+  if (!fields || !Object.hasOwn(fields, slot)) return undefined;
+  return structuredClone(fields[slot]);
 }
 
 function audienceQuestion(section: IaSection, audience: string): string {
@@ -111,10 +65,15 @@ function workspaceEvidenceBytes(root: string, path: string): Buffer | null {
 }
 
 function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>, root: string): ContentFieldContract {
-  const maxCharacters = maxCharactersFor(slot);
+  const maxCharacters = maxCharactersForContentSlot(slot, section.type);
   const authored = input.authoredContent?.[slot];
   const authoredValue = authored?.value;
+  const scopedValue = scopedContentValue(input, section, slot);
+  if (scopedValue !== undefined && authoredValue !== undefined && JSON.stringify(scopedValue) !== JSON.stringify(authoredValue)) {
+    throw new Error(`conflicting content sources for ${section.id}.${slot}`);
+  }
   const evidence = authored?.evidence;
+  const authoredText = Array.isArray(authoredValue) ? authoredValue.join("; ") : authoredValue;
   const evidenceBytes = evidence ? workspaceEvidenceBytes(root, evidence.source) : null;
   const evidenceText = evidenceBytes?.toString("utf8");
   const sourceSha256 = evidenceBytes ? createHash("sha256").update(evidenceBytes).digest("hex") : null;
@@ -123,8 +82,9 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     evidence.source === authored.source.uri &&
     sourceSha256 === evidence.sourceSha256 &&
     evidenceText?.includes(evidence.excerpt) === true &&
-    evidence.excerpt.toLocaleLowerCase("en").includes(authored.value.toLocaleLowerCase("en")) &&
-    evidence.sha256 === evidenceSha256(evidence.source, evidence.sourceSha256, evidence.excerpt, authored.value);
+    authoredText !== undefined &&
+    evidence.excerpt.toLocaleLowerCase("en").includes(authoredText.toLocaleLowerCase("en")) &&
+    evidence.sha256 === evidenceSha256(evidence.source, evidence.sourceSha256, evidence.excerpt, authoredText);
   if ((forbidden.has(slot) || EVIDENCE_REQUIRED_SLOTS.has(slot)) && !evidenceVerified) {
     return {
       slot,
@@ -138,15 +98,15 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   }
 
   const projectValue = slot === "brand-or-project-name" || slot === "project-name" ? input.project : undefined;
-  const value = authoredValue ?? projectValue;
-  if (!value || value.length > maxCharacters) {
+  const value: ContentValue | undefined = scopedValue ?? authoredValue ?? projectValue;
+  if (value === undefined || !validContentValue(slot, value, maxCharacters)) {
     return {
       slot,
       state: "NEEDS_INPUT",
       sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: planningProvenanceFor(slot, input, section),
+      provenance: [],
       lengthBudget: { maxCharacters }
     };
   }
@@ -154,31 +114,33 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   return {
     slot,
     state: "READY",
-    sourceType: "user_supplied_claim",
+    sourceType: evidenceVerified ? "observed_fact" : "user_supplied_claim",
     value,
     publishable: true,
-    provenance: authored
+    provenance: scopedValue !== undefined
+      ? [`brief-input:${input.briefSourceEvidence!.inputSha256}#/contentEvidence/sections/${section.id}/${slot}`]
+      : authored
       ? [
           `compiler.authoredContent:${slot}`,
           `source:${authored.source.kind}:${authored.source.uri}`,
           ...(evidenceVerified ? [`evidence:${evidence.source}#sha256=${evidence.sha256}`] : [])
         ]
-      : planningProvenanceFor(slot, input, section),
+      : [`compiler.project:${input.project}`],
     lengthBudget: { maxCharacters }
   };
 }
 
-function qualityFor(fields: ContentFieldContract[]): SectionContentContract["quality"] {
-  const publishable = fields.filter((field) => field.publishable && field.value).map((field) => field.value!);
-  const forbiddenPhraseHits = EMPTY_MARKETING_PHRASES.filter((phrase) => publishable.some((value) => value.toLowerCase().includes(phrase)));
-  const counts = new Map<string, number>();
-  for (const value of publishable) counts.set(value, (counts.get(value) ?? 0) + 1);
-  const repeatedPublishableValues = [...counts.entries()].filter(([, count]) => count > 1).map(([value]) => value);
-  return { forbiddenPhraseHits, repeatedPublishableValues };
-}
-
 export function compileContentArchitecture(input: CompilerInput, root = process.cwd()): ContentArchitecturePlan {
   const ia = compileInformationArchitecture(input);
+  if(input.contentEvidence){
+    if(input.contentEvidence.schema!=="website-design-compiler/content-evidence/v1"||input.contentEvidence.source!=="USER_SUPPLIED")throw new Error("content evidence identity is invalid");
+    if(!input.briefSourceEvidence)throw new Error("content evidence requires exact brief source evidence");
+    const sectionsById=new Map(ia.sections.map((section)=>[section.id,section]));
+    for(const [sectionId,fields] of Object.entries(input.contentEvidence.sections)){
+      const section=sectionsById.get(sectionId);if(!section)throw new Error(`content evidence references unknown section ${sectionId}`);
+      for(const slot of Object.keys(fields))if(!section.requiredContent.includes(slot))throw new Error(`content evidence references unknown slot ${sectionId}.${slot}`);
+    }
+  }
   const forbidden = new Set(ia.forbiddenInventions);
   const requiredSlots = new Set(ia.sections.flatMap((section) => section.requiredContent));
   const unownedSlots = Object.keys(input.authoredContent ?? {})
@@ -198,12 +160,14 @@ export function compileContentArchitecture(input: CompilerInput, root = process.
       fallback: section.fallback,
       localePolicy: { sourceLocale: "en", localizationReady: true },
       fields,
-      quality: qualityFor(fields)
+      quality: qualityForContentFields(fields)
     };
   });
 
-  const qualityFailure = sections.some((section) => section.quality.forbiddenPhraseHits.length > 0 || section.quality.repeatedPublishableValues.length > 1);
+  const qualityFailure = sections.some((section) => section.quality.forbiddenPhraseHits.length > 0 || section.quality.repeatedPublishableValues.length > 0);
   const needsInput = sections.some((section) => section.fields.some((field) => field.state === "NEEDS_INPUT"));
+  const contractErrors=sections.flatMap((section)=>validateSectionContentContract(section).map((error)=>`${section.sectionId}: ${error}`));
+  if(contractErrors.length>0)throw new Error(`invalid content architecture: ${contractErrors.join("; ")}`);
   return {
     schema: "website-design-compiler/content-architecture/v2",
     project: input.project,

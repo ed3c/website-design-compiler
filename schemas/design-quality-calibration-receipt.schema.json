@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"website-design-compiler/design-quality-calibration-receipt/v1",
+  "type":"object","additionalProperties":false,
+  "required":["schema","overall","threshold","categoryCount","observationCount","controls","viewports","structure","sources"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/design-quality-calibration-receipt/v1"},
+    "overall":{"enum":["PASS","FAIL"]},"threshold":{"const":0.82},"categoryCount":{"const":6},"observationCount":{"const":12},
+    "controls":{"type":"object","additionalProperties":false,"required":["state","identical","reordered","paletteOnly","distant"],"properties":{"state":{"enum":["PASS","FAIL"]},"identical":{"type":"number","minimum":0,"maximum":1},"reordered":{"type":"number","minimum":0,"maximum":1},"paletteOnly":{"type":"number","minimum":0,"maximum":1},"distant":{"type":"number","minimum":0,"maximum":1}}},
+    "viewports":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"object","additionalProperties":false,"required":["viewport","pairCount","maxSimilarity","nearestPair","pairs"],"properties":{"viewport":{"enum":["desktop","mobile"]},"pairCount":{"const":15},"maxSimilarity":{"type":"number","minimum":0,"maximum":1},"nearestPair":{"$ref":"#/$defs/pair"},"pairs":{"type":"array","minItems":15,"maxItems":15,"items":{"$ref":"#/$defs/pair"}}}}},
+    "structure":{"type":"object","additionalProperties":false,"required":["pairCount","maxSimilarity","nearestPair","pairs"],"properties":{"pairCount":{"const":15},"maxSimilarity":{"type":"number","minimum":0,"maximum":1},"nearestPair":{"$ref":"#/$defs/pair"},"pairs":{"type":"array","minItems":15,"maxItems":15,"items":{"$ref":"#/$defs/pair"}}}},
+    "sources":{"type":"object","additionalProperties":false,"required":["projection","observations"],"properties":{"projection":{"$ref":"#/$defs/source"},"observations":{"type":"array","minItems":12,"maxItems":12,"items":{"type":"object","additionalProperties":false,"required":["category","viewport","path","sha256","screenshotSha256"],"properties":{"category":{"type":"string","minLength":1},"viewport":{"enum":["desktop","mobile"]},"path":{"type":"string","pattern":"^artifacts/design-quality-browser/[^/]+\\.json$"},"sha256":{"$ref":"#/$defs/hash"},"screenshotSha256":{"$ref":"#/$defs/hash"}}}}}}
+  },
+  "$defs":{"hash":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source":{"type":"object","additionalProperties":false,"required":["path","sha256"],"properties":{"path":{"type":"string","minLength":1},"sha256":{"$ref":"#/$defs/hash"}}},"pair":{"type":"object","additionalProperties":false,"required":["first","second","similarity"],"properties":{"first":{"type":"string","minLength":1},"second":{"type":"string","minLength":1},"similarity":{"type":"number","minimum":0,"maximum":1}}}}
+}

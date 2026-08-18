@@ -87,3 +87,10 @@ test("section readiness reflects explicit authored content rather than planning 
   assert.ok(plan.sections.every((section) => section.status === "READY"));
   assert.ok(plan.sections.every((section) => section.missingContent.length === 0));
 });
+
+test("editorial reading intent does not fabricate a hero conversion requirement",()=>{
+  const plan=compileInformationArchitecture(input("editorial publication"));
+  const hero=plan.sections.find((section)=>section.id==="editorial-hero");
+  assert.deepEqual(hero?.requiredContent,["headline","dek"]);
+  assert.ok(!hero?.requiredContent.includes("primary-action"));
+});

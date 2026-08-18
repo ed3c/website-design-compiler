@@ -9,20 +9,21 @@
     "project": { "type": "string", "minLength": 1 },
     "sourceVisualDirection": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema", "inputSha256", "seed", "candidateId", "candidateSignature"],
+      "required": ["schema", "inputSha256", "seed", "candidateId", "candidateSignature", "receiptSha256"],
       "properties": {
         "schema": { "const": "website-design-compiler/visual-direction-search/v2" },
         "inputSha256": { "$ref": "#/$defs/sha256" },
         "seed": { "type": "string", "minLength": 1 },
         "candidateId": { "type": "string", "pattern": "^direction-[1-9][0-9]*$" },
-        "candidateSignature": { "$ref": "#/$defs/sha256" }
+        "candidateSignature": { "$ref": "#/$defs/sha256" },
+        "receiptSha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "color": {
       "type": "object", "additionalProperties": false,
       "required": ["mode", "background", "surface", "text", "mutedText", "accent", "onAccent", "focus", "contrastPolicy", "contrastEvidence"],
       "properties": {
-        "mode": { "const": "light" },
+        "mode": { "enum": ["light", "dark"] },
         "background": { "$ref": "#/$defs/oklch" }, "surface": { "$ref": "#/$defs/oklch" }, "text": { "$ref": "#/$defs/oklch" }, "mutedText": { "$ref": "#/$defs/oklch" }, "accent": { "$ref": "#/$defs/oklch" }, "onAccent": { "$ref": "#/$defs/oklch" }, "focus": { "$ref": "#/$defs/oklch" },
         "contrastPolicy": { "const": "WCAG_AA_TEXT" },
         "contrastEvidence": {
@@ -103,7 +104,7 @@
       "required": ["treatment", "gradientPolicy", "blurMaxPx", "noiseOpacityMax"],
       "properties": {
         "treatment": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
-        "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+        "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] },
         "blurMaxPx": { "type": "number", "minimum": 0 }, "noiseOpacityMax": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },

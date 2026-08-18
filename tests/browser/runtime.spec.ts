@@ -155,9 +155,6 @@ test("core runtime satisfies governed browser accessibility performance and degr
     await page.evaluate(() => window.dispatchEvent(new Event("wdc:motion:route-change")));
     await expect(gsapEffect).toHaveAttribute("data-route-cleanup-observed", "true");
     await expect(gsapEffect).toHaveAttribute("data-gsap-active", "false");
-    const motionRuntimeDirectory = join(process.cwd(), "artifacts", "motion-choreography");
-    await mkdir(motionRuntimeDirectory, { recursive: true });
-    await writeFile(join(motionRuntimeDirectory, "browser-runtime-receipt.json"), `${JSON.stringify({schema:"website-design-compiler/motion-choreography-browser-receipt/v2",overall:"PASS",git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"},checks:{routeChangeCleanupObserved:true,timelineInactiveAfterCleanup:true,layoutPropertiesAnimated:false}}, null, 2)}\n`, "utf8");
 
     await page.evaluate(() => window.dispatchEvent(new Event("wdc:graphics3d:dispose")));
     await expect(graphics3d).toHaveAttribute("data-graphics3d-disposed", "true");

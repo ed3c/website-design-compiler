@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/issue-35-local-closure.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "git", "predecessors", "commandResults", "commands", "browser", "cleanup", "residualNotExercised", "failures"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/issue-35-local-closure/v1" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "sha", "tree", "trackedWorktreeClean"],
+      "properties": {
+        "ref": { "type": "string", "pattern": "^refs/[A-Za-z0-9._/-]+$" },
+        "sha": { "$ref": "#/$defs/gitHash" },
+        "tree": { "$ref": "#/$defs/gitHash" },
+        "trackedWorktreeClean": { "type": "boolean" }
+      }
+    },
+    "predecessors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "puck", "payload", "chainDigest", "graphConsistency"],
+      "properties": {
+        "state": { "$ref": "#/$defs/evidenceState" },
+        "puck": { "$ref": "#/$defs/receiptEvidence" },
+        "payload": { "$ref": "#/$defs/receiptEvidence" },
+        "chainDigest": { "$ref": "#/$defs/controlState" },
+        "graphConsistency": { "$ref": "#/$defs/controlState" }
+      }
+    },
+    "commandResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "state", "sameLineage"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/nullableSha256" },
+        "state": { "$ref": "#/$defs/evidenceState" },
+        "sameLineage": { "$ref": "#/$defs/controlState" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": { "$ref": "#/$defs/command" }
+    },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt", "screenshots", "runtimeAssertions"],
+      "properties": {
+        "receipt": { "$ref": "#/$defs/receiptEvidence" },
+        "screenshots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "expected", "observed", "distinctHashes", "inventory", "missing", "unexpected", "digestMismatches"],
+          "properties": {
+            "state": { "$ref": "#/$defs/evidenceState" },
+            "expected": { "const": 18 },
+            "observed": { "type": "integer", "minimum": 0, "maximum": 18 },
+            "distinctHashes": { "type": "integer", "minimum": 0, "maximum": 18 },
+            "inventory": {
+              "type": "array",
+              "maxItems": 18,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["category", "project", "path", "declaredSha256", "actualSha256", "verdict"],
+                "properties": {
+                  "category": { "$ref": "#/$defs/category" },
+                  "project": { "$ref": "#/$defs/screenshotProject" },
+                  "path": { "type": "string", "pattern": "^artifacts/generated-pages/screenshots/[^/]+\\.png$" },
+                  "declaredSha256": { "$ref": "#/$defs/sha256" },
+                  "actualSha256": { "$ref": "#/$defs/nullableSha256" },
+                  "verdict": { "enum": ["PASS", "FAIL", "ABSENT"] }
+                }
+              }
+            },
+            "missing": { "$ref": "#/$defs/stringArray" },
+            "unexpected": { "$ref": "#/$defs/stringArray" },
+            "digestMismatches": { "$ref": "#/$defs/stringArray" }
+          }
+        },
+        "runtimeAssertions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "reportPath", "reportSha256", "testSourcePath", "testSourceSha256", "expectedCases", "passedCases", "semanticOrder", "horizontalOverflow", "missing", "failed"],
+          "properties": {
+            "state": { "$ref": "#/$defs/evidenceState" },
+            "reportPath": { "const": "artifacts/browser-qa/playwright-report.json" },
+            "reportSha256": { "$ref": "#/$defs/nullableSha256" },
+            "testSourcePath": { "const": "tests/browser/generated-pages.spec.ts" },
+            "testSourceSha256": { "$ref": "#/$defs/nullableSha256" },
+            "expectedCases": { "const": 24 },
+            "passedCases": { "type": "integer", "minimum": 0, "maximum": 24 },
+            "semanticOrder": { "$ref": "#/$defs/controlState" },
+            "horizontalOverflow": { "$ref": "#/$defs/controlState" },
+            "missing": { "$ref": "#/$defs/stringArray" },
+            "failed": { "$ref": "#/$defs/stringArray" }
+          }
+        }
+      }
+    },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "residualNotExercised": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lane", "state", "reason"],
+        "properties": {
+          "lane": { "type": "string", "minLength": 1 },
+          "state": { "const": "NOT_EXERCISED" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "failures": { "$ref": "#/$defs/stringArray" }
+  },
+  "$defs": {
+    "category": { "type": "string", "minLength": 1 },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "devServer", "playwright", "payload", "temporaryRuntimeState", "retainedEvidence"],
+      "properties": {
+        "state": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+        "devServer": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+        "playwright": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+        "payload": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+        "temporaryRuntimeState": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+        "retainedEvidence": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "verdict", "exitCode", "evidence"],
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "verdict": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+        "exitCode": { "type": ["integer", "null"] },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
+    "controlState": { "enum": ["PASS", "FAIL", "ABSENT", "NOT_EXERCISED"] },
+    "evidenceState": { "enum": ["PASS", "FAIL", "ABSENT"] },
+    "gitHash": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "nullableSha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "receiptEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "state", "sameLineage"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/nullableSha256" },
+        "state": { "$ref": "#/$defs/evidenceState" },
+        "sameLineage": { "$ref": "#/$defs/controlState" }
+      }
+    },
+    "screenshotProject": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "stringArray": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

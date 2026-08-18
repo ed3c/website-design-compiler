@@ -8,6 +8,7 @@
     "schema": { "const": "website-design-compiler/brief-input/v2" },
     "project": { "type": "string", "minLength": 1 },
     "briefText": { "type": "string", "minLength": 1 },
+    "contentEvidence": { "$ref": "#/$defs/contentEvidence" },
     "references": {
       "type": "array",
       "items": {
@@ -16,7 +17,7 @@
         "required": ["kind", "value"],
         "properties": {
           "kind": { "enum": ["url", "image", "video", "html"] },
-          "value": { "type": "string", "minLength": 1 },
+          "value": { "$ref": "#/$defs/contentValue" },
           "visualEvidence": {
             "type": "object",
             "additionalProperties": false,
@@ -55,10 +56,11 @@
           "evidence": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["kind", "source", "excerpt", "sha256"],
+            "required": ["kind", "source", "sourceSha256", "excerpt", "sha256"],
             "properties": {
               "kind": { "const": "source-excerpt" },
               "source": { "type": "string", "minLength": 1 },
+              "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
               "excerpt": { "type": "string", "minLength": 1 },
               "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
             }
@@ -88,6 +90,32 @@
           "items": { "enum": ["anthropic-frontend-design", "google-stitch", "taste-skill", "repo-native"] }
         }
       }
+    }
+  },
+  "$defs": {
+    "contentEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "source", "sections"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/content-evidence/v1" },
+        "source": { "const": "USER_SUPPLIED" },
+        "sections": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "$ref": "#/$defs/contentValue" }
+          }
+        }
+      }
+    },
+    "contentValue": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" },
+        { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" } }
+      ]
     }
   }
 }

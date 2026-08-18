@@ -7,6 +7,7 @@ import {
 } from "./section-projections.js";
 import { validateAuthoringData, type AuthoringComponentData, type AuthoringData } from "./puck-authoring.js";
 import { validateCompletePageGraph, type CompletePageGraph } from "./complete-page-graph.js";
+import { pageGraphFingerprint, payloadToPuck, puckToPageGraph, type PayloadPageGraphDocument } from "./page-graph-roundtrip.js";
 
 export const PAYLOAD_VERSION="3.86.0" as const;export const CMS_LOCALES=["en","zh-TW"] as const;export const PAYLOAD_DEPLOYMENT_POLICY={developmentSchemaSync:"PUSH_ALLOWED",productionSchemaSync:"MIGRATIONS_REQUIRED",productionCredentialSource:"ENVIRONMENT_ONLY"} as const;
 const authenticated=({req}:{req:{user?:unknown}})=>Boolean(req.user);
@@ -43,7 +44,7 @@ export const MediaAssets:CollectionConfig={slug:"media-assets",admin:{useAsTitle
 
 export const Pages:CollectionConfig={slug:"pages",admin:{useAsTitle:"title"},versions:{drafts:{validate:true},maxPerDoc:50},access:{create:authenticated,update:authenticated,delete:authenticated,readVersions:authenticated,read:({req})=>req.user?true:{_status:{equals:"published"}}},fields:[{name:"slug",type:"text",required:true,unique:true},{name:"project",type:"text",required:true},{name:"title",type:"text",required:true,localized:true},{name:"surfaceToken",type:"select",required:true,defaultValue:"surface-default",options:["surface-default","surface-muted"]},{name:"layout",type:"blocks",required:true,localized:true,blocks:[ButtonBlock,StatusPanelBlock,SectionBlock,...RichSectionBlocks],maxRows:64,validate:(value)=>{try{const data=payloadLayoutToAuthoring(value,"Payload validation","surface-default");const result=validateAuthoringData(data);return result.overall==="PASS"?true:result.errors.join("; ");}catch(error){return error instanceof Error?error.message:"invalid governed Payload layout";}}},{name:"media",type:"relationship",relationTo:"media-assets",hasMany:true,required:false},{name:"compilerSchema",type:"text",required:true,defaultValue:"website-design-compiler/frontend-plan/v1"},{name:"authoringSchema",type:"text",required:true,defaultValue:"website-design-compiler/governed-authoring/v1"}]};
 
-function validateStoredPageGraph(value:unknown):true|string{
+export function validateStoredPageGraph(value:unknown):true|string{
   if(!isRecord(value)||value.schema!=="website-design-compiler/payload-page-graph/v2")return"compiled page graph schema is invalid";
   if(!Array.isArray(value.layout))return"compiled page graph layout must be an array";
   const nodes=value.layout.map((entry)=>{
@@ -51,12 +52,22 @@ function validateStoredPageGraph(value:unknown):true|string{
     const {blockType:_,...node}=entry;
     return node;
   });
-  const graph={schema:"website-design-compiler/page-graph/v2",category:value.category,route:value.route,readiness:value.readiness,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature,missingEvidence:value.missingEvidence,nodes} as unknown as CompletePageGraph;
+  const graph={schema:"website-design-compiler/page-graph/v2",project:value.project,category:value.category,route:value.route,source:value.source,readiness:value.readiness,sourceMissingEvidence:value.sourceMissingEvidence,missingEvidence:value.missingEvidence,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,nodes,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature} as unknown as CompletePageGraph;
   const errors=validateCompletePageGraph(graph);
   return errors.length===0?true:errors.join("; ");
 }
 
-export const PageGraphs:CollectionConfig={slug:"compiled-pages",admin:{useAsTitle:"category"},versions:{drafts:{validate:true},maxPerDoc:50},access:{create:authenticated,update:authenticated,delete:authenticated,readVersions:authenticated,read:({req})=>req.user?true:{_status:{equals:"published"}}},fields:[{name:"category",type:"text",required:true,unique:true},{name:"route",type:"text",required:true},{name:"graph",type:"json",required:true,validate:(value)=>{try{return validateStoredPageGraph(value);}catch(error){return error instanceof Error?error.message:"invalid compiled page graph";}}},{name:"graphFingerprint",type:"text",required:true},{name:"editorNote",type:"text",required:false},{name:"compilerSchema",type:"text",required:true,defaultValue:"website-design-compiler/page-graph/v2"}]};
+export function validateStoredPageGraphFingerprint(value:unknown, declaredFingerprint:unknown):true|string {
+  const graphValidation = validateStoredPageGraph(value);
+  if (graphValidation !== true) return graphValidation;
+  if (typeof declaredFingerprint !== "string") return "compiled page graph fingerprint is missing";
+  const graph = puckToPageGraph(payloadToPuck(value as PayloadPageGraphDocument));
+  return pageGraphFingerprint(graph) === declaredFingerprint
+    ? true
+    : "compiled page graph fingerprint drift";
+}
+
+export const PageGraphs:CollectionConfig={slug:"compiled-pages",admin:{useAsTitle:"category"},versions:{drafts:{validate:true},maxPerDoc:50},access:{create:authenticated,update:authenticated,delete:authenticated,readVersions:authenticated,read:({req})=>req.user?true:{_status:{equals:"published"}}},hooks:{beforeValidate:[({data})=>{const result=validateStoredPageGraphFingerprint(data?.graph,data?.graphFingerprint);if(result!==true)throw new Error(result);return data;}]},fields:[{name:"category",type:"text",required:true,unique:true},{name:"route",type:"text",required:true},{name:"graph",type:"json",required:true,validate:(value)=>{try{return validateStoredPageGraph(value);}catch(error){return error instanceof Error?error.message:"invalid compiled page graph";}}},{name:"graphFingerprint",type:"text",required:true},{name:"editorNote",type:"text",required:false},{name:"compilerSchema",type:"text",required:true,defaultValue:"website-design-compiler/page-graph/v2"}]};
 
 type PayloadBlock=Record<string,unknown>&{blockType:string};
 function requireString(value:unknown,path:string):string{if(typeof value!=="string"||value.trim()==="")throw new Error(`${path} must be non-empty text`);return value;}

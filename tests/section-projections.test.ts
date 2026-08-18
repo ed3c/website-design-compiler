@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { SECTION_CONTRACTS, SECTION_KINDS } from "../src/section-grammar.js";
 import { projectSectionContracts, projectionDriftErrors } from "../src/section-projections.js";
@@ -61,4 +62,17 @@ test("projection drift rejects duplicate kinds and identity or policy drift",()=
       ...(field.maxLength===undefined?{}:{maxLength:field.maxLength})
     }))
   ));
+});
+
+test("projection drift rejects missing Storybook variants",()=>{
+  const projection=projectSectionContracts();
+  const drifted=projection.map((entry,index)=>index===0?{...entry,variantStories:entry.variantStories.slice(1)}:entry);
+  assert.ok(projectionDriftErrors(drifted).some((error)=>error.includes("storybook variant drift")));
+});
+
+test("every projected variant has a statically discoverable canonical Storybook export",async()=>{
+  const source=await readFile(new URL("../apps/site/components/sections/governed-section.stories.tsx",import.meta.url),"utf8");
+  for(const projection of projectSectionContracts())for(const story of projection.variantStories){
+    assert.ok(source.includes(`export const ${story.exportName}:Story=canonicalStory("${projection.kind}","${story.variant}");`),`${projection.kind}/${story.variant} is not a static canonical Storybook export`);
+  }
 });

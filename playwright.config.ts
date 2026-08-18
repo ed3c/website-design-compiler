@@ -18,10 +18,8 @@ const webgpuLaunchArgs = process.platform === "linux"
 
 export default defineConfig({
   testDir: "./tests/browser",
-  // Performance and GPU evidence must not compete for the same runner CPU/GPU.
-  // Parallel functional tests made the measured INP depend on unrelated workers.
-  workers: 1,
-  outputDir: "artifacts/browser-qa/test-results",
+  testIgnore: ["runtime.spec.ts", "motion-choreography.spec.ts", "media-orchestration.spec.ts", "webgpu.spec.ts"],
+  outputDir: "artifacts/browser-qa/test-results-functional",
   reporter: [["json", { outputFile: "artifacts/browser-qa/playwright-report.json" }], ["line"]],
   retries: 0,
   use: {

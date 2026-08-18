@@ -1,0 +1,111 @@
+[
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-b2b",
+    "briefText": "Page type: b2b product landing\nAudience: enterprise software buyers\nObjective: explain governed website generation and drive product evaluation\nMust preserve semantic HTML.\nDo not invent testimonials, metrics, customer logos, or pricing.",
+    "authoredContent": {
+      "proof-items": {
+        "value": ["Runtime receipts bind results to an exact commit", "Browser observations record the rendered output", "Release profiles expose every unmet capability"],
+        "source": { "kind": "benchmark-fixture", "uri": "fixtures/content/proof-evidence.txt" },
+        "evidence": { "kind": "source-excerpt", "source": "fixtures/content/proof-evidence.txt", "sourceSha256": "14d2a0d1b15a42cb88e1f00d04e74dc96df0333f951072f32b9d0eda6bee6959", "excerpt": "Quality B2B evidence states: Runtime receipts bind results to an exact commit; Browser observations record the rendered output; Release profiles expose every unmet capability", "sha256": "9b0122f91ab801ef2b8f4284c120382e075ee7645d91e5d700f26c29ede79f4b" }
+      }
+    },
+    "contentEvidence": {
+      "schema": "website-design-compiler/content-evidence/v1",
+      "source": "USER_SUPPLIED",
+      "sections": {
+        "navigation": { "primary-action-label": "Inspect the compiler" },
+        "hero": { "headline": "Evidence before pixels", "value-proposition": "Compile governed sites from traceable inputs, explicit contracts and runtime proof.", "primary-action": "Review the evidence" },
+        "features": { "headline": "A compiler you can audit", "feature-items": ["Every stage emits an exact artifact identity", "Responsive and motion contracts execute in the browser", "Unknown rights and missing evidence fail closed"] },
+        "proof": { "proof-items": ["Runtime receipts bind results to an exact commit", "Browser observations record the rendered output", "Release profiles expose every unmet capability"] },
+        "conversion": { "cta-headline": "Inspect the full evidence chain", "cta-label": "Open the compiler" }
+      }
+    }
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-editorial",
+    "briefText": "Page type: editorial feature\nAudience: long-form readers\nObjective: prioritize reading hierarchy and evidence-backed narrative\nMust support reduced motion.\nDo not invent authors, publications, metrics, or pricing.",
+    "contentEvidence": {
+      "schema": "website-design-compiler/content-evidence/v1",
+      "source": "USER_SUPPLIED",
+      "sections": {
+        "navigation": { "primary-action-label": "Begin reading" },
+        "editorial-hero": { "headline": "The quiet machinery behind trustworthy interfaces", "dek": "A field guide to preserving meaning while a design system moves from brief to browser." },
+        "article-body": { "body-content": "A useful compiler does more than assemble sections. It keeps the reason for every decision close to the resulting artifact, so readers and reviewers can distinguish observed behavior from an attractive claim." },
+        "related-content": { "headline": "Continue the investigation", "related-items": ["How responsive contracts preserve reading order", "Why incomplete evidence should remain visible", "What browser receipts can and cannot prove"] }
+      }
+    }
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-premium",
+    "briefText": "Page type: premium consumer brand site\nAudience: high-intent consumer buyers\nObjective: present a distinctive premium product story with a clear action\nMust preserve accessible commerce actions.\nDo not invent customer logos, testimonials, metrics, or pricing.",
+    "authoredContent": {
+      "proof-items": {
+        "value": ["Material specifications accompany every object", "Care and repair guidance remains available after purchase", "Packaging decisions are documented by product"],
+        "source": { "kind": "benchmark-fixture", "uri": "fixtures/content/proof-evidence.txt" },
+        "evidence": { "kind": "source-excerpt", "source": "fixtures/content/proof-evidence.txt", "sourceSha256": "14d2a0d1b15a42cb88e1f00d04e74dc96df0333f951072f32b9d0eda6bee6959", "excerpt": "Quality premium evidence states: Material specifications accompany every object; Care and repair guidance remains available after purchase; Packaging decisions are documented by product", "sha256": "aa5545f472240ed1a654a5ce0f993f2170ba48efa82cefb94e71901da6e360ef" }
+      }
+    },
+    "contentEvidence": {
+      "schema": "website-design-compiler/content-evidence/v1",
+      "source": "USER_SUPPLIED",
+      "sections": {
+        "navigation": { "primary-action-label": "Explore the collection" },
+        "brand-hero": { "headline": "Made for a slower kind of attention", "value-proposition": "A restrained collection shaped by tactile materials, deliberate proportions and lasting utility.", "primary-action": "View the collection" },
+        "product-showcase": { "headline": "Form, repair and daily use", "product-description": "A sculptural everyday object with a quiet profile and a repairable, modular construction.", "product-media-asset-id": "approved-product-object", "product-media-alt": "Sculptural modular object shown against a quiet neutral ground" },
+        "brand-proof": { "proof-items": ["Material specifications accompany every object", "Care and repair guidance remains available after purchase", "Packaging decisions are documented by product"] },
+        "conversion": { "cta-headline": "Choose the object that stays", "cta-label": "Explore objects" }
+      }
+    }
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-motion",
+    "briefText": "Page type: motion-heavy creative site\nAudience: creative technology audiences\nObjective: create a paced interactive narrative without blocking the primary action\nMust support reduced motion.\nNever make motion required for comprehension.",
+    "contentEvidence": {
+      "schema": "website-design-compiler/content-evidence/v1",
+      "source": "USER_SUPPLIED",
+      "sections": {
+        "navigation": { "primary-action-label": "Enter the sequence" },
+        "creative-hero": { "headline": "Motion with a reason", "value-proposition": "A paced narrative where movement reveals causality and the complete story remains available without animation.", "primary-action": "Start the sequence" },
+        "narrative-sequence": { "story-beats": ["Orient with a stable opening frame", "Reveal relationships as the story advances", "Return control before the primary decision"] },
+        "interactive-showcase": { "interaction-purpose": "Let visitors scrub between the authored states while semantic copy owns the explanation.", "stage-media-asset-id": "approved-authored-state-sequence", "stage-media-alt": "Sequence of three authored states controlled by a scrubber" },
+        "conversion": { "cta-headline": "Take the idea into the studio", "cta-label": "Open the studio" }
+      }
+    }
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-2d",
+    "briefText": "Page type: interactive 2d experience\nAudience: interactive product visitors\nObjective: demonstrate a 2D experience while preserving semantic fallbacks\nMust preserve semantic HTML.\nNever require canvas for primary content.",
+    "contentEvidence": {
+      "schema": "website-design-compiler/content-evidence/v1",
+      "source": "USER_SUPPLIED",
+      "sections": {
+        "navigation": { "primary-action-label": "Try the canvas" },
+        "experience-hero": { "headline": "A canvas that explains itself", "task": "Arrange the field, compare its states and keep every conclusion available in semantic HTML.", "primary-action": "Launch the field" },
+        "pixi-stage": { "scene-purpose": "Visualize a bounded field of responsive particles as optional feedback for direct manipulation." },
+        "how-it-works": { "headline": "Direct, bounded, recoverable", "feature-items": ["Pointer and keyboard paths describe the same task", "The renderer stays inside an explicit draw-call budget", "A static explanation survives every graphics failure"] },
+        "conversion": { "cta-headline": "Carry the pattern forward", "cta-label": "Inspect the interaction" }
+      }
+    }
+  },
+  {
+    "schema": "website-design-compiler/brief-input/v2",
+    "project": "benchmark-3d",
+    "briefText": "Page type: interactive 3d showcase\nAudience: spatial-interface visitors\nObjective: demonstrate a governed 3D experience with a clear fallback path\nMust support reduced motion.\nNever require WebGL for primary content.",
+    "contentEvidence": {
+      "schema": "website-design-compiler/content-evidence/v1",
+      "source": "USER_SUPPLIED",
+      "sections": {
+        "navigation": { "primary-action-label": "Enter the scene" },
+        "experience-hero": { "headline": "Space without the black box", "task": "Inspect a bounded scene whose camera, geometry and fallback remain explicit.", "primary-action": "Explore the scene" },
+        "three-stage": { "scene-purpose": "Reveal depth and material response without moving primary content into the GPU layer." },
+        "capabilities": { "headline": "A scene with declared limits", "feature-items": ["Geometry and draw calls stay within a measured budget", "Device loss returns to a semantic static state", "WebGPU remains opt-in until hardware evidence exists"] },
+        "conversion": { "cta-headline": "See how the scene is governed", "cta-label": "Inspect the scene" }
+      }
+    }
+  }
+]

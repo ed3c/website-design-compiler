@@ -44,6 +44,7 @@ export function ThreeEvidence() {
   const [disposed, setDisposed] = useState(false);
   const [dpr, setDpr] = useState(1);
   const [forceInitializationFailure, setForceInitializationFailure] = useState(false);
+  const [webglMetrics,setWebglMetrics]=useState<{drawCalls:number;triangles:number;textureCount:number;textureBytes:number|null;dpr:number}|null>(null);
 
   const handleReady = useCallback(() => setState("ready"), []);
   const handleDisposed = useCallback(() => setDisposed(true), []);
@@ -151,9 +152,10 @@ export function ThreeEvidence() {
       data-graphics3d-three-version="0.184.0"
       data-graphics3d-tsl-module="three/tsl@0.184.0"
       data-graphics3d-frame-loop={runtimeReceipt?.budget.frameLoop ?? "demand"}
-      data-graphics3d-draw-calls={runtimeReceipt?.budget.drawCalls ?? "NOT_EXERCISED"}
-      data-graphics3d-triangles={runtimeReceipt?.budget.triangles ?? "NOT_EXERCISED"}
-      data-graphics3d-texture-bytes={runtimeReceipt?.budget.textureBytes ?? "NOT_EXERCISED"}
+      data-graphics3d-draw-calls={runtimeReceipt?.budget.drawCalls ?? webglMetrics?.drawCalls ?? "NOT_EXERCISED"}
+      data-graphics3d-triangles={runtimeReceipt?.budget.triangles ?? webglMetrics?.triangles ?? "NOT_EXERCISED"}
+      data-graphics3d-texture-bytes={runtimeReceipt?.budget.textureBytes ?? webglMetrics?.textureBytes ?? "NOT_EXERCISED"}
+      data-graphics3d-texture-count={webglMetrics?.textureCount ?? "NOT_EXERCISED"}
       data-graphics3d-disposed={String(disposed)}
       data-graphics3d-dpr={dpr}
     >
@@ -163,7 +165,7 @@ export function ThreeEvidence() {
       </p>
       <div data-r3f-host="true" role="img" aria-label="Procedural compiler proof object">
         {selection?.renderer === "webgl" ? (
-          <R3FScene dpr={dpr} onReady={handleReady} onDisposed={handleDisposed} />
+          <R3FScene dpr={dpr} onReady={handleReady} onDisposed={handleDisposed} onMetrics={setWebglMetrics} />
         ) : null}
         {selection?.renderer === "webgpu" && WebGPUScene ? (
           <WebGPUScene

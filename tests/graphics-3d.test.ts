@@ -107,12 +107,7 @@ test("WebGPU runtime schema accepts the adapter identity emitted by the browser 
           renderer: "three.WebGPURenderer",
           rendererVersion: "0.184.0",
           tslModule: "three/tsl@0.184.0",
-          adapterInfo: {
-            vendor: "apple",
-            architecture: "common-8",
-            device: "UNREPORTED",
-            description: "UNREPORTED"
-          },
+          adapterInfo: { state:"REPORTED",sha256:"a".repeat(64) },
           features: [],
           limits: { maxTextureDimension2D: 8192, maxBindGroups: 4, maxBufferSize: 268435456 }
         },

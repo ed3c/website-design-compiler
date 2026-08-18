@@ -87,7 +87,7 @@ try {
     await writeFile(resolve(outputDirectory, `${benchmark.id}.json`), `${JSON.stringify(search, null, 2)}\n`, "utf8");
   }
   const winnerDiversity = new Set(categories.map((category) => category.selectedSignature)).size;
-  const overall = categories.length === 6 && winnerDiversity >= 3 && categories.every((category) => category.state === "PASS" && category.originalityState === "PASS") ? "PASS" : "FAIL";
+  const overall = categories.length === 6 && winnerDiversity === 6 && categories.every((category) => category.state === "PASS" && category.originalityState === "PASS") ? "PASS" : "FAIL";
   await writeReceipt(overall, []);
   if (overall !== "PASS") process.exitCode = 1;
 } catch (error) {

@@ -44,8 +44,8 @@ function validReceipts(): Record<string, Record<string, unknown>> {
       schema: "website-design-compiler/browser-qa-runtime-receipt/v1", overall: "PASS", git,
       requiredProjects: ["desktop"], projectResults: [{ projectName: "desktop", status: "passed" }],
       passedProjects: ["desktop"], failedProjects: [], missingProjects: [], missingScreenshots: [],
-      artifacts: { report: "playwright-report.json", screenshots: ["screenshots/desktop.png"], traces: ["desktop-trace.zip"] },
-      gates: { browserMatrix: "PASS", screenshots: "PASS", traces: "PASS", playwrightReport: "PASS" }
+      artifacts: { report: "playwright-report.json", runtimeReport: "playwright-runtime-report.json", screenshots: ["screenshots/desktop.png"], traces: ["desktop-trace.zip"] },
+      gates: { browserMatrix: "PASS", screenshots: "PASS", traces: "PASS", playwrightReport: "PASS", playwrightRuntimeReport: "PASS" }
     },
     quality: {
       schema: "website-design-compiler/accessibility-performance-receipt/v1", overall: "PASS", git,
@@ -314,7 +314,7 @@ test("runtime evidence binds the governed input and rejects symlinked artifacts"
   }
 });
 
-test("premium PASS cannot be promoted without artifact readback", async () => {
+test("legacy premium evidence cannot impersonate the v3 artifact-bound contract", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-premium-artifacts-"));
   try {
     const spec = RELEASE_CAPABILITY_SPECS.premiumQuality;
@@ -369,10 +369,9 @@ test("premium PASS cannot be promoted without artifact readback", async () => {
     await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
     const result = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
     assert.equal(result.state, "FAIL");
-    assert.match(result.errors.join("; "), /trusted generated-page browser admission is absent/);
-    assert.match(result.errors.join("; "), /canonical browser viewport/);
-    assert.match(result.errors.join("; "), /not a PNG browser screenshot/);
-    assert.match(result.errors.join("; "), /card does not match current graph, observation, and profile/);
+    assert.match(result.errors.join("; "), /required property 'calibration'/);
+    assert.match(result.errors.join("; "), /required property 'allMeasurementsPass'/);
+    assert.match(result.errors.join("; "), /releaseProfile must have required property 'schema'/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -402,12 +401,13 @@ test("formal optional capability evidence remains admissible through the central
   };
   const webgpu = {
     schema: RELEASE_CAPABILITY_SPECS.webgpu.schema, overall: "PASS", git, rendererOutcome: "WEBGPU_PASS",
-    selected: { state: "WEBGPU_PASS", renderer: "webgpu", reason: "browser execution", capabilities: { webgpu: true, webgl: true }, runtime: { state: "WEBGPU_PASS", identity: { adapter: "navigator.gpu", renderer: "three.WebGPURenderer", rendererVersion: "0.184.0", tslModule: "three/tsl@0.184.0", adapterInfo: { vendor: "fixture", architecture: "fixture", device: "fixture", description: "fixture" }, features: [], limits: {} }, budget: { dpr: 1, drawCalls: 1, triangles: 1, textureBytes: 1, framesRendered: 1, frameLoop: "demand" } } },
+    selected: { state: "WEBGPU_PASS", renderer: "webgpu", reason: "browser execution", capabilities: { webgpu: true, webgl: true }, runtime: { state: "WEBGPU_PASS", identity: { adapter: "navigator.gpu", renderer: "three.WebGPURenderer", rendererVersion: "0.184.0", tslModule: "three/tsl@0.184.0", adapterInfo: { state: "REPORTED", sha256: hash }, features: [], limits: { maxTextureDimension2D: 8192, maxBindGroups: 4, maxBufferSize: 268435456 } }, budget: { dpr: 1, drawCalls: 1, triangles: 1, textureBytes: 1, framesRendered: 1, frameLoop: "demand" } } },
     fallbacks: { initializationFailure: "PASS", totalGpuFailure: "PASS", deviceLoss: "PASS" }
   };
   const productionProvider = {
     schema: RELEASE_CAPABILITY_SPECS.productionProvider.schema, gate: "PRODUCTION_PROVIDER", overall: "NOT_EXERCISED", admissionState: "NEEDS_HUMAN_ADMIT", productionReleaseEligible: false,
-    providerIdentity: "ABSENT", modelIdentity: "ABSENT", rightsClearance: "ABSENT", runtimeCredentials: "ABSENT", budgetAuthorization: "ABSENT", deterministicMockGate: "SEPARATE", reason: "human admission is absent", git
+    providerIdentity: "ABSENT", modelIdentity: "ABSENT", rightsClearance: "ABSENT", runtimeCredentials: "ABSENT", budgetAuthorization: "ABSENT", deterministicMockGate: "SEPARATE",
+    executionReceiptSha256:"ABSENT",requestSha256:"ABSENT",assetSha256:"ABSENT",reason: "human admission is absent", git
   };
   assert.equal(bindReleaseEvidence(live, RELEASE_CAPABILITY_SPECS.liveReference.schema, git).state, "PASS");
   assert.equal(bindReleaseEvidence(webgpu, RELEASE_CAPABILITY_SPECS.webgpu.schema, git).state, "PASS");

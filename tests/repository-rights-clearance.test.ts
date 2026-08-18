@@ -104,6 +104,10 @@ test("public asset symlinks fail closed without following their targets", async 
     const outsideTarget = join(root, "untracked-third-party.png");
     await writeFile(outsideTarget, "unknown third-party bytes", "utf8");
     await symlink(outsideTarget, join(publicDirectory, "linked-third-party.png"));
+    await writeFile(join(root, "rights-asset-provenance.json"), `${JSON.stringify({
+      schema: "website-design-compiler/asset-provenance/v1",
+      assets: []
+    })}\n`, "utf8");
 
     const subjects = await scanShippedAssets(root);
     assert.equal(subjects.length, 1);
@@ -122,6 +126,10 @@ test("absent public tree means zero assets while an unreadable tree is diagnosti
   try {
     assert.deepEqual(await scanShippedAssets(root), []);
     await mkdir(join(root, "apps/site"), { recursive: true });
+    await writeFile(join(root, "rights-asset-provenance.json"), `${JSON.stringify({
+      schema: "website-design-compiler/asset-provenance/v1",
+      assets: []
+    })}\n`, "utf8");
     await writeFile(join(root, "apps/site/public"), "not a directory", "utf8");
     const subjects = await scanShippedAssets(root);
     assert.equal(subjects.length, 1);
@@ -235,6 +243,10 @@ test("waiver and public-tree diagnostics independently fail the repository recei
     await mkdir(join(root, "node_modules/.pnpm"), { recursive: true });
     await mkdir(publicDirectory, { recursive: true });
     await mkdir(binDirectory);
+    await writeFile(join(root, "rights-asset-provenance.json"), `${JSON.stringify({
+      schema: "website-design-compiler/asset-provenance/v1",
+      assets: []
+    })}\n`, "utf8");
     const pnpmPath = join(binDirectory, "pnpm");
     await writeFile(pnpmPath, "#!/bin/sh\nprintf '%s\\n' '[]'\n", "utf8");
     await chmod(pnpmPath, 0o755);

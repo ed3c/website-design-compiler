@@ -26,7 +26,7 @@ for (const benchmark of matrix.categories) {
   const publishableFields = content.sections.flatMap((section) => section.fields).filter((field) => field.publishable);
   const forbiddenPublishable = publishableFields.filter((field) => content.forbiddenInventions.includes(field.slot));
   const provenanceComplete = publishableFields.every((field) => field.provenance.length > 0);
-  const budgetsPass = publishableFields.every((field) => (field.value?.length ?? 0) <= field.lengthBudget.maxCharacters);
+  const budgetsPass = publishableFields.every((field) => Array.isArray(field.value)?field.value.every((value)=>value.length<=field.lengthBudget.maxCharacters):(field.value?.length ?? 0)<=field.lengthBudget.maxCharacters);
   const sectionAlignment = JSON.stringify(content.sections.map((section) => section.sectionId)) === JSON.stringify(ia.sections.map((section) => section.id));
   const pageProjection = page.sectionIntents.every((intent) => {
     const section = content.sections.find((candidate) => candidate.sectionId === intent.id);

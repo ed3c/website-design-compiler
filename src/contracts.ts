@@ -34,7 +34,7 @@ export interface VisualDirectionDimensions {
   density: "airy" | "balanced" | "dense";
   grid: "strict" | "asymmetric" | "modular" | "editorial";
   surface: "flat" | "layered" | "bordered" | "tonal";
-  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand";
+  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand" | "spatial-dark";
   mediaStrategy: "text-first" | "product-media" | "editorial-media" | "interactive-stage";
   motionIntensity: "minimal" | "moderate" | "expressive";
   signatureInteraction: "none" | "progressive-reveal" | "spatial-focus" | "direct-manipulation";
@@ -50,7 +50,7 @@ export interface CompilerReference {
 }
 
 export interface AuthoredContentEntry {
-  value: string;
+  value: CompilerContentValue;
   source: {
     kind: "user-supplied" | "benchmark-fixture";
     uri: string;
@@ -73,6 +73,13 @@ export interface CompilerBriefSourceEvidence {
   };
 }
 
+export type CompilerContentValue = string | string[];
+export interface CompilerContentEvidence {
+  schema: "website-design-compiler/content-evidence/v1";
+  source: "USER_SUPPLIED";
+  sections: Record<string, Record<string, CompilerContentValue>>;
+}
+
 export interface CompilerInput {
   schema: "website-design-compiler/input/v1";
   project: string;
@@ -84,6 +91,7 @@ export interface CompilerInput {
   hardConstraints?: string[];
   authoredContent?: Record<string, AuthoredContentEntry>;
   briefSourceEvidence?: CompilerBriefSourceEvidence;
+  contentEvidence?: CompilerContentEvidence;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];

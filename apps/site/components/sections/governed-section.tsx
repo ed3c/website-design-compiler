@@ -78,7 +78,7 @@ export function GovernedSection({ kind, variant, fields }: GovernedSectionProps)
     return <section className={`${styles.section} ${styles.hero}`} data-governed-section={kind} data-variant={variant}>
       <div className={styles.heroCopy}>
         <Kicker>{text(fields.eyebrow) ?? variant}</Kicker>
-        <h2>{heading}</h2>
+        <h1>{heading}</h1>
         {body ? <p className={styles.lede}>{body}</p> : null}
         <div className={styles.actions}>{primary ? <Action value={primary} /> : null}{secondary ? <Action value={secondary} tone="quiet" /> : null}</div>
       </div>

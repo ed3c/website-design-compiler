@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/issue-35-payload-runtime.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "git", "predecessor", "runtime", "draftPublished", "controls", "graphs", "cleanup", "evidence", "commands"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/issue-35-payload-runtime/v1" },
+    "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+    "git": { "$ref": "#/$defs/git" },
+    "predecessor": { "$ref": "#/$defs/evidence" },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["adapter", "database", "package", "version"],
+      "properties": {
+        "adapter": { "const": "@payloadcms/db-sqlite" },
+        "database": { "const": "EPHEMERAL_ARTIFACT" },
+        "package": { "const": "payload" },
+        "version": { "const": "3.86.0" }
+      }
+    },
+    "draftPublished": {
+      "type": "object", "additionalProperties": false,
+      "required": ["distinctGraphs", "guestCanReadPublished", "guestCannotReadDraft"],
+      "properties": {
+        "distinctGraphs": { "const": true },
+        "guestCanReadPublished": { "const": true },
+        "guestCannotReadDraft": { "const": true }
+      }
+    },
+    "controls": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fingerprintDriftRejected", "unknownBlockRejected"],
+      "properties": {
+        "fingerprintDriftRejected": { "const": true },
+        "unknownBlockRejected": { "const": true }
+      }
+    },
+    "graphs": {
+      "type": "array", "minItems": 6, "maxItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["category", "declaredFingerprint", "fingerprint", "provenanceComplete", "puckState", "readiness", "restoredFingerprint", "route", "semanticOrder", "sharedChrome", "sourceArtifacts", "sourceMode"],
+        "properties": {
+          "category": { "type": "string", "minLength": 1 },
+          "declaredFingerprint": { "$ref": "#/$defs/sha256" },
+          "fingerprint": { "$ref": "#/$defs/sha256" },
+          "provenanceComplete": { "const": true },
+          "puckState": { "const": "PASS" },
+          "readiness": { "const": "READY" },
+          "restoredFingerprint": { "$ref": "#/$defs/sha256" },
+          "route": { "type": "string", "pattern": "^/" },
+          "semanticOrder": { "type": "array", "minItems": 5, "items": { "type": "string", "minLength": 1 } },
+          "sharedChrome": {
+            "type": "object", "additionalProperties": false,
+            "required": ["navigationId", "footerId", "consistencyKey"],
+            "properties": {
+              "navigationId": { "type": "string", "minLength": 1 },
+              "footerId": { "type": "string", "minLength": 1 },
+              "consistencyKey": { "type": "string", "minLength": 1 }
+            }
+          },
+          "sourceArtifacts": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "minLength": 1 } },
+          "sourceMode": { "const": "PRODUCTION" }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object", "additionalProperties": false,
+      "required": ["databaseRetainedForInspection", "payloadProcessExited", "shmFileAbsent", "walFileAbsent"],
+      "properties": {
+        "databaseRetainedForInspection": { "const": true },
+        "payloadProcessExited": { "const": true },
+        "shmFileAbsent": { "const": true },
+        "walFileAbsent": { "const": true }
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cmsReceiptPath", "cmsReceiptSha256"],
+      "properties": {
+        "cmsReceiptPath": { "const": "artifacts/cms/payload-cms-receipt.json" },
+        "cmsReceiptSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "commands": {
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["command", "verdict"],
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "verdict": { "const": "PASS" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "git": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ref", "sha", "tree"],
+      "properties": {
+        "ref": { "type": "string", "pattern": "^refs/[A-Za-z0-9._/-]+$" },
+        "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "tree": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+      }
+    },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

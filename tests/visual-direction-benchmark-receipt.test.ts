@@ -13,8 +13,7 @@ test("a failed current visual-direction run overwrites a stale PASS receipt", as
   try {
     for (const path of [
       "fixtures/arena/benchmark-matrix.json",
-      "fixtures/content/proof-evidence.txt",
-      "artifacts/reference-browser/observed-visual-fingerprint.json"
+      "fixtures/content/proof-evidence.txt"
     ]) {
       await mkdir(dirname(join(root, path)), { recursive: true });
       await copyFile(resolve(path), join(root, path));

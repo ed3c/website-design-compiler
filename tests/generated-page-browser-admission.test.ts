@@ -17,13 +17,14 @@ const git = { sha: "a".repeat(40), ref: "refs/heads/review" };
 test("generated-page browser admission requires an external hash and binds sources, receipt, and evidence sets", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-generated-browser-admission-"));
   const previousTrustedSha256 = process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256;
+  const previousAdmissionBase64 = process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64;
   try {
     for (const path of GENERATED_PAGE_BROWSER_TRUST_SOURCE_PATHS) {
       await mkdir(dirname(join(root, path)), { recursive: true });
       await copyFile(resolve(path), join(root, path));
     }
     const generatedReceipt = {
-      schema: "website-design-compiler/generated-page-browser-receipt/v2",
+      schema: "website-design-compiler/generated-page-browser-receipt/v3",
       overall: "PASS",
       git,
       evidence: [{
@@ -31,9 +32,8 @@ test("generated-page browser admission requires an external hash and binds sourc
         project: "desktop-chromium",
         path: "screenshots/desktop-chromium--b2b-product.png",
         sha256: "b".repeat(64),
-        observationPath: "observations/desktop-chromium--b2b-product.json",
-        observationSha256: "c".repeat(64)
-      }]
+      }],
+      qualityEvidence:[{category:"b2b-product",project:"desktop-chromium",viewport:"desktop",path:"observations/desktop-chromium--b2b-product.json",sha256:"c".repeat(64),screenshotSha256:"b".repeat(64)}]
     };
     const generatedReceiptBytes = Buffer.from(`${JSON.stringify(generatedReceipt, null, 2)}\n`);
     const admission = {
@@ -48,9 +48,7 @@ test("generated-page browser admission requires an external hash and binds sourc
       authority: { kind: "repository-administrator", identity: "external-release-controller", admittedAt: "2026-08-19T00:00:00.000Z" }
     };
     const admissionBytes = Buffer.from(`${JSON.stringify(admission, null, 2)}\n`);
-    const admissionPath = join(root, "fixtures/generated-pages/browser-admission.json");
-    await mkdir(dirname(admissionPath), { recursive: true });
-    await writeFile(admissionPath, admissionBytes);
+    process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64 = admissionBytes.toString("base64");
     process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256 = createHash("sha256").update(admissionBytes).digest("hex");
 
     assert.deepEqual(await validateTrustedGeneratedPageBrowserAdmission(root, generatedReceiptBytes, generatedReceipt, git), []);
@@ -67,6 +65,8 @@ test("generated-page browser admission requires an external hash and binds sourc
   } finally {
     if (previousTrustedSha256 === undefined) delete process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256;
     else process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256 = previousTrustedSha256;
+    if(previousAdmissionBase64===undefined)delete process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64;
+    else process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64=previousAdmissionBase64;
     await rm(root, { recursive: true, force: true });
   }
 });

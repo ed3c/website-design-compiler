@@ -76,7 +76,7 @@ const SECTION_CONTRACT_DEFINITIONS:Readonly<Record<SectionKind,SectionContractDe
       eyebrow: text(false, 48),
       headline: text(true, 96),
       body: text(true, 220),
-      primaryAction: { type: "link", required: true, provenanceRequired: true },
+      primaryAction: { type: "link", required: false, provenanceRequired: true },
       secondaryAction: { type: "link", required: false, provenanceRequired: true },
       media: media(false)
     },

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/storybook-golden-review.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "candidateSha256", "decision", "reviewer", "reviewedAt", "inspectedScreenshots"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/storybook-golden-review/v1" },
+    "candidateSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "decision": { "const": "ADMIT" },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "context", "independence"],
+      "properties": {
+        "identity": { "type": "string", "minLength": 1 },
+        "context": { "type": "string", "minLength": 1 },
+        "independence": { "const": "SEPARATE_REVIEW_CONTEXT" }
+      }
+    },
+    "reviewedAt": { "type": "string", "format": "date-time" },
+    "inspectedScreenshots": {
+      "type": "array",
+      "minItems": 90,
+      "maxItems": 90,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256", "observation"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^storybook-(desktop|mobile)--[^/]+\\.png$" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "observation": { "type": "string", "minLength": 8 }
+        }
+      }
+    }
+  }
+}

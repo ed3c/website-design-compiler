@@ -70,8 +70,9 @@ function resolveValue(
   const field = ownedFields
     .find((candidate) => candidate?.state === "READY" && candidate.value);
   if (field?.value) {
+    const value = Array.isArray(field.value) ? field.value.join("; ") : field.value;
     return {
-      value: bounded(field.value, maxCharacters),
+      value: bounded(value, maxCharacters),
       provenance: field.provenance.join("|") || `content-architecture:${section.sectionId}`,
       missingEvidence: []
     };
@@ -173,13 +174,14 @@ function projectSection(
   }
 
   if (iaSection.type === "feature-grid") {
+    const sectionHeading = resolveValue(content, ["headline"], content.messageGoal, 72);
     const items = resolveValue(content, ["feature-items"], fallback, 280);
     return {
       kind: "feature-grid",
       variant: "cards",
-      props: { heading: heading.value, items: itemsFrom(items) },
-      provenance: { heading: heading.provenance, items: items.provenance },
-      missingEvidence: items.missingEvidence
+      props: { heading: sectionHeading.value, items: itemsFrom(items) },
+      provenance: { heading: sectionHeading.provenance, items: items.provenance },
+      missingEvidence: [...sectionHeading.missingEvidence, ...items.missingEvidence]
     };
   }
 
@@ -195,12 +197,13 @@ function projectSection(
   }
 
   if (iaSection.type === "cta-band") {
+    const ctaHeadline = resolveValue(content, ["cta-headline"], content.messageGoal, 80);
     return {
       kind: "cta",
       variant: "band",
-      props: { headline: bounded(content.messageGoal, 80), action: linkFrom(action, "#navigation") },
-      provenance: { headline: heading.provenance, action: action.provenance },
-      missingEvidence: action.missingEvidence
+      props: { headline: ctaHeadline.value, action: linkFrom(action, "#navigation") },
+      provenance: { headline: ctaHeadline.provenance, action: action.provenance },
+      missingEvidence: [...ctaHeadline.missingEvidence, ...action.missingEvidence]
     };
   }
 
@@ -228,6 +231,18 @@ function projectSection(
     };
   }
 
+  if (iaSection.type === "related-content") {
+    const sectionHeading = resolveValue(content, ["headline"], content.messageGoal, 72);
+    const items = resolveValue(content, ["related-items"], fallback, 280);
+    return {
+      kind: "faq",
+      variant: "list",
+      props: { heading: sectionHeading.value, items: itemsFrom(items) },
+      provenance: { heading: sectionHeading.provenance, items: items.provenance },
+      missingEvidence: [...sectionHeading.missingEvidence, ...items.missingEvidence]
+    };
+  }
+
   if (iaSection.type === "editorial-media") {
     const asset = resolveValue(
       content,
@@ -246,6 +261,7 @@ function projectSection(
   }
 
   if (iaSection.type === "product-showcase") {
+    const sectionHeading = resolveValue(content, ["headline"], content.messageGoal, 72);
     const description = resolveValue(content, ["product-description"], fallback, 180);
     const asset = resolveValue(
       content,
@@ -258,16 +274,17 @@ function projectSection(
       kind: "product-showcase",
       variant: "split",
       props: {
-        heading: heading.value,
+        heading: sectionHeading.value,
         body: description.value,
         media: mediaFrom(asset, alt)
       },
       provenance: {
-        heading: heading.provenance,
+        heading: sectionHeading.provenance,
         body: description.provenance,
         media: `${asset.provenance}|${alt.provenance}`
       },
       missingEvidence: [
+        ...sectionHeading.missingEvidence,
         ...description.missingEvidence,
         ...asset.missingEvidence,
         ...alt.missingEvidence
@@ -275,7 +292,7 @@ function projectSection(
     };
   }
 
-  if (iaSection.type === "bento-grid") {
+  if (iaSection.type === "narrative-sequence") {
     const items = resolveValue(content, ["story-beats"], fallback, 280);
     return {
       kind: "bento-grid",
@@ -286,7 +303,7 @@ function projectSection(
     };
   }
 
-  if (iaSection.type === "media-stage") {
+  if (iaSection.type === "interactive-stage") {
     const description = resolveValue(content, ["interaction-purpose"], fallback, 180);
     const asset = resolveValue(
       content,
@@ -364,12 +381,12 @@ export function compileSectionPage(input: CompilerInput): CompiledSectionPage {
   };
 }
 
-function benchmarkValue(category: ArenaCategory, slot: string): string {
+function benchmarkValue(category: ArenaCategory, slot: string): string|string[] {
   if (slot.includes("asset-id")) return `${category}-${slot}`;
   if (slot.endsWith("-alt")) return `Approved media for ${category}`;
   if (slot.includes("action") || slot.includes("cta")) return "Explore";
   if (slot.includes("items") || slot.includes("beats")) {
-    return `Supplied ${slot} A for ${category}; Supplied ${slot} B for ${category}`;
+    return [`Supplied ${slot} A for ${category}`, `Supplied ${slot} B for ${category}`];
   }
   return `Supplied ${slot} for ${category}`;
 }
@@ -377,7 +394,8 @@ function benchmarkValue(category: ArenaCategory, slot: string): string {
 function benchmarkAuthoredContent(category: ArenaCategory, slot: string): AuthoredContentEntry {
   const source = slot === "proof-items" ? PROOF_SOURCE : `fixture://section-page/${category}/${slot}`;
   const value = benchmarkValue(category, slot);
-  const excerpt = `Synthetic section-page evidence states: ${value}`;
+  const valueText=Array.isArray(value)?value.join("; "):value;
+  const excerpt = `Synthetic section-page evidence states: ${valueText}`;
   return {
     value,
     source: { kind: "benchmark-fixture", uri: source },
@@ -387,7 +405,7 @@ function benchmarkAuthoredContent(category: ArenaCategory, slot: string): Author
         source,
         sourceSha256: PROOF_SOURCE_SHA256,
         excerpt,
-        sha256: createHash("sha256").update(`${source}\0${PROOF_SOURCE_SHA256}\0${excerpt}\0${value}`).digest("hex")
+        sha256: createHash("sha256").update(`${source}\0${PROOF_SOURCE_SHA256}\0${excerpt}\0${valueText}`).digest("hex")
       }
     } : {})
   };

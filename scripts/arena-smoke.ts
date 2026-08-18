@@ -184,7 +184,8 @@ const motionV2 = await readJson<{overall?:unknown}>(join(root,"artifacts","v2","
 const motionRuntimeV2 = await readJson<{overall?:unknown}>(join(root,"artifacts","motion-choreography","browser-runtime-receipt.json"));
 const mediaV2 = await readJson<{overall?:unknown}>(join(root,"artifacts","v2","media-orchestration","receipt.json"));
 const mediaRuntimeV2 = await readJson<{overall?:unknown}>(join(root,"artifacts","media-orchestration","browser-runtime-receipt.json"));
-const designQualityV2 = await readJson<{overall?:unknown;categoryCount?:number;viewportCoverage?:{mobile?:number;desktop?:number};premium?:{state?:unknown;evaluations?:Array<{card?:{score?:number}}>}}>(join(root,"artifacts","v2","design-quality","design-quality-eval-receipt.json"));
+const designQualityArtifact = await readJson<{schema?:unknown;overall?:unknown;categoryCount?:number;viewportCoverage?:{mobile?:number;desktop?:number};premium?:{state?:unknown;evaluations?:Array<{card?:{score?:number}}>}}>(join(root,"artifacts","v3","design-quality","design-quality-eval-receipt.json"));
+const designQualityV3=designQualityArtifact?.schema==="website-design-compiler/design-quality-eval-receipt/v3"?designQualityArtifact:null;
 
 const projects = new Map((quality?.projects ?? []).map((entry) => [entry.project ?? "", entry]));
 const desktop = projects.get("desktop-chromium");
@@ -246,7 +247,7 @@ const globalEvidence: Record<string, EvidenceState> = {
 };
 
 const evaluation = evaluateArena(matrix, receipts, globalEvidence);
-const v2Metrics=evaluateArenaV2Metrics({responsive:responsiveV2,generatedPages:generatedPagesV2,motion:motionV2,motionRuntime:motionRuntimeV2,media:mediaV2,mediaRuntime:mediaRuntimeV2,designQuality:designQualityV2});
+const v2Metrics=evaluateArenaV2Metrics({responsive:responsiveV2,generatedPages:generatedPagesV2,motion:motionV2,motionRuntime:motionRuntimeV2,media:mediaV2,mediaRuntime:mediaRuntimeV2,designQuality:designQualityV3});
 const metricEvidence = {
   browserMatrix: ["artifacts/browser-qa/browser-qa.json"],
   responsiveBehavior: ["artifacts/browser-qa/browser-qa.json", "artifacts/accessibility-performance/accessibility-performance.json"],
@@ -264,8 +265,11 @@ const metricEvidence = {
   sharedBindings: ["artifacts/runtime/shared-binding-receipt.json"],
   responsiveCompositionQuality:["artifacts/v2/responsive-composition/receipt.json","artifacts/generated-pages/generated-page-browser-receipt.json"],
   motionChoreographyQuality:["artifacts/v2/motion-choreography/receipt.json","artifacts/motion-choreography/browser-runtime-receipt.json"],
+  motionCoherence:["artifacts/v2/motion-choreography/receipt.json","artifacts/motion-choreography/browser-runtime-receipt.json"],
+  motionAccessibility:["artifacts/v2/motion-choreography/receipt.json","artifacts/motion-choreography/browser-runtime-receipt.json"],
   mediaStrategyFit:["artifacts/v2/media-orchestration/receipt.json","artifacts/media-orchestration/browser-runtime-receipt.json"],
-  designQualityPremium:["artifacts/v2/design-quality/design-quality-eval-receipt.json"]
+  mediaNecessity:["artifacts/v2/media-orchestration/receipt.json","artifacts/media-orchestration/browser-runtime-receipt.json"],
+  designQualityPremium:["artifacts/v3/design-quality/design-quality-eval-receipt.json"]
 };
 
 const receipt = {
@@ -295,13 +299,15 @@ const receipt = {
     motionRuntime: "artifacts/motion-choreography/browser-runtime-receipt.json",
     mediaOrchestration: "artifacts/v2/media-orchestration/receipt.json",
     mediaRuntime: "artifacts/media-orchestration/browser-runtime-receipt.json",
-    designQuality: "artifacts/v2/design-quality/design-quality-eval-receipt.json",
+    designQuality: "artifacts/v3/design-quality/design-quality-eval-receipt.json",
     visualGoldenManifest: "fixtures/storybook/visual-goldens.json"
   },
   scopeNotes: {
     benchmarkProvenanceCompleteness: "PASS applies to the deterministic Arena provenance fixture only; repository-wide rights clearance remains outside this claim.",
     keyboardCompletion: "The browser runtime test contract explicitly exercises Tab focus followed by the primary button action; project PASS plus retained Playwright report/trace is the runtime evidence boundary.",
-    mediaStrategyFit: "The Arena metric requires both the compiler strategy receipt and a separate browser receipt proving lazy activation, bounded Pixi/Three execution, provider fallback and forced media-off behavior."
+    motionChoreography: "Coherence and accessibility are scored independently; generic browser PASS cannot substitute for either scoped gate set.",
+    mediaStrategyFit: "The Arena metric requires both the compiler strategy receipt and a separate browser receipt proving lazy activation, bounded Pixi/Three execution, provider fallback and forced media-off behavior.",
+    mediaNecessity: "Necessity requires deliberate no-media coverage and semantic DOM ownership rather than rewarding maximal rich-media use."
   },
   diagnostics
 };

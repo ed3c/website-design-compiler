@@ -12,10 +12,11 @@
     "arbitraryComponentAdmission": { "const": false },
     "selectedVisualDirection": {
       "type": "object", "additionalProperties": false,
-      "required": ["source", "searchSeed", "candidateId", "dimensions"],
+      "required": ["source", "searchSeed", "receiptSha256", "candidateId", "dimensions"],
       "properties": {
         "source": { "const": "website-design-compiler/visual-direction-search/v2" },
         "searchSeed": { "type": "string", "minLength": 1 },
+        "receiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "candidateId": { "type": "string", "minLength": 1 },
         "dimensions": {
           "type": "object", "additionalProperties": false,
@@ -26,7 +27,7 @@
             "density": { "enum": ["airy", "balanced", "dense"] },
             "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
             "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
-            "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+            "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] },
             "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
             "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
             "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }

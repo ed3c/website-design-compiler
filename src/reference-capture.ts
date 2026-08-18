@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { readFile } from "node:fs/promises";
-import { request as requestHttp, type IncomingHttpHeaders, type RequestOptions } from "node:http";
-import { request as requestHttps } from "node:https";
 import { isIP } from "node:net";
 import { resolve } from "node:path";
 import type { CompilerReference, EvidenceState } from "./contracts.js";
+import {
+  injectedFetchTransport,
+  productionPinnedTransport,
+  sameNetworkAddress
+} from "./pinned-http-transport.js";
 
 export interface CaptureProvenance {
   adapter: string;
@@ -69,6 +72,7 @@ export interface RemoteCaptureDependencies {
 export interface RemoteTransportRequest {
   url: URL;
   addresses: string[];
+  deadlineAt: number;
   timeoutMs: number;
   maxBytes: number;
 }
@@ -265,130 +269,42 @@ function boundedInteger(value: number | undefined, fallback: number, minimum: nu
   return Math.max(minimum, Math.min(Math.trunc(value), maximum));
 }
 
-async function fetchWithTimeout(fetchImpl: typeof globalThis.fetch, request: RemoteTransportRequest): Promise<RemoteTransportResponse> {
-  const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const response = await new Promise<Response>((resolveResponse, rejectResponse) => {
-      timer = setTimeout(() => {
-        controller.abort();
-        rejectResponse(new RemoteCaptureError("AVAILABILITY", `remote reference transport timed out after ${request.timeoutMs}ms`));
-      }, request.timeoutMs);
-      void fetchImpl(request.url, {
-        method: "GET",
-        redirect: "manual",
-        credentials: "omit",
-        headers: {
-          accept: "text/html,application/xhtml+xml;q=0.9",
-          "user-agent": "website-design-compiler-reference-capture/1"
-        },
-        signal: controller.signal
-      }).then(resolveResponse, rejectResponse);
-    });
-    const body = new Uint8Array(await response.arrayBuffer());
-    if (body.byteLength > request.maxBytes) {
-      throw new RemoteCaptureError("COMPILER", `remote reference exceeds ${request.maxBytes} byte limit`);
-    }
-    return { status: response.status, headers: response.headers, body, mode: "INJECTED_TEST" };
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-}
-
-function headersFromNode(headers: IncomingHttpHeaders): Headers {
+function headersFromRecord(headers: Record<string, string>): Headers {
   const result = new Headers();
   for (const [name, value] of Object.entries(headers)) {
-    if (Array.isArray(value)) {
-      for (const item of value) result.append(name, item);
-    } else if (value !== undefined) {
-      result.set(name, value);
-    }
+    result.set(name, value);
   }
   return result;
 }
 
-function pinnedNetworkTransport(request: RemoteTransportRequest): Promise<RemoteTransportResponse> {
-  return new Promise((resolveResponse, rejectResponse) => {
+function sharedTransport(fetchImpl?: typeof globalThis.fetch): RemoteTransport {
+  const transport = fetchImpl ? injectedFetchTransport(fetchImpl) : productionPinnedTransport;
+  return async (request) => {
     const selectedAddress = request.addresses[0];
-    const family = selectedAddress ? isIP(selectedAddress) : 0;
-    if (!selectedAddress || (family !== 4 && family !== 6)) {
-      rejectResponse(new RemoteCaptureError("POLICY", "remote reference has no valid pinned public address"));
-      return;
+    if (!selectedAddress) throw new RemoteCaptureError("POLICY", "remote reference has no valid pinned public address");
+    const response = await transport({
+      url: request.url,
+      resolvedAddress: selectedAddress,
+      deadlineAt: request.deadlineAt,
+      maxBytes: request.maxBytes
+    });
+    if (!sameNetworkAddress(response.connectedAddress, selectedAddress)) {
+      throw new RemoteCaptureError("POLICY", "remote reference connected address did not match pinned DNS evidence");
     }
-
-    const options: RequestOptions = {
-      method: "GET",
-      headers: {
-        accept: "text/html,application/xhtml+xml;q=0.9",
-        "user-agent": "website-design-compiler-reference-capture/1"
-      },
-      family,
-      lookup: ((_hostname: string, _options: unknown, callback: (error: NodeJS.ErrnoException | null, address: string, addressFamily: number) => void) => {
-        callback(null, selectedAddress, family);
-      }) as RequestOptions["lookup"]
+    return {
+      status: response.status,
+      headers: headersFromRecord(response.headers),
+      body: response.body,
+      connectedAddress: response.connectedAddress,
+      mode: response.mode === "PRODUCTION" ? "PINNED_NETWORK" : "INJECTED_TEST"
     };
-    const requestFn = request.url.protocol === "https:" ? requestHttps : requestHttp;
-    let connectedAddress: string | undefined;
-    let settled = false;
-    let totalTimer: ReturnType<typeof setTimeout> | undefined;
-    const clearTotalTimer = () => {
-      if (totalTimer !== undefined) clearTimeout(totalTimer);
-    };
-    const settleReject = (error: unknown) => {
-      if (settled) return;
-      settled = true;
-      clearTotalTimer();
-      rejectResponse(remoteError(error));
-    };
-    const clientRequest = requestFn(request.url, options, (response) => {
-      const chunks: Uint8Array[] = [];
-      let byteCount = 0;
-      response.on("data", (chunk: Buffer) => {
-        byteCount += chunk.byteLength;
-        if (byteCount > request.maxBytes) {
-          response.destroy(new RemoteCaptureError("COMPILER", `remote reference exceeds ${request.maxBytes} byte limit`));
-          return;
-        }
-        chunks.push(chunk);
-      });
-      response.on("error", settleReject);
-      response.on("end", () => {
-        if (settled) return;
-        if (!connectedAddress || !request.addresses.includes(connectedAddress)) {
-          settleReject(new RemoteCaptureError("POLICY", "remote reference connected address did not match pinned DNS evidence"));
-          return;
-        }
-        settled = true;
-        clearTotalTimer();
-        resolveResponse({
-          status: response.statusCode ?? 0,
-          headers: headersFromNode(response.headers),
-          body: Buffer.concat(chunks),
-          connectedAddress,
-          mode: "PINNED_NETWORK"
-        });
-      });
-    });
-    clientRequest.on("socket", (socket) => {
-      socket.once("connect", () => {
-        connectedAddress = socket.remoteAddress;
-        if (!connectedAddress || !request.addresses.includes(connectedAddress)) {
-          clientRequest.destroy(new RemoteCaptureError("POLICY", "remote reference connected address did not match pinned DNS evidence"));
-        }
-      });
-    });
-    totalTimer = setTimeout(() => {
-      clientRequest.destroy(new RemoteCaptureError("AVAILABILITY", `remote reference transport timed out after ${request.timeoutMs}ms`));
-    }, request.timeoutMs);
-    clientRequest.on("error", settleReject);
-    clientRequest.end();
-  });
+  };
 }
 
 export async function captureRemoteUrl(value: string, dependencies: RemoteCaptureDependencies = {}): Promise<CapturedReference> {
   const resolveHost = dependencies.resolveHost ?? defaultResolveHost;
   const transport = dependencies.transport
-    ?? (dependencies.fetchImpl ? (request: RemoteTransportRequest) => fetchWithTimeout(dependencies.fetchImpl!, request) : pinnedNetworkTransport);
+    ?? sharedTransport(dependencies.fetchImpl);
   const maxRedirects = boundedInteger(dependencies.maxRedirects, 3, 0, 10);
   const maxBytes = boundedInteger(dependencies.maxBytes, 2 * 1024 * 1024, 1, 8 * 1024 * 1024);
   const now = dependencies.now ?? (() => new Date());
@@ -396,6 +312,7 @@ export async function captureRemoteUrl(value: string, dependencies: RemoteCaptur
   const retryBackoffMs = boundedInteger(dependencies.retryBackoffMs, 250, 0, 5_000);
   const sleep = dependencies.sleep ?? defaultSleep;
   const timeoutMs = boundedInteger(dependencies.timeoutMs, 10_000, 1, 30_000);
+  const deadlineAt = Date.now() + timeoutMs;
   const startedAt = now().toISOString();
   let requested: URL;
   try {
@@ -430,7 +347,8 @@ export async function captureRemoteUrl(value: string, dependencies: RemoteCaptur
     let preparedAddresses: string[] | undefined;
     try {
       for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
-        const addresses = preparedAddresses ?? await validateRemoteTarget(current, resolveHost, timeoutMs);
+        const remainingMs = Math.max(1, deadlineAt - Date.now());
+        const addresses = preparedAddresses ?? await validateRemoteTarget(current, resolveHost, remainingMs);
         if (!preparedAddresses) {
           dnsResolutions.push({ attempt: attemptCount, hostname: current.hostname, addresses, observedAt: now().toISOString() });
         }
@@ -440,15 +358,15 @@ export async function captureRemoteUrl(value: string, dependencies: RemoteCaptur
         let response: RemoteTransportResponse;
         try {
           response = await withAvailabilityTimeout(
-            transport({ url: current, addresses, timeoutMs, maxBytes }),
-            timeoutMs,
-            "remote reference transport"
+            transport({ url: current, addresses, deadlineAt, timeoutMs: remainingMs, maxBytes }),
+            remainingMs,
+            "remote reference total deadline exceeded during transport"
           );
         } catch (error) {
           throw remoteError(error);
         }
         lastHttpStatus = response.status;
-        if (response.mode === "PINNED_NETWORK" && (!response.connectedAddress || !addresses.includes(response.connectedAddress))) {
+        if ((response.mode === "PINNED_NETWORK" && !response.connectedAddress) || (response.connectedAddress && !addresses.some((address)=>sameNetworkAddress(response.connectedAddress!,address)))) {
           throw new RemoteCaptureError("POLICY", "remote reference connected address did not match pinned DNS evidence");
         }
 
@@ -462,7 +380,7 @@ export async function captureRemoteUrl(value: string, dependencies: RemoteCaptur
           } catch {
             throw new RemoteCaptureError("COMPILER", "remote reference redirect Location is invalid");
           }
-          const nextAddresses = await validateRemoteTarget(next, resolveHost, timeoutMs);
+          const nextAddresses = await validateRemoteTarget(next, resolveHost, Math.max(1, deadlineAt - Date.now()));
           dnsResolutions.push({ attempt: attemptCount, hostname: next.hostname, addresses: nextAddresses, observedAt: now().toISOString() });
           redirectChain.push({ attempt: attemptCount, fromUrl: current.toString(), status: response.status, toUrl: next.toString() });
           current = next;
@@ -519,7 +437,7 @@ export async function captureRemoteUrl(value: string, dependencies: RemoteCaptur
       throw new RemoteCaptureError("COMPILER", "remote reference redirect state exhausted");
     } catch (error) {
       const failure = remoteError(error);
-      if (failure.kind === "AVAILABILITY" && attemptCount < maxAttempts) {
+      if (failure.kind === "AVAILABILITY" && attemptCount < maxAttempts && Date.now() < deadlineAt) {
         await sleep(retryBackoffMs * 2 ** (attemptCount - 1));
         continue;
       }

@@ -5,6 +5,7 @@ import { buildDesignContractBundle } from "./design-contracts.js";
 import { GOVERNED_COMPONENTS } from "./frontend-builder.js";
 import {
   assertVisualDirectionSearchBinding,
+  visualDirectionSha256,
   type VisualDirectionDimensions,
   type VisualDirectionSearchReceipt
 } from "./visual-direction-search.js";
@@ -19,6 +20,7 @@ export interface DesignSystemPlan {
   selectedVisualDirection: {
     source: "website-design-compiler/visual-direction-search/v2";
     searchSeed: string;
+    receiptSha256: string;
     candidateId: string;
     dimensions: VisualDirectionDimensions;
   };
@@ -45,6 +47,7 @@ export function buildDesignSystemPlan(input: CompilerInput, visualSearch: Visual
     selectedVisualDirection: {
       source: visualSearch.schema,
       searchSeed: visualSearch.seed,
+      receiptSha256: visualDirectionSha256(visualSearch),
       candidateId: visualSearch.selectedCandidateId,
       dimensions: { ...visualSearch.selectedDirection }
     },

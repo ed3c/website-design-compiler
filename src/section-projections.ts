@@ -7,6 +7,7 @@ import {
 } from "./section-grammar";
 
 export type ProjectionFieldType = "text" | "textarea" | "number" | "items" | "media" | "link";
+export interface GovernedSectionVariantStory { variant:string; exportName:string; storyId:string; }
 
 export interface ProjectionField {
   name: string;
@@ -21,6 +22,7 @@ export interface GovernedSectionProjection {
   authoringType: "RichSectionBlock";
   payloadSlug: string;
   storyId: string;
+  variantStories: GovernedSectionVariantStory[];
   variants: string[];
   fields: ProjectionField[];
   composition: SectionCompositionContract;
@@ -50,6 +52,20 @@ function storyIdFor(kind: SectionKind): string {
   return `governed-sections-section--${exportId}`;
 }
 
+function exportNameFor(value:string):string {
+  return value.split("-").map((part)=>`${part.slice(0,1).toUpperCase()}${part.slice(1)}`).join("");
+}
+
+function variantStoriesFor(kind:SectionKind,variants:readonly string[]):GovernedSectionVariantStory[] {
+  const baseStoryId=storyIdFor(kind);
+  const baseExportName=exportNameFor(kind);
+  return variants.map((variant,index)=>({
+    variant,
+    exportName:index===0?baseExportName:`${baseExportName}${exportNameFor(variant)}`,
+    storyId:index===0?baseStoryId:`${baseStoryId}-${variant}`
+  }));
+}
+
 export function projectSectionContracts(): GovernedSectionProjection[] {
   return SECTION_KINDS.map((kind) => {
     const contract = SECTION_CONTRACTS[kind];
@@ -58,12 +74,13 @@ export function projectSectionContracts(): GovernedSectionProjection[] {
       authoringType: "RichSectionBlock",
       payloadSlug: `section-${kind}`,
       storyId: storyIdFor(kind),
+      variantStories: variantStoriesFor(kind, contract.variants),
       variants: [...contract.variants],
       fields: Object.entries(contract.fields).map(([name, field]) => mapField(name, field)),
       composition: contract.composition,
       rawMarkupAllowed: contract.rawMarkupAllowed,
       tokenOwnership: contract.tokenOwnership,
-      claimPolicy: contract.claimPolicy
+      claimPolicy:contract.claimPolicy
     };
   });
 }
@@ -112,6 +129,9 @@ export function projectionDriftErrors(
     }
     if (projection.storyId !== storyIdFor(kind)) {
       errors.push(`storybook identity drift for ${kind}`);
+    }
+    if (!sameValue(projection.variantStories, variantStoriesFor(kind, canonical.variants))) {
+      errors.push(`storybook variant drift for ${kind}`);
     }
     if (projection.claimPolicy !== canonical.claimPolicy) {
       errors.push(`claim policy drift for ${kind}`);

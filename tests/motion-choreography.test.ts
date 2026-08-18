@@ -17,6 +17,15 @@ test("generated choreography is policy-complete and budget-safe",()=>{
   }
 });
 
+test("motion budget rejects layout, long-task and duration violations",()=>{
+  const plan=compileMotionChoreography(compileAllSectionPageFixtures()[0]!);
+  assert.equal(plan.budget.maxLongTaskMs,50);
+  assert.equal(plan.budget.maxLayoutShift,0);
+  assert.match(validateMotionChoreography({...plan,totalDurationMs:plan.budget.maxTotalMs+1})[0]??"",/total choreography exceeds budget/);
+  assert.match(validateMotionChoreography({...plan,effects:plan.effects.map((effect,index)=>index===0?{...effect,durationMs:plan.budget.maxEffectMs+1}:effect)})[0]??"",/effect exceeds duration budget/);
+  assert.match(validateMotionChoreography({...plan,effects:plan.effects.map((effect,index)=>index===0?{...effect,layoutProperties:true as false}:effect)})[0]??"",/layout-triggering motion property forbidden/);
+});
+
 test("section semantics produce materially different choreography across page categories",()=>{
   const plans=compileAllSectionPageFixtures().map(compileMotionChoreography);
   const signatures=plans.map((plan)=>plan.effects.map((e)=>`${e.kind}:${e.purpose}:${e.trigger}:${e.engine}`).join("|"));
@@ -31,4 +40,16 @@ test("interactive graphics routes continuity effects through GSAP with static fa
   assert.equal(effect.purpose,"spatial-continuity");
   assert.equal(effect.reducedMotion,"disabled");
   assert.equal(effect.fallback,"static-visible");
+});
+
+test("structural chrome and disclosure sections remain static by design",()=>{
+  for(const page of compileAllSectionPageFixtures()){
+    const plan=compileMotionChoreography(page);
+    for(const effect of plan.effects.filter((entry)=>["navigation","footer","faq","proof-cloud"].includes(entry.kind))){
+      assert.equal(effect.engine,"none");
+      assert.equal(effect.durationMs,0);
+      assert.equal(effect.delayMs,0);
+    }
+    assert.ok(plan.engineRouting.none>=2);
+  }
 });

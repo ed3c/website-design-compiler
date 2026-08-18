@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readdir, readFile, realpath } from "node:fs/promises";
+import { lstat, readdir, readFile, realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { isAbsolute, resolve, join, relative } from "node:path";
 
@@ -29,7 +29,8 @@ export function classifyLicense(expression: string | null): RightsState {
 interface PnpmDependency { version?: string; path?: string; dependencies?: Record<string, PnpmDependency>; optionalDependencies?: Record<string, PnpmDependency>; }
 interface PnpmProject extends PnpmDependency { path?: string; }
 interface PackageEvidenceOverride { license: string; source: string; }
-interface AssetEvidence { sha256: string; license: string; source: string; }
+export interface AssetProvenanceEntry { path: string; sha256: string; licenseExpression: string; provenance: { kind: "AUTHORED" | "LICENSED" | "PUBLIC_DOMAIN"; source: string }; attributionRequired: boolean; }
+export interface AssetProvenanceManifest { schema: "website-design-compiler/asset-provenance/v1"; assets: AssetProvenanceEntry[]; }
 interface PackageMetadataScan { index: Map<string, { license: string | null; path: string }>; failuresByName: Map<string, string[]>; globalFailures: string[]; }
 type ExactPackageMetadata = { license: string | null; path: string } | { diagnostic: string };
 
@@ -37,6 +38,20 @@ function errorCode(error: unknown): string {
   return error instanceof Error && "code" in error && typeof error.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
     ? error.code
     : "UNKNOWN";
+}
+
+export async function loadWaivers(path: string): Promise<Waiver[]> {
+  let source: string;
+  try { source = await readFile(path, "utf8"); }
+  catch (error) {
+    if (errorCode(error) === "ENOENT") return [];
+    throw new Error(`unable to read rights waivers: ${errorCode(error)}`);
+  }
+  let value: unknown;
+  try { value = JSON.parse(source) as unknown; }
+  catch { throw new Error("rights waivers contain invalid JSON"); }
+  if (!Array.isArray(value)) throw new Error("rights waivers must be an array");
+  return value as Waiver[];
 }
 
 function assetScanFailure(root: string, path: string, error: unknown): RightsSubject {
@@ -172,15 +187,54 @@ async function loadOverrides(root: string): Promise<Record<string, PackageEviden
   catch { return {}; }
 }
 
-async function loadAssetEvidence(root: string): Promise<Record<string, AssetEvidence>> {
-  try { return JSON.parse(await readFile(resolve(root, "rights-asset-evidence.json"), "utf8")) as Record<string, AssetEvidence>; }
-  catch { return {}; }
+function exactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const wanted = [...expected].sort();
+  return actual.length === wanted.length && actual.every((key, index) => key === wanted[index]);
+}
+
+async function loadAssetEvidence(root: string): Promise<{ entries: Map<string, AssetProvenanceEntry>; diagnostic?: string }> {
+  const path = resolve(root, "rights-asset-provenance.json");
+  let raw: unknown;
+  try { raw = JSON.parse(await readFile(path, "utf8")) as unknown; }
+  catch (error) { return { entries: new Map(), diagnostic: `diagnostic:asset-provenance:${errorCode(error)}` }; }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || !exactKeys(raw as Record<string, unknown>, ["schema", "assets"])) {
+    return { entries: new Map(), diagnostic: "diagnostic:asset-provenance:INVALID_MANIFEST" };
+  }
+  const manifest = raw as Partial<AssetProvenanceManifest>;
+  if (manifest.schema !== "website-design-compiler/asset-provenance/v1" || !Array.isArray(manifest.assets)) {
+    return { entries: new Map(), diagnostic: "diagnostic:asset-provenance:INVALID_MANIFEST" };
+  }
+  const entries = new Map<string, AssetProvenanceEntry>();
+  for (const [index, candidate] of manifest.assets.entries()) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate) || !exactKeys(candidate as unknown as Record<string, unknown>, ["path", "sha256", "licenseExpression", "provenance", "attributionRequired"])) {
+      return { entries: new Map(), diagnostic: `diagnostic:asset-provenance:ENTRY_${index}_INVALID` };
+    }
+    const entry = candidate as AssetProvenanceEntry;
+    const provenance = entry.provenance;
+    const authoredSource = provenance?.kind === "AUTHORED" && /^git:[a-f0-9]{40}:[A-Za-z0-9._/-]+$/.test(provenance.source);
+    const externalSource = (provenance?.kind === "LICENSED" || provenance?.kind === "PUBLIC_DOMAIN") && /^https:\/\/[^\s?#]+(?:\/[^\s?#]*)?#sha256=[a-f0-9]{64}$/.test(provenance.source);
+    if (!/^apps\/site\/public\/[A-Za-z0-9._/-]+$/.test(entry.path) || entry.path.includes("..") || !/^[a-f0-9]{64}$/.test(entry.sha256) || typeof entry.licenseExpression !== "string" || classifyLicense(entry.licenseExpression) === "UNKNOWN" || (!authoredSource && !externalSource) || typeof entry.attributionRequired !== "boolean" || entries.has(entry.path)) {
+      return { entries: new Map(), diagnostic: `diagnostic:asset-provenance:ENTRY_${index}_INVALID` };
+    }
+    entries.set(entry.path, entry);
+  }
+  return { entries };
 }
 
 export async function scanShippedAssets(root: string): Promise<RightsSubject[]> {
   const publicDir = resolve(root, "apps/site/public");
-  const evidenceIndex = await loadAssetEvidence(root);
+  try { await lstat(publicDir); }
+  catch (error) {
+    if (errorCode(error) === "ENOENT") return [];
+    return [assetScanFailure(root, publicDir, error)];
+  }
+  const evidence = await loadAssetEvidence(root);
+  const evidenceIndex = evidence.entries;
   const subjects: RightsSubject[] = [];
+  if (evidence.diagnostic) {
+    subjects.push({ id: "asset-scan:rights-asset-provenance.json", kind: "asset", name: "rights-asset-provenance.json", versionOrIdentity: "INVALID", licenseExpression: null, state: "UNKNOWN", evidence: [evidence.diagnostic], attributionRequired: false, distributed: true });
+  }
   async function walk(dir: string): Promise<void> {
     let entries;
     try { entries = await readdir(dir, { withFileTypes: true }); }
@@ -206,10 +260,10 @@ export async function scanShippedAssets(root: string): Promise<RightsSubject[]> 
       } else if (entry.isDirectory()) await walk(path);
       else if (entry.isFile()) {
         const repositoryPath = relative(root, path);
-        const declared = evidenceIndex[repositoryPath];
+        const declared = evidenceIndex.get(repositoryPath);
         const contentSha256 = createHash("sha256").update(await readFile(path)).digest("hex");
         const declarationMatches = declared?.sha256 === contentSha256;
-        const license = declarationMatches ? declared.license : null;
+        const license = declarationMatches ? declared.licenseExpression : null;
         const state = declarationMatches ? classifyLicense(license) : "UNKNOWN";
         subjects.push({
           id: `asset:${repositoryPath}`,
@@ -220,15 +274,23 @@ export async function scanShippedAssets(root: string): Promise<RightsSubject[]> 
           state,
           evidence: [
             repositoryPath,
-            declarationMatches ? `rights-asset-evidence.json:${declared.source}` : "rights-asset-evidence.json:ABSENT_OR_HASH_MISMATCH"
+            declarationMatches ? "rights-asset-provenance.json" : "rights-asset-provenance.json:ABSENT_OR_HASH_MISMATCH",
+            ...(declarationMatches ? [declared.provenance.source] : [])
           ],
-          attributionRequired: state === "ALLOW" && license !== "REPO_ORIGINAL",
+          attributionRequired: declarationMatches ? declared.attributionRequired : false,
           distributed: true
         });
       }
     }
   }
-  await walk(publicDir); return subjects;
+  await walk(publicDir);
+  const actualPaths = new Set(subjects.filter((subject) => subject.id.startsWith("asset:apps/site/public/")).map((subject) => subject.id.slice("asset:".length)));
+  for (const entry of evidenceIndex.values()) {
+    if (!actualPaths.has(entry.path)) {
+      subjects.push({ id: `asset:${entry.path}`, kind: "asset", name: relative(publicDir, resolve(root, entry.path)), versionOrIdentity: "DECLARED_ASSET_ABSENT", licenseExpression: entry.licenseExpression, state: "UNKNOWN", evidence: ["rights-asset-provenance.json", "diagnostic:asset-provenance:DECLARED_ASSET_ABSENT"], attributionRequired: entry.attributionRequired, distributed: true });
+    }
+  }
+  return subjects;
 }
 
 export function applyWaivers(subjects: RightsSubject[], waivers: Waiver[], now: Date): { subjects: RightsSubject[]; expiredWaivers: string[]; diagnostics: string[] } {

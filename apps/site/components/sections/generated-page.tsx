@@ -1,53 +1,36 @@
-import { GovernedSection, type GovernedSectionKind } from "./governed-section";
-import { MediaOrchestrationStage, type ProjectedMediaHook } from "./media-orchestration-stage";
+"use client";
 
-type ProjectedNode = {
-  id: string;
-  kind: GovernedSectionKind;
-  variant: string;
-  semanticIndex: number;
-  section: { props: Record<string, unknown> };
-  responsive: {
-    mobile: { layout: string };
-    tablet: { layout: string };
-    desktop: { layout: string };
-  };
-  mediaHook: ProjectedMediaHook;
-  motionHook: { engine: string };
+import { useEffect, useState } from "react";
+import type { GovernedSectionKind } from "./governed-section";
+import type { ProjectedMediaHook } from "./media-orchestration-stage";
+import { GeneratedSectionStage } from "./generated-section-stage";
+
+type ViewportComposition={layout:string;columns:1|2|3|4;visualOrder:string[];mediaPlacement:"before"|"after"|"background"|"none";sticky:boolean;density:"compact"|"comfortable"|"spacious";maxContentChars:number};
+export type ProjectedNode={
+  id:string;
+  kind:GovernedSectionKind;
+  variant:string;
+  semanticIndex:number;
+  section:{props:Record<string,unknown>};
+  responsive:{mobile:ViewportComposition;tablet:ViewportComposition;desktop:ViewportComposition;coarsePointer:{hoverRequired:false;carousel:"controls"|"static";sticky:boolean};reducedMotion:{essentialOnly:true;transition:"instant"|"short"}};
+  mediaHook:ProjectedMediaHook;
+  motionHook:{engine:"motion"|"gsap"|"none";trigger:"enter"|"interaction"|"scroll-progress"|"route-change";durationMs:number;delayMs:number;mobile:"full"|"simplified"|"disabled";reducedMotion:"instant"|"disabled"};
 };
-export type ProjectedPageGraph = {
-  category: string;
-  readiness: "READY" | "NEEDS_INPUT";
-  signature: string;
-  nodes: ProjectedNode[];
+export type ProjectedPageGraph={
+  category:string;
+  readiness:"READY"|"NEEDS_INPUT";
+  signature:string;
+  nodes:ProjectedNode[];
 };
 
-export function GeneratedPage({ graph }: { graph: ProjectedPageGraph }) {
-  return <main
-    className="wdc-shell"
-    data-generated-page={graph.category}
-    data-page-readiness={graph.readiness}
-    data-graph-signature={graph.signature}
-  >
-    <header className="wdc-hero">
-      <p className="wdc-eyebrow">Compiler generated benchmark</p>
-      <h1>{graph.category.replaceAll("-"," ")}</h1>
-      <p>Rendered directly from the governed page graph projection with semantic order, responsive, motion and media contracts attached to each node.</p>
-    </header>
-    {graph.nodes.map((node) => <div
-      key={node.id}
-      data-page-node={node.id}
-      data-semantic-index={node.semanticIndex}
-      data-mobile-layout={node.responsive.mobile.layout}
-      data-tablet-layout={node.responsive.tablet.layout}
-      data-desktop-layout={node.responsive.desktop.layout}
-      data-media-renderer={node.mediaHook.renderer}
-      data-motion-engine={node.motionHook.engine}
-    >
-      <GovernedSection kind={node.kind} variant={node.variant} fields={node.section.props} />
-      {node.mediaHook.renderer !== "dom"
-        ? <MediaOrchestrationStage sectionId={node.id} decision={node.mediaHook} />
-        : null}
-    </div>)}
+export function GeneratedPage({graph}: {graph:ProjectedPageGraph}){
+  const [mounted,setMounted]=useState(true);
+  useEffect(()=>{
+    const unmount=()=>setMounted(false);
+    window.addEventListener("wdc:generated-page:unmount",unmount);
+    return()=>window.removeEventListener("wdc:generated-page:unmount",unmount);
+  },[]);
+  return <main className="wdc-shell" data-generated-page={graph.category} data-page-mounted={String(mounted)} data-page-readiness={graph.readiness} data-graph-signature={graph.signature}>
+    {mounted?graph.nodes.map((node)=><GeneratedSectionStage key={node.id} node={node}/>):null}
   </main>;
 }

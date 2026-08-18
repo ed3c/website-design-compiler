@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/motion-choreography-v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "category", "effects", "budget", "totalDurationMs", "scrollLinkedCount", "engineRouting"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/motion-choreography/v2" },
+    "category": { "type": "string", "minLength": 1 },
+    "effects": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "sectionId", "kind", "purpose", "target", "trigger", "engine", "durationMs", "delayMs", "easing", "interruption", "mobile", "reducedMotion", "blocksPrimaryInteraction", "layoutProperties", "fallback", "cleanup"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "sectionId": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 },
+          "purpose": { "enum": ["orient", "reveal-causality", "confirm-action", "spatial-continuity", "emphasize-hierarchy", "express-brand"] },
+          "target": { "enum": ["section", "content", "media", "interaction"] }, "trigger": { "enum": ["enter", "interaction", "scroll-progress", "route-change"] },
+          "engine": { "enum": ["motion", "gsap", "none"] }, "durationMs": { "type": "integer", "minimum": 0, "maximum": 700 }, "delayMs": { "type": "integer", "minimum": 0 },
+          "easing": { "type": "string", "minLength": 1 }, "interruption": { "enum": ["cancel-and-settle", "resume-safe"] }, "mobile": { "enum": ["full", "simplified", "disabled"] },
+          "reducedMotion": { "enum": ["instant", "disabled"] }, "blocksPrimaryInteraction": { "const": false }, "layoutProperties": { "const": false },
+          "fallback": { "enum": ["static-visible", "instant-state"] }, "cleanup": { "const": "on-unmount-and-route-change" }
+        }
+      }
+    },
+    "budget": {
+      "type": "object", "additionalProperties": false, "required": ["maxConcurrent", "maxEffectMs", "maxTotalMs", "maxLongTaskMs", "maxLayoutShift", "layoutPropertiesAllowed"],
+      "properties": { "maxConcurrent": { "const": 3 }, "maxEffectMs": { "const": 700 }, "maxTotalMs": { "type": "integer", "minimum": 1 }, "maxLongTaskMs": { "const": 50 }, "maxLayoutShift": { "const": 0 }, "layoutPropertiesAllowed": { "const": false } }
+    },
+    "totalDurationMs": { "type": "integer", "minimum": 0 }, "scrollLinkedCount": { "type": "integer", "minimum": 0 },
+    "engineRouting": { "type": "object", "additionalProperties": false, "required": ["motion", "gsap", "none"], "properties": { "motion": { "type": "integer", "minimum": 0 }, "gsap": { "type": "integer", "minimum": 0 }, "none": { "type": "integer", "minimum": 0 } } }
+  }
+}

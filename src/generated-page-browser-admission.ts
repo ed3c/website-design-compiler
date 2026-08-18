@@ -8,10 +8,20 @@ type JsonRecord = Record<string, unknown>;
 export const GENERATED_PAGE_BROWSER_TRUST_SOURCE_PATHS = [
   ".github/workflows/compiler-core.yml",
   "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
   "playwright.config.ts",
+  "playwright.runtime.config.ts",
   "schemas/generated-page-browser-admission-v1.schema.json",
   "schemas/generated-page-visual-observation.schema.json",
+  "schemas/generated-page-browser-receipt-v3.schema.json",
+  "schemas/design-quality-browser-observation.schema.json",
   "scripts/generated-page-browser-receipt.ts",
+  "apps/site/components/sections/generated-page.tsx",
+  "apps/site/components/sections/generated-section-stage.tsx",
+  "apps/site/components/sections/governed-section.tsx",
+  "apps/site/components/sections/governed-section.module.css",
+  "tests/browser/design-quality-observations.spec.ts",
   "src/generated-page-browser-admission.ts",
   "src/png-evidence.ts",
   "src/release-evidence.ts",
@@ -54,7 +64,14 @@ export function generatedPageScreenshotSetSha256(receipt: JsonRecord): string | 
 }
 
 export function generatedPageObservationSetSha256(receipt: JsonRecord): string | null {
-  return evidenceSetSha256(receipt, ["observationPath", "observationSha256"]);
+  if (!Array.isArray(receipt.qualityEvidence)) return null;
+  const entries: JsonRecord[] = [];
+  for (const value of receipt.qualityEvidence) {
+    if (!isRecord(value) || !["category", "project", "viewport", "path", "sha256", "screenshotSha256"].every((field) => typeof value[field] === "string")) return null;
+    entries.push(Object.fromEntries(["category", "project", "viewport", "path", "sha256", "screenshotSha256"].map((field) => [field, value[field]])));
+  }
+  entries.sort((left, right) => `${String(left.category)}\0${String(left.project)}`.localeCompare(`${String(right.category)}\0${String(right.project)}`));
+  return createHash("sha256").update(JSON.stringify(entries)).digest("hex");
 }
 
 export async function generatedPageBrowserTrustSourceSha256(root = process.cwd()): Promise<string> {
@@ -75,9 +92,15 @@ export async function validateTrustedGeneratedPageBrowserAdmission(
   expectedGit: { sha: string; ref: string }
 ): Promise<string[]> {
   const errors: string[] = [];
+  const encodedAdmission = process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64?.trim();
+  if (!encodedAdmission) return ["trusted generated-page browser admission is absent from the protected external channel"];
   let bytes: Buffer;
-  try { bytes = await readFile(resolveWorkspacePath(root, "fixtures/generated-pages/browser-admission.json")); }
-  catch { return ["trusted generated-page browser admission is absent"]; }
+  try {
+    bytes = Buffer.from(encodedAdmission, "base64");
+    if (bytes.length === 0 || bytes.toString("base64") !== encodedAdmission) throw new Error("non-canonical base64");
+  } catch {
+    return ["trusted generated-page browser admission external bytes are malformed"];
+  }
   const receiptSha256 = createHash("sha256").update(bytes).digest("hex");
   const trustedSha256 = process.env.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256?.trim();
   if (!trustedSha256 || trustedSha256 !== receiptSha256) {

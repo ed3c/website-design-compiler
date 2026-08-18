@@ -28,13 +28,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Produce browser-bound visual reference evidence
-        run: pnpm reference:browser-fixture
       - name: Verify v2 natural-language brief normalization and IA compilation
         run: pnpm v2:brief-ia
       - name: Verify six natural-language v2 benchmark briefs
@@ -44,7 +42,9 @@ jobs:
       - name: Verify deterministic multi-candidate visual direction search
         env:
           WDC_REFERENCE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 }}
-        run: pnpm v2:visual-directions
+        run: |
+          pnpm reference:browser-fixture
+          pnpm v2:visual-directions
       - name: Verify concrete semantic tokens and production projection drift
         run: pnpm v2:semantic-tokens
       - name: Verify governed rich section grammar
@@ -89,10 +89,12 @@ jobs:
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
+        id: runtime-gates
         env:
           WDC_REFERENCE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 }}
-          WDC_STORYBOOK_VISUAL_ADMISSION_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_ADMISSION_SHA256 }}
+          WDC_STORYBOOK_VISUAL_GOLDENS_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_GOLDENS_SHA256 }}
           WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256 }}
+          WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64: ${{ secrets.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64 }}
         run: |
           set +e
           pnpm storybook:build
@@ -107,7 +109,11 @@ jobs:
           browser_receipt_status=$?
           pnpm generated-pages:receipt
           generated_pages_status=$?
-          pnpm v2:design-quality
+          pnpm site-graphs:browser-receipt
+          site_graphs_status=$?
+          pnpm v3:design-quality-calibration
+          design_quality_calibration_status=$?
+          pnpm v3:design-quality
           design_quality_status=$?
           pnpm quality:receipt
           quality_status=$?
@@ -117,9 +123,37 @@ jobs:
           arena_status=$?
           pnpm release:receipt
           release_status=$?
-          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+          echo "storybook_build_status=$storybook_build_status" >> "$GITHUB_OUTPUT"
+          echo "storybook_qa_status=$storybook_qa_status" >> "$GITHUB_OUTPUT"
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$site_graphs_status" -ne 0 ] || [ "$design_quality_calibration_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
+      - name: Upload Ubuntu Storybook golden screenshot candidate
+        id: storybook-golden-screenshots
+        if: always() && steps.runtime-gates.outputs.storybook_build_status == '0' && steps.runtime-gates.outputs.storybook_qa_status == '0'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/storybook/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
+      - name: Bind Storybook golden candidate to uploaded screenshot artifact
+        id: storybook-golden-candidate
+        if: always() && steps.storybook-golden-screenshots.outputs.artifact-id != ''
+        env:
+          STORYBOOK_SCREENSHOT_ARTIFACT_ID: ${{ steps.storybook-golden-screenshots.outputs.artifact-id }}
+          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          STORYBOOK_BUILD_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_build_status }}
+          STORYBOOK_QA_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_qa_status }}
+        run: pnpm storybook:golden-candidate
+      - name: Upload review-required Storybook golden candidate manifest
+        if: always() && steps.storybook-golden-candidate.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: storybook-golden-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/storybook/golden-candidate.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify canonical v2 release policy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: pnpm release:v2
@@ -129,6 +163,7 @@ jobs:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
             artifacts/v2/
+            artifacts/v3/
             artifacts/rights-clearance/
             artifacts/runtime/minimal/runtime-receipt.json
             artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
@@ -157,8 +192,11 @@ jobs:
             artifacts/storybook/
             artifacts/browser-qa/browser-qa.json
             artifacts/browser-qa/playwright-report.json
+            artifacts/browser-qa/playwright-runtime-report.json
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
+            artifacts/browser-qa/test-results-functional/
+            artifacts/browser-qa/test-results-runtime/
             artifacts/graphics-3d/
             artifacts/generated-pages/
             artifacts/media-orchestration/

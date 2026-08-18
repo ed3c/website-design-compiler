@@ -7,7 +7,8 @@ import addFormats from "ajv-formats";
 import { routeArtDirection } from "./art-direction.js";
 import { compileCompletePageGraph, type CompletePageGraph } from "./complete-page-graph.js";
 import type { CompilerInput } from "./contracts.js";
-import { evaluateDesignQuality, type OriginalitySubject, type QualityViewport, type VisualQualityObservation } from "./design-quality-eval.js";
+import { evaluateDesignQuality, evaluateDesignQualityV3, type OriginalitySubject, type QualityViewport } from "./design-quality-eval.js";
+import type { DesignQualityBrowserObservation, RuntimeTokenMatch, VisualOriginalitySubject } from "./design-quality-observation.js";
 import { decidePremiumQuality, type DesignQualityEvidenceBinding, type ExpectedDesignQualityEvidence } from "./design-quality-evidence.js";
 import { buildFrontendPlan } from "./frontend-builder.js";
 import { buildGraphics2DPlan } from "./graphics-2d.js";
@@ -17,7 +18,13 @@ import { GENERATED_PAGE_CANONICAL_VIEWPORTS, validateTrustedGeneratedPageBrowser
 import { assertPngEvidence } from "./png-evidence.js";
 import { buildReferenceManifest } from "./reference-intelligence.js";
 import { compileAllSectionPageFixtures } from "./section-page-fixtures.js";
-import { validateCompilerInput } from "./validate.js";
+import {
+  CAPABILITY_RECEIPT_CONTRACTS,
+  type Capability,
+  type CapabilityEvidence,
+  type CapabilityState
+} from "./release-policy-v2.js";
+import { validateAgainstSchema, validateCompilerInput } from "./validate.js";
 
 export type ReleaseInputState = "PASS" | "FAIL" | "NOT_IMPLEMENTED" | "NOT_EXERCISED" | "ABSENT" | "SKIPPED_BY_POLICY";
 
@@ -48,12 +55,14 @@ const JSON_SCHEMA_FILES: Record<string, string> = {
   "website-design-compiler/generated-page-visual-observation/v1": "generated-page-visual-observation.schema.json",
   "website-design-compiler/live-reference-receipt/v2": "live-reference-receipt.schema.json",
   "website-design-compiler/webgpu-runtime-receipt/v1": "webgpu-runtime-receipt.schema.json",
-  "website-design-compiler/production-provider-status/v1": "production-provider-status.schema.json"
+  "website-design-compiler/production-provider-status/v2": "production-provider-status.schema.json",
+  "website-design-compiler/design-quality-eval-receipt/v3": "design-quality-eval-receipt-v3.schema.json"
 };
 const jsonSchemaValidators = new Map<string, ValidateFunction>();
 const READBACK_REQUIRED_SCHEMAS = new Set([
   "website-design-compiler/runtime-receipt/v1",
-  "website-design-compiler/design-quality-eval-receipt/v2"
+  "website-design-compiler/design-quality-eval-receipt/v3",
+  "website-design-compiler/production-provider-status/v2"
 ]);
 const RUNTIME_ARTIFACT_SPECS: Record<string, { path: string; schema: string | null }> = {
   "reference-intelligence": { path: "reference-intelligence/reference-manifest.json", schema: "website-design-compiler/reference-manifest/v1" },
@@ -86,8 +95,8 @@ export const RELEASE_CAPABILITY_SPECS = {
   liveReference: { path: "artifacts/live-reference/live-reference-receipt.json", schema: "website-design-compiler/live-reference-receipt/v2" },
   webgpu: { path: "artifacts/graphics-3d/webgpu-receipt.json", schema: "website-design-compiler/webgpu-runtime-receipt/v1" },
   repositoryRights: { path: RELEASE_CHILD_SPECS.rights.path, schema: RELEASE_CHILD_SPECS.rights.schema },
-  productionProvider: { path: "artifacts/media-generator/production-provider-status.json", schema: "website-design-compiler/production-provider-status/v1" },
-  premiumQuality: { path: "artifacts/v2/design-quality/design-quality-eval-receipt.json", schema: "website-design-compiler/design-quality-eval-receipt/v2" }
+  productionProvider: { path: "artifacts/media-generator/production-provider-status.json", schema: "website-design-compiler/production-provider-status/v2" },
+  premiumQuality: { path: "artifacts/v3/design-quality/design-quality-eval-receipt.json", schema: "website-design-compiler/design-quality-eval-receipt/v3" }
 } as const;
 
 export interface ReleaseEvidenceFileBinding extends ReleaseEvidenceBinding {
@@ -201,10 +210,11 @@ function validateBrowserReceipt(value: JsonRecord): string[] {
   const artifacts = requireRecord(value.artifacts, "artifacts", errors);
   if (artifacts) {
     if (artifacts.report !== null && typeof artifacts.report !== "string") errors.push("artifacts.report must be a path or null");
+    if (artifacts.runtimeReport !== null && typeof artifacts.runtimeReport !== "string") errors.push("artifacts.runtimeReport must be a path or null");
     requireStringArray(artifacts.screenshots, "artifacts.screenshots", errors);
     requireStringArray(artifacts.traces, "artifacts.traces", errors);
   }
-  const gates = validatePassFailRecord(value.gates, ["browserMatrix", "screenshots", "traces", "playwrightReport"], "gates", errors);
+  const gates = validatePassFailRecord(value.gates, ["browserMatrix", "screenshots", "traces", "playwrightReport", "playwrightRuntimeReport"], "gates", errors);
   if (gates && Array.isArray(value.requiredProjects) && Array.isArray(value.passedProjects) && Array.isArray(value.failedProjects) && Array.isArray(value.missingProjects) && Array.isArray(value.missingScreenshots) && artifacts) {
     const passedProjects = value.passedProjects;
     const observedPassed = Array.isArray(value.projectResults) ? value.projectResults.filter((entry) => isRecord(entry) && entry.status === "passed").map((entry) => String((entry as JsonRecord).projectName)) : [];
@@ -219,7 +229,8 @@ function validateBrowserReceipt(value: JsonRecord): string[] {
       browserMatrix: value.missingProjects.length === 0 && value.failedProjects.length === 0 && value.requiredProjects.every((project) => passedProjects.includes(project)) ? "PASS" : "FAIL",
       screenshots: value.missingScreenshots.length === 0 ? "PASS" : "FAIL",
       traces: Array.isArray(artifacts.traces) && artifacts.traces.length >= value.requiredProjects.length ? "PASS" : "FAIL",
-      playwrightReport: typeof artifacts.report === "string" && artifacts.report.length > 0 ? "PASS" : "FAIL"
+      playwrightReport: typeof artifacts.report === "string" && artifacts.report.length > 0 ? "PASS" : "FAIL",
+      playwrightRuntimeReport: typeof artifacts.runtimeReport === "string" && artifacts.runtimeReport.length > 0 ? "PASS" : "FAIL"
     };
     for (const [key, state] of Object.entries(expected)) if (gates[key] !== state) errors.push(`gates.${key} is inconsistent; expected ${state}`);
   }
@@ -541,11 +552,14 @@ function validateWebgpuReceipt(value: JsonRecord): string[] {
 
 function validateProductionProviderStatus(value: JsonRecord): string[] {
   const errors: string[] = [];
-  const expected = {
-    gate: "PRODUCTION_PROVIDER", overall: "NOT_EXERCISED", admissionState: "NEEDS_HUMAN_ADMIT", productionReleaseEligible: false,
-    providerIdentity: "ABSENT", modelIdentity: "ABSENT", rightsClearance: "ABSENT", runtimeCredentials: "ABSENT", budgetAuthorization: "ABSENT", deterministicMockGate: "SEPARATE"
-  } as const;
-  for (const [key, expectedValue] of Object.entries(expected)) if (value[key] !== expectedValue) errors.push(`${key} is inconsistent with an unconfigured production provider`);
+  if(value.gate!=="PRODUCTION_PROVIDER")errors.push("gate must be PRODUCTION_PROVIDER");
+  if(!["PASS","FAIL","NOT_EXERCISED"].includes(String(value.overall)))errors.push("overall must be PASS, FAIL, or NOT_EXERCISED");
+  if(value.deterministicMockGate!=="SEPARATE")errors.push("deterministic mock gate must remain separate");
+  if(value.overall==="PASS"){
+    if(value.admissionState!=="ADMITTED"||value.productionReleaseEligible!==true||value.rightsClearance!=="PASS"||value.runtimeCredentials!=="AVAILABLE"||value.budgetAuthorization!=="AUTHORIZED")errors.push("PASS provider status lacks admitted runtime, rights, credentials, or budget evidence");
+    for(const key of ["executionReceiptSha256","requestSha256","assetSha256"] as const)if(typeof value[key]!=="string"||!SHA256.test(value[key]))errors.push(`${key} is not a SHA-256 digest`);
+    if(!isRecord(value.artifacts))errors.push("PASS provider status lacks persisted artifact bindings");
+  }else if(value.productionReleaseEligible!==false)errors.push("non-PASS provider status cannot be release eligible");
   requireString(value.reason, "reason", errors);
   return errors;
 }
@@ -556,10 +570,12 @@ function validatePremiumQualityReceipt(value: JsonRecord): string[] {
   const viewportCoverage = requireRecord(value.viewportCoverage, "viewportCoverage", errors);
   const premium = requireRecord(value.premium, "premium", errors);
   if (!Number.isInteger(value.categoryCount) || Number(value.categoryCount) < 0) errors.push("categoryCount must be an integer");
-  for (const key of ["exactHeadBound", "allEvidenceBound", "allStructuralPass", "allOriginalityPass"] as const) if (typeof value[key] !== "boolean") errors.push(`${key} must be boolean`);
+  for (const key of ["exactHeadBound", "allEvidenceBound", "allStructuralPass", "allOriginalityPass", "allMeasurementsPass"] as const) if (typeof value[key] !== "boolean") errors.push(`${key} must be boolean`);
   if (premium && (!PASS_FAIL.has(premium.state) || !Array.isArray(premium.evaluations))) errors.push("premium evidence is malformed");
   const releaseProfile = requireRecord(value.releaseProfile, "releaseProfile", errors);
   if (releaseProfile && (typeof releaseProfile.sha256 !== "string" || !SHA256.test(releaseProfile.sha256) || !Array.isArray(releaseProfile.requiredViewports) || !sameMembers(releaseProfile.requiredViewports.map(String), ["mobile", "desktop"]) || typeof releaseProfile.premiumQualityThreshold !== "number" || typeof releaseProfile.originalitySimilarityThreshold !== "number" || releaseProfile.requireExactEvidenceBinding !== true)) errors.push("releaseProfile is malformed");
+  const calibration=requireRecord(value.calibration,"calibration",errors);
+  if(calibration&&(calibration.state!=="PASS"||calibration.exactObservationSetBound!==true||typeof calibration.sha256!=="string"||!SHA256.test(calibration.sha256)))errors.push("calibration is not exact-observation PASS evidence");
   const git = isRecord(value.git) ? value.git : null;
   const observedPairs: string[] = [];
   if (premium && Array.isArray(premium.evaluations)) premium.evaluations.forEach((evaluation, index) => {
@@ -567,19 +583,17 @@ function validatePremiumQualityReceipt(value: JsonRecord): string[] {
     const card = requireRecord(evaluation.card, `premium.evaluations[${index}].card`, errors);
     const binding = requireRecord(evaluation.binding, `premium.evaluations[${index}].binding`, errors);
     const decision = requireRecord(evaluation.decision, `premium.evaluations[${index}].decision`, errors);
-    const suppliedReferenceAudit = requireRecord(evaluation.suppliedReferenceAudit, `premium.evaluations[${index}].suppliedReferenceAudit`, errors);
     const source = requireRecord(evaluation.source, `premium.evaluations[${index}].source`, errors);
     if (card) {
-      if (typeof card.category !== "string" || !["mobile", "desktop"].includes(String(card.viewport)) || typeof card.score !== "number" || !isRecord(card.originalityAudit) || card.originalityAudit.state !== "PASS") errors.push(`premium.evaluations[${index}].card is malformed`);
+      if (card.schema!=="website-design-compiler/design-quality-eval/v3"||typeof card.category !== "string" || !["mobile", "desktop"].includes(String(card.viewport)) || typeof card.score !== "number" || !isRecord(card.originalityAudit) || card.originalityAudit.state !== "PASS"||!isRecord(card.measurement)||card.measurement.state!=="PASS") errors.push(`premium.evaluations[${index}].card is malformed`);
       else observedPairs.push(`${card.category}:${card.viewport}`);
     }
     if (binding && (binding.gitSha !== git?.sha || !["pageGraphSha256", "designTokensSha256", "screenshotSha256"].every((key) => typeof binding[key] === "string" && SHA256.test(String(binding[key]))) || typeof binding.screenshotPath !== "string" || binding.screenshotPath.length === 0 || typeof binding.graphSignature !== "string" || binding.graphSignature.length === 0)) errors.push(`premium.evaluations[${index}].binding is not exact-head evidence`);
     if (decision && (decision.overall !== "PREMIUM_PASS" || decision.evidenceState !== "PASS" || decision.structuralState !== "PASS")) errors.push(`premium.evaluations[${index}].decision did not pass`);
-    if (suppliedReferenceAudit && (suppliedReferenceAudit.originalityState !== "PASS" || typeof suppliedReferenceAudit.observedReferenceCount !== "number" || suppliedReferenceAudit.observedReferenceCount < 1)) errors.push(`premium.evaluations[${index}].reference originality was not exercised`);
-    if (source && !["pageGraphPath", "generatedPageReceiptPath", "semanticTokenReceiptPath", "tokenArtifactId", "tokenPath", "visualDirectionReceiptPath", "visualObservationPath", "visualObservationSha256"].every((key) => typeof source[key] === "string" && String(source[key]).length > 0)) errors.push(`premium.evaluations[${index}].source is not artifact-addressable`);
+    if (source && !["generatedPageReceipt", "generatedPageReceiptGitSha", "qualityObservationPath", "qualityObservationSha256", "productionProjection", "productionProjectionPath", "productionProjectionSha256", "semanticTokensSourceSha256"].every((key) => typeof source[key] === "string" && String(source[key]).length > 0)) errors.push(`premium.evaluations[${index}].source is not artifact-addressable`);
   });
   if (observedPairs.length > 0 && new Set(observedPairs).size !== observedPairs.length) errors.push("premium evaluations contain duplicated category/viewports");
-  if (value.overall === "PASS" && (value.categoryCount !== 6 || viewportCoverage?.mobile !== 6 || viewportCoverage?.desktop !== 6 || value.exactHeadBound !== true || value.allEvidenceBound !== true || value.allStructuralPass !== true || value.allOriginalityPass !== true || premium?.state !== "PASS" || !Array.isArray(premium.evaluations) || premium.evaluations.length !== 12 || observedPairs.length !== 12)) errors.push("PASS is inconsistent with premium evidence coverage and bindings");
+  if (value.overall === "PASS" && (value.categoryCount !== 6 || viewportCoverage?.mobile !== 6 || viewportCoverage?.desktop !== 6 || value.exactHeadBound !== true || value.allEvidenceBound !== true || value.allStructuralPass !== true || value.allOriginalityPass !== true || value.allMeasurementsPass!==true||calibration?.state!=="PASS"||calibration?.exactObservationSetBound!==true||premium?.state !== "PASS" || !Array.isArray(premium.evaluations) || premium.evaluations.length !== 12 || observedPairs.length !== 12)) errors.push("PASS is inconsistent with premium evidence coverage and bindings");
   return errors;
 }
 
@@ -599,8 +613,8 @@ const STRUCTURAL_VALIDATORS: Record<string, (value: JsonRecord) => string[]> = {
   "website-design-compiler/release-gate-receipt/v2": validateCoreReceipt,
   "website-design-compiler/live-reference-receipt/v2": validateLiveReferenceReceipt,
   "website-design-compiler/webgpu-runtime-receipt/v1": validateWebgpuReceipt,
-  "website-design-compiler/production-provider-status/v1": validateProductionProviderStatus,
-  "website-design-compiler/design-quality-eval-receipt/v2": validatePremiumQualityReceipt
+  "website-design-compiler/production-provider-status/v2": validateProductionProviderStatus,
+  "website-design-compiler/design-quality-eval-receipt/v3": validatePremiumQualityReceipt
 };
 
 function bindReleaseEvidenceStructure(
@@ -726,7 +740,39 @@ async function validateRuntimeArtifacts(root: string, receiptPath: string, recei
   return errors;
 }
 
-async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Promise<string[]> {
+async function validateProductionProviderArtifacts(root:string,receipt:JsonRecord):Promise<string[]>{
+  if(receipt.overall!=="PASS")return[];
+  const errors:string[]=[];
+  const artifacts=isRecord(receipt.artifacts)?receipt.artifacts:null;
+  const execution=artifacts&&isRecord(artifacts.executionReceipt)?artifacts.executionReceipt:null;
+  const asset=artifacts&&isRecord(artifacts.asset)?artifacts.asset:null;
+  const readBound=async(binding:JsonRecord|null,label:string):Promise<Buffer|null>=>{
+    if(!binding||typeof binding.path!=="string"||!/^[A-Za-z0-9._-]+$/.test(binding.path)){errors.push(`${label} path is unsafe`);return null;}
+    const path=binding.path;
+    const base=resolve(root,"artifacts/media-generator");
+    try{
+      const canonicalBase=await realpath(base);const target=resolve(base,path);const canonicalTarget=await realpath(target);
+      if(canonicalTarget!==resolve(canonicalBase,path)){errors.push(`${label} resolves through a symbolic link or outside its artifact directory`);return null;}
+      const bytes=await readFile(canonicalTarget);const digest=createHash("sha256").update(bytes).digest("hex");
+      if(binding.sha256!==digest)errors.push(`${label} SHA-256 mismatch`);
+      if(binding.bytes!==bytes.byteLength)errors.push(`${label} byte count mismatch`);
+      return bytes;
+    }catch{errors.push(`${label} is missing or unreadable`);return null;}
+  };
+  const executionBytes=await readBound(execution,"production execution receipt");
+  const assetBytes=await readBound(asset,"production provider asset");
+  if(execution?.sha256!==receipt.executionReceiptSha256)errors.push("status executionReceiptSha256 does not match its artifact binding");
+  if(asset?.sha256!==receipt.assetSha256)errors.push("status assetSha256 does not match its artifact binding");
+  if(executionBytes){
+    try{
+      const value=JSON.parse(executionBytes.toString("utf8")) as unknown;
+      if(!isRecord(value)||value.schema!=="website-design-compiler/production-provider-receipt/v2"||value.overall!=="PASS"||!isRecord(value.asset)||value.asset.sha256!==receipt.assetSha256||value.asset.bytes!==assetBytes?.byteLength)errors.push("production execution receipt does not bind the persisted PASS asset");
+    }catch{errors.push("production execution receipt is not valid JSON");}
+  }
+  return errors;
+}
+
+async function validatePremiumArtifactsV2(root: string, receipt: JsonRecord): Promise<string[]> {
   if (receipt.overall !== "PASS") return [];
   const errors: string[] = [];
   let canonicalRoot: string;
@@ -861,7 +907,7 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
         [],
         originalityCorpus,
         Number(profileValue.originalitySimilarityThreshold),
-        observationValue as unknown as VisualQualityObservation
+        observationValue as unknown as DesignQualityBrowserObservation
       );
       if (JSON.stringify(recomputedCard) !== JSON.stringify(card)) errors.push(`${label}.card does not match current graph, observation, and profile`);
       const expectedEvidence: ExpectedDesignQualityEvidence = {
@@ -880,6 +926,102 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
   return errors;
 }
 
+async function validatePremiumArtifacts(root:string,receipt:JsonRecord):Promise<string[]>{
+  if(receipt.overall!=="PASS")return[];
+  const errors:string[]=[];
+  let canonicalRoot:string;
+  try{canonicalRoot=await realpath(root);}catch{return["release workspace is missing or unreadable"];}
+  const readArtifact=async(path:unknown,label:string):Promise<{bytes:Buffer;value:unknown}|null>=>{
+    if(typeof path!=="string"||path.length===0||isAbsolute(path)){errors.push(`${label} is not a safe relative path`);return null;}
+    const absolute=resolve(root,path);const traversal=relative(root,absolute);
+    if(traversal.split(/[\\/]/)[0]===".."||isAbsolute(traversal)){errors.push(`${label} escapes the workspace`);return null;}
+    try{
+      const canonical=await realpath(absolute);if(canonical!==resolve(canonicalRoot,path)){errors.push(`${label} resolves through a symbolic link or outside the workspace`);return null;}
+      const bytes=await readFile(canonical);if(bytes.length===0){errors.push(`${label} is empty`);return null;}
+      try{return{bytes,value:path.endsWith(".json")?JSON.parse(bytes.toString("utf8")) as unknown:null};}catch{errors.push(`${label} is not valid JSON`);return null;}
+    }catch{errors.push(`${label} is missing or unreadable`);return null;}
+  };
+  const sha256=(value:Uint8Array|string)=>createHash("sha256").update(value).digest("hex");
+  const receiptGit=isRecord(receipt.git)?receipt.git:null;
+
+  const profileArtifact=await readArtifact("fixtures/v3/release-profiles/premium.json","release profile");
+  const profile=isRecord(profileArtifact?.value)?profileArtifact.value:null;
+  const declaredProfile=isRecord(receipt.releaseProfile)?receipt.releaseProfile:null;
+  if(!profile||!declaredProfile||JSON.stringify({...profile,sha256:profileArtifact?sha256(profileArtifact.bytes):null})!==JSON.stringify(declaredProfile))errors.push("release profile fields do not match governed v3 profile bytes");
+
+  const projectionArtifact=await readArtifact("apps/site/generated/benchmark-page-graphs.json","production page-graph projection");
+  const projection=isRecord(projectionArtifact?.value)?projectionArtifact.value:null;
+  const graphs=projection&&isRecord(projection.graphs)?projection.graphs:null;
+  const tokens=projection&&isRecord(projection.designTokens)?projection.designTokens:null;
+  if(!projection||projection.schema!=="website-design-compiler/site-page-graph-projection/v2"||projection.source!=="production-site-compiler"||!graphs||!tokens)errors.push("production page-graph projection is malformed");
+
+  const generatedArtifact=await readArtifact("artifacts/generated-pages/generated-page-browser-receipt.json","generated-page browser receipt");
+  const generated=isRecord(generatedArtifact?.value)?generatedArtifact.value:null;
+  const generatedGit=generated&&isRecord(generated.git)?generated.git:null;
+  if(!generated||generated.schema!=="website-design-compiler/generated-page-browser-receipt/v3"||generated.overall!=="PASS")errors.push("generated-page browser v3 receipt is not PASS evidence");
+  if(!generatedGit||generatedGit.sha!==receiptGit?.sha||generatedGit.ref!==receiptGit?.ref)errors.push("generated-page browser receipt is not bound to the premium subject");
+  if(generatedArtifact&&generated)errors.push(...await validateTrustedGeneratedPageBrowserAdmission(root,generatedArtifact.bytes,generated,{sha:String(receiptGit?.sha??""),ref:String(receiptGit?.ref??"")}));else errors.push("trusted generated-page browser admission is absent");
+
+  const calibrationArtifact=await readArtifact("artifacts/v3/design-quality-calibration/design-quality-calibration-receipt.json","design-quality calibration receipt");
+  const calibration=isRecord(calibrationArtifact?.value)?calibrationArtifact.value:null;
+  const declaredCalibration=isRecord(receipt.calibration)?receipt.calibration:null;
+  const calibrationGit=calibration&&isRecord(calibration.git)?calibration.git:null;
+  if(!calibration||calibration.schema!=="website-design-compiler/design-quality-calibration-receipt/v2"||calibration.overall!=="PASS"||calibrationGit?.sha!==receiptGit?.sha||calibrationGit?.ref!==receiptGit?.ref)errors.push("design-quality calibration is not exact-subject PASS evidence");
+  if(!declaredCalibration||!calibrationArtifact||declaredCalibration.sha256!==sha256(calibrationArtifact.bytes)||declaredCalibration.state!=="PASS"||declaredCalibration.exactObservationSetBound!==true)errors.push("premium receipt does not bind exact calibration bytes");
+
+  const qualityEvidence=generated&&Array.isArray(generated.qualityEvidence)?generated.qualityEvidence.filter(isRecord):[];
+  const observations=new Map<string,{observation:DesignQualityBrowserObservation;bytesSha256:string;evidence:JsonRecord}>();
+  for(const evidence of qualityEvidence){
+    const category=String(evidence.category??"");const viewport=String(evidence.viewport??"");const project=String(evidence.project??"");
+    const path=typeof evidence.path==="string"?join("artifacts/generated-pages",evidence.path):"";
+    const observed=await readArtifact(path,`quality observation ${category}/${viewport}`);
+    if(!observed||sha256(observed.bytes)!==evidence.sha256){errors.push(`quality observation ${category}/${viewport} digest mismatch`);continue;}
+    try{await validateAgainstSchema(observed.value,"design-quality-browser-observation.schema.json",root);}catch{errors.push(`quality observation ${category}/${viewport} schema validation failed`);continue;}
+    const observation=observed.value as DesignQualityBrowserObservation;
+    if(observation.category!==category||observation.viewport!==viewport||observation.project!==project)errors.push(`quality observation ${category}/${viewport} identity mismatch`);
+    const screenshot=await readArtifact(observation.screenshot.path,`quality screenshot ${category}/${viewport}`);
+    if(!screenshot||sha256(screenshot.bytes)!==observation.screenshot.sha256||observation.screenshot.sha256!==evidence.screenshotSha256){errors.push(`quality screenshot ${category}/${viewport} digest mismatch`);continue;}
+    const expectedViewport=GENERATED_PAGE_CANONICAL_VIEWPORTS[project as keyof typeof GENERATED_PAGE_CANONICAL_VIEWPORTS];
+    if(!expectedViewport||observation.computed.viewport.width!==expectedViewport.width||observation.computed.viewport.height!==expectedViewport.height)errors.push(`quality observation ${category}/${viewport} does not match the canonical browser viewport`);
+    try{assertPngEvidence(screenshot.bytes,{width:observation.computed.viewport.width,maximumWidth:Math.ceil(observation.computed.viewport.width*4),minimumHeight:observation.computed.viewport.height,viewport:`${category}/${viewport}`});}catch(error){errors.push(`quality screenshot ${category}/${viewport} ${error instanceof Error?error.message:"failed PNG validation"}`);}
+    observations.set(`${category}:${viewport}`,{observation,bytesSha256:sha256(observed.bytes),evidence});
+  }
+
+  const runtimeTokenMatch=(tokenValue:JsonRecord,observation:DesignQualityBrowserObservation):RuntimeTokenMatch=>{
+    const color=isRecord(tokenValue.color)?tokenValue.color:{};const typography=isRecord(tokenValue.typography)?tokenValue.typography:{};const display=isRecord(typography.display)?typography.display:{};const body=isRecord(typography.body)?typography.body:{};const layout=isRecord(tokenValue.layout)?tokenValue.layout:{};const container=isRecord(layout.containerMaxPx)?layout.containerMaxPx:{};const gutter=isRecord(layout.gutterPx)?layout.gutterPx:{};const motion=isRecord(tokenValue.motionMs)?tokenValue.motionMs:{};
+    const expected:Record<string,string>={"--wdc-color-background":String(color.background??""),"--wdc-color-surface":String(color.surface??""),"--wdc-color-text-primary":String(color.text??""),"--wdc-color-text-muted":String(color.mutedText??""),"--wdc-color-accent":String(color.accent??""),"--wdc-color-on-accent":String(color.onAccent??""),"--wdc-color-focus":String(color.focus??""),"--wdc-font-display":String(display.family??""),"--wdc-font-body":String(body.family??""),"--wdc-motion-fast":`${String(motion.fast??"")}ms`,"--wdc-motion-base":`${String(motion.base??"")}ms`,"--wdc-container-max":`${String(container[observation.viewport]??"")}px`,"--wdc-gutter":`${String(gutter[observation.viewport]??"")}px`};
+    const normalize=(value:string)=>value.toLowerCase().replace(/[\s"']/g,"");
+    const mismatches=Object.entries(expected).filter(([name,value])=>name.startsWith("--wdc-font-")?!normalize(observation.computed.cssTokens[name]??"").startsWith(normalize(value)):normalize(observation.computed.cssTokens[name]??"")!==normalize(value)).map(([name,value])=>`${name}:${observation.computed.cssTokens[name]??"ABSENT"}!=${value}`);
+    return{state:mismatches.length===0?"PASS":"FAIL",matched:Object.keys(expected).length-mismatches.length,total:Object.keys(expected).length,mismatches};
+  };
+
+  const graphEntries=Object.entries(graphs??{}).flatMap(([category,value])=>isRecord(value)?[[category,value as unknown as CompletePageGraph] as const]:[]);
+  const premium=isRecord(receipt.premium)?receipt.premium:null;const evaluations=Array.isArray(premium?.evaluations)?premium.evaluations:[];
+  for(const[index,value]of evaluations.entries()){
+    if(!isRecord(value))continue;const card=isRecord(value.card)?value.card:null;const binding=isRecord(value.binding)?value.binding:null;const source=isRecord(value.source)?value.source:null;
+    if(!card||!binding||!source||typeof card.category!=="string"||(card.viewport!=="mobile"&&card.viewport!=="desktop"))continue;
+    const label=`premium.evaluations[${index}]`;const graph=graphs?.[card.category] as CompletePageGraph|undefined;const tokenValue=tokens&&isRecord(tokens[card.category])?tokens[card.category] as JsonRecord:null;const observed=observations.get(`${card.category}:${card.viewport}`);const project=card.viewport==="mobile"?"mobile-chromium":"desktop-chromium";
+    if(!graph||!tokenValue||!observed){errors.push(`${label} lacks current graph, tokens, or browser observation`);continue;}
+    if(source.generatedPageReceipt!==generated?.schema||source.generatedPageReceiptGitSha!==generatedGit?.sha||source.productionProjection!==projection?.schema||source.productionProjectionPath!=="apps/site/generated/benchmark-page-graphs.json"||source.productionProjectionSha256!==(projectionArtifact?sha256(projectionArtifact.bytes):null))errors.push(`${label}.source does not bind current upstream receipts and projection`);
+    if(source.qualityObservationPath!==observed.evidence.path||source.qualityObservationSha256!==observed.bytesSha256)errors.push(`${label}.source does not bind the exact browser observation`);
+    if(binding.pageGraphSha256!==sha256(JSON.stringify(graph))||binding.graphSignature!==graph.signature||binding.designTokensSha256!==sha256(JSON.stringify(tokenValue))||binding.screenshotPath!==observed.observation.screenshot.path||binding.screenshotSha256!==observed.observation.screenshot.sha256||binding.gitSha!==receiptGit?.sha)errors.push(`${label}.binding does not match current graph, tokens, screenshot, and Git subject`);
+    if(observed.evidence.project!==project)errors.push(`${label}.browser project is not canonical for its viewport`);
+    const structuralIds=graphEntries.filter(([category])=>category!==card.category).map(([category])=>category).sort();const visualIds=[...observations.values()].map((entry)=>entry.observation).filter((entry)=>entry.viewport===card.viewport&&entry.category!==card.category).map((entry)=>entry.category).sort();
+    if(JSON.stringify([...(Array.isArray(source.structuralOriginalityCorpus)?source.structuralOriginalityCorpus:[])].sort())!==JSON.stringify(structuralIds)||JSON.stringify([...(Array.isArray(source.visualOriginalityCorpus)?source.visualOriginalityCorpus:[])].sort())!==JSON.stringify(visualIds))errors.push(`${label}.originality corpus identities drifted`);
+    const visualCorpus:VisualOriginalitySubject[]=[...observations.values()].map((entry)=>entry.observation).filter((entry)=>entry.viewport===card.viewport&&entry.category!==card.category).map((observation)=>({id:observation.category,observation}));
+    const recomputed=evaluateDesignQualityV3(graph,card.viewport as QualityViewport,{premiumQualityThreshold:Number(profile?.premiumQualityThreshold),originalitySimilarityThreshold:Number(profile?.originalitySimilarityThreshold),structuralCorpus:graphEntries.filter(([category])=>category!==card.category).map(([category,candidate])=>({id:category,graph:candidate})),observation:observed.observation,tokenMatch:runtimeTokenMatch(tokenValue,observed.observation),visualCorpus});
+    if(JSON.stringify(recomputed)!==JSON.stringify(card))errors.push(`${label}.card does not match current graph, observation, tokens, corpus, and profile`);
+    const expected:ExpectedDesignQualityEvidence={category:graph.category,viewport:card.viewport as QualityViewport,pageGraphSha256:String(binding.pageGraphSha256),designTokensSha256:String(binding.designTokensSha256),screenshotSha256:String(binding.screenshotSha256),gitSha:String(receiptGit?.sha),graphSignature:graph.signature};
+    const decision=decidePremiumQuality(recomputed,binding as unknown as DesignQualityEvidenceBinding,expected,Number(profile?.premiumQualityThreshold));
+    if(JSON.stringify(decision)!==JSON.stringify(value.decision))errors.push(`${label}.decision does not match recomputed premium evidence`);
+  }
+
+  const calibrationSources=calibration&&isRecord(calibration.sources)?calibration.sources:null;const calibrationProjection=calibrationSources&&isRecord(calibrationSources.projection)?calibrationSources.projection:null;const calibrationObservations=calibrationSources&&Array.isArray(calibrationSources.observations)?calibrationSources.observations.filter(isRecord):[];
+  const observedSet=[...observations.values()].map((entry)=>`${entry.observation.category}:${entry.observation.viewport}:${entry.bytesSha256}:${entry.observation.screenshot.sha256}`).sort();const calibratedSet=calibrationObservations.map((entry)=>`${String(entry.category)}:${String(entry.viewport)}:${String(entry.sha256)}:${String(entry.screenshotSha256)}`).sort();
+  if(calibrationProjection?.sha256!==(projectionArtifact?sha256(projectionArtifact.bytes):null)||JSON.stringify(observedSet)!==JSON.stringify(calibratedSet))errors.push("calibration does not bind the exact production projection and browser observation set");
+  return errors;
+}
+
 export async function readBoundReleaseEvidence(
   root: string,
   path: string,
@@ -895,10 +1037,13 @@ export async function readBoundReleaseEvidence(
       const runtimeArtifactErrors = expectedSchema === "website-design-compiler/runtime-receipt/v1" && isRecord(receipt)
         ? await validateRuntimeArtifacts(root, path, receipt)
         : [];
-      const premiumArtifactErrors = expectedSchema === "website-design-compiler/design-quality-eval-receipt/v2" && isRecord(receipt)
+      const premiumArtifactErrors = expectedSchema === "website-design-compiler/design-quality-eval-receipt/v3" && isRecord(receipt)
         ? await validatePremiumArtifacts(root, receipt)
         : [];
-      const errors = [...binding.errors, ...runtimeArtifactErrors, ...premiumArtifactErrors];
+      const providerArtifactErrors=expectedSchema==="website-design-compiler/production-provider-status/v2"&&isRecord(receipt)
+        ?await validateProductionProviderArtifacts(root,receipt)
+        :[];
+      const errors = [...binding.errors, ...runtimeArtifactErrors, ...premiumArtifactErrors,...providerArtifactErrors];
       return { ...binding, state: errors.length === 0 ? binding.state : "FAIL", errors, path, sha256 };
     } catch {
       return fileFailure(path, "receipt JSON is malformed", sha256);
@@ -938,4 +1083,45 @@ export async function verifyCoreReleaseEvidence(root: string, expectedGit: { sha
     }
   }
   return { ...core, state: core.state === "PASS" && errors.length === 0 ? "PASS" : "FAIL", errors };
+}
+
+function capabilityEvidenceState(value: unknown, capability: Capability): CapabilityState {
+  if (EVIDENCE_STATES.has(value)) return value as CapabilityState;
+  throw new Error(`${capability} receipt has invalid overall state`);
+}
+
+export async function readCapabilityEvidence(root: string, capability: Capability): Promise<CapabilityEvidence> {
+  const contract = CAPABILITY_RECEIPT_CONTRACTS[capability];
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(join(root, contract.path));
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return { state: "ABSENT", gitSha: null, identity: null, artifactPath: contract.path, artifactSha256: null };
+    }
+    throw new Error(`unable to read ${capability} receipt`, { cause: error });
+  }
+  let receipt: unknown;
+  try { receipt = JSON.parse(bytes.toString("utf8")) as unknown; }
+  catch (error) { throw new Error(`${capability} receipt is malformed JSON`, { cause: error }); }
+  await validateAgainstSchema(receipt, contract.schemaFile, root);
+  if (!isRecord(receipt)) throw new Error(`${capability} receipt must be an object`);
+  if (receipt.schema !== contract.identity) throw new Error(`${capability} receipt schema identity mismatch`);
+  const git = isRecord(receipt.git) ? receipt.git : null;
+  if (!git || typeof git.sha !== "string" || !GIT_SHA.test(git.sha)) throw new Error(`${capability} receipt has no exact git SHA`);
+  if(typeof git.ref!=="string"||!git.ref.startsWith("refs/"))throw new Error(`${capability} receipt has no exact git ref`);
+  const structural=bindReleaseEvidenceStructure(receipt,contract.identity,{sha:git.sha,ref:git.ref});
+  const artifactErrors=capability==="productionProvider"
+    ?await validateProductionProviderArtifacts(root,receipt)
+    :capability==="premiumQuality"
+      ?await validatePremiumArtifacts(root,receipt)
+      :[];
+  const state=structural.errors.length===0&&artifactErrors.length===0?capabilityEvidenceState(receipt.overall,capability):"FAIL";
+  return {
+    state,
+    gitSha: git.sha,
+    identity: contract.identity,
+    artifactPath: contract.path,
+    artifactSha256: createHash("sha256").update(bytes).digest("hex")
+  };
 }

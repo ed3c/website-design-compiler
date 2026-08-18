@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { compileSemanticDesignTokens, contrastRatio, projectSemanticTokensToCss } from "../src/semantic-design-tokens.js";
-import { searchVisualDirections } from "../src/visual-direction-search.js";
+import { searchVisualDirections, visualDirectionSha256 } from "../src/visual-direction-search.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 function input(pageType: string): CompilerInput {
@@ -53,16 +53,20 @@ test("semantic tokens bind the exact supplied visual search receipt", () => {
     inputSha256: visualSearch.inputSha256,
     seed: visualSearch.seed,
     candidateId: visualSearch.selectedCandidateId,
-    candidateSignature: selected.signature
+    candidateSignature: selected.signature,
+    receiptSha256:visualDirectionSha256(visualSearch)
   });
 });
 
 test("CSS projection includes every concrete token family used by production UI", () => {
   const css = projectSemanticTokensToCss(compileTokens(input("interactive-3d")));
   for (const variable of [
-    "--wdc-type-display-weight",
-    "--wdc-type-display-line-height",
-    "--wdc-type-body-measure",
+    "--wdc-font-display-weight",
+    "--wdc-font-display-line-height",
+    "--wdc-font-body-measure",
+    "--wdc-type-scale-0-desktop",
+    "--wdc-type-scale-0-tablet",
+    "--wdc-type-scale-0-mobile",
     "--wdc-type-scale-0",
     "--wdc-space-0",
     "--wdc-space-6",

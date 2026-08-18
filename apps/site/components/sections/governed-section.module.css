@@ -8,10 +8,12 @@
   color: var(--section-ink);
 }
 
+.section h1,
 .section h2,
 .section h3,
 .section p { margin-top: 0; }
 
+.section h1,
 .section h2 {
   max-width: 18ch;
   margin-bottom: 1rem;
@@ -42,7 +44,7 @@
 .action,
 .quietAction {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: var(--wdc-target-min, 48px);
   align-items: center;
   justify-content: center;
   border-radius: 999px;

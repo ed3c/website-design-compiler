@@ -154,6 +154,8 @@ const ORIGINALITY_THRESHOLD = 70;
 export const REFERENCE_BROWSER_TRUST_SOURCE_PATHS = [
   ".github/workflows/compiler-core.yml",
   "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
   "schemas/observed-visual-fingerprint-v3.schema.json",
   "schemas/reference-browser-admission-v1.schema.json",
   "schemas/reference-browser-receipt.schema.json",
@@ -185,12 +187,22 @@ const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
   {
     typography: "humanist-sans", typeContrast: "restrained", density: "dense", grid: "strict", surface: "tonal",
     colorStrategy: "tonal-brand", mediaStrategy: "text-first", motionIntensity: "minimal", signatureInteraction: "direct-manipulation"
+  },
+  {
+    typography: "humanist-sans", typeContrast: "balanced", density: "airy", grid: "asymmetric", surface: "layered",
+    colorStrategy: "spatial-dark", mediaStrategy: "interactive-stage", motionIntensity: "moderate", signatureInteraction: "spatial-focus"
+  },
+  {
+    typography: "display-contrast", typeContrast: "restrained", density: "airy", grid: "strict", surface: "layered",
+    colorStrategy: "tonal-brand", mediaStrategy: "product-media", motionIntensity: "moderate", signatureInteraction: "progressive-reveal"
   }
 ];
 
 function hash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
+
+export const visualDirectionSha256 = hash;
 
 function hashText(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -432,8 +444,9 @@ function preferredDirectionIndex(pageType: string): number | null {
   if (value.includes("b2b")) return 4;
   if (value.includes("editorial")) return 1;
   if (value.includes("motion") || value.includes("creative")) return 3;
-  if (value.includes("3d") || value.includes("2d")) return 2;
-  if (value.includes("premium") || value.includes("consumer")) return 1;
+  if (value.includes("3d")) return 5;
+  if (value.includes("2d")) return 2;
+  if (value.includes("premium") || value.includes("consumer")) return 6;
   if (value.includes("product")) return 0;
   return null;
 }
@@ -441,12 +454,19 @@ function preferredDirectionIndex(pageType: string): number | null {
 function rotateDirections(seedHash: string, pageType: string): VisualDirectionDimensions[] {
   const seededStart = Number.parseInt(seedHash.slice(0, 2), 16) % BASE_DIRECTIONS.length;
   const preferred = preferredDirectionIndex(pageType);
-  const indices = preferred === null ? [] : [preferred];
-  for (let offset = 0; indices.length < 3 && offset < BASE_DIRECTIONS.length; offset += 1) {
+  const orderedIndices:number[] = preferred === null ? [] : [preferred];
+  for (let offset = 0; offset < BASE_DIRECTIONS.length; offset += 1) {
     const index = (seededStart + offset) % BASE_DIRECTIONS.length;
-    if (!indices.includes(index)) indices.push(index);
+    if (!orderedIndices.includes(index)) orderedIndices.push(index);
   }
-  return indices.map((index) => ({ ...BASE_DIRECTIONS[index]! }));
+  const selected:number[]=[];
+  for(const index of orderedIndices){
+    const direction=BASE_DIRECTIONS[index]!;
+    if(selected.every((chosen)=>visualDirectionDistance(direction,BASE_DIRECTIONS[chosen]!)>=DIVERSITY_THRESHOLD))selected.push(index);
+    if(selected.length===3)break;
+  }
+  if(selected.length<3)throw new Error(`visual direction corpus cannot satisfy diversity threshold ${DIVERSITY_THRESHOLD}`);
+  return selected.map((index) => ({ ...BASE_DIRECTIONS[index]! }));
 }
 
 export function searchVisualDirections(

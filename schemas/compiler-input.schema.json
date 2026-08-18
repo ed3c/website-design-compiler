@@ -47,6 +47,7 @@
         }
       }
     },
+    "contentEvidence": { "$ref": "#/$defs/contentEvidence" },
     "references": {
       "type": "array",
       "items": {
@@ -55,7 +56,7 @@
         "required": ["kind", "value"],
         "properties": {
           "kind": { "enum": ["url", "image", "video", "html"] },
-          "value": { "type": "string", "minLength": 1 },
+          "value": { "$ref": "#/$defs/contentValue" },
           "visualEvidence": {
             "type": "object",
             "additionalProperties": false,
@@ -85,6 +86,7 @@
       "items": { "type": "string", "minLength": 1 }
     }
   },
+  "dependentRequired": { "contentEvidence": ["briefSourceEvidence"] },
   "$defs": {
     "authoredContentEntry": {
       "type": "object",
@@ -125,7 +127,7 @@
         "density": { "enum": ["airy", "balanced", "dense"] },
         "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
         "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
-        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] },
         "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
         "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
         "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }
@@ -139,6 +141,30 @@
         "state": { "enum": ["EXPLICIT", "INFERRED"] },
         "sourceExcerpt": { "type": "string", "minLength": 1 }
       }
+    },
+    "contentEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "source", "sections"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/content-evidence/v1" },
+        "source": { "const": "USER_SUPPLIED" },
+        "sections": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "$ref": "#/$defs/contentValue" }
+          }
+        }
+      }
+    },
+    "contentValue": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" },
+        { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" } }
+      ]
     }
   }
 }

@@ -71,13 +71,17 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
     sectionIntents: ia.sections.map((section) => {
       const contentSection = contentBySection.get(section.id);
       if (!contentSection) throw new Error(`content contract missing for IA section: ${section.id}`);
-      const contentState = contentSection.fields.some((field) => field.state === "NEEDS_INPUT") ? "NEEDS_INPUT" : "READY";
+      const contentState = contentSection.fields.some((field) => field.state === "NEEDS_INPUT") ||
+        contentSection.quality.forbiddenPhraseHits.length > 0 ||
+        contentSection.quality.repeatedPublishableValues.length > 0
+        ? "NEEDS_INPUT"
+        : "READY";
       return {
         id: section.id,
         type: section.type,
         purpose: section.purpose,
         priority: section.priority,
-        status: section.status,
+        status: contentState,
         evidence: section.evidence,
         requiredContent: section.requiredContent,
         missingContent: section.missingContent,

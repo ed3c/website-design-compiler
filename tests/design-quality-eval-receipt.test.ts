@@ -14,12 +14,12 @@ test("a failed current design-quality run overwrites a stale PASS receipt", asyn
     const proofPath = "fixtures/content/proof-evidence.txt";
     await mkdir(dirname(join(root, proofPath)), { recursive: true });
     await copyFile(resolve(proofPath), join(root, proofPath));
-    const receiptPath = join(root, "artifacts/v2/design-quality/design-quality-eval-receipt.json");
+    const receiptPath = join(root, "artifacts/v3/design-quality/design-quality-eval-receipt.json");
     await mkdir(dirname(receiptPath), { recursive: true });
-    await writeFile(receiptPath, '{"schema":"website-design-compiler/design-quality-eval-receipt/v2","overall":"PASS"}\n', "utf8");
+    await writeFile(receiptPath, '{"schema":"website-design-compiler/design-quality-eval-receipt/v3","overall":"PASS"}\n', "utf8");
     let failure: unknown;
     try {
-      await execFileAsync(process.execPath, ["--import", import.meta.resolve("tsx"), resolve("scripts/design-quality-eval-receipt.ts")], {
+      await execFileAsync(process.execPath, ["--import", import.meta.resolve("tsx"), resolve("scripts/design-quality-eval-v3-receipt.ts")], {
         cwd: root,
         env: { ...process.env, GITHUB_SHA: "a".repeat(40), GITHUB_REF: "refs/heads/review" }
       });
