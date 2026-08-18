@@ -194,6 +194,35 @@ test("a production-graph package with an explicit absent release-target path is 
   }
 });
 
+test("the exact production graph install path wins over a stale pnpm store copy", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-rights-exact-target-"));
+  const binDirectory = join(root, "bin");
+  const previousPath = process.env.PATH;
+  try {
+    const target = join(root, "release-target/node_modules/example");
+    const stale = join(root, "node_modules/.pnpm/example@1.0.0/node_modules/example");
+    await mkdir(target, { recursive: true });
+    await mkdir(stale, { recursive: true });
+    await mkdir(binDirectory);
+    await writeFile(join(target, "package.json"), `${JSON.stringify({ name: "example", version: "1.0.0", license: "PolyForm-Noncommercial-1.0.0" })}\n`, "utf8");
+    await writeFile(join(stale, "package.json"), `${JSON.stringify({ name: "example", version: "1.0.0", license: "MIT" })}\n`, "utf8");
+    const graph = JSON.stringify([{ dependencies: { example: { version: "1.0.0", path: target } } }]);
+    const pnpmPath = join(binDirectory, "pnpm");
+    await writeFile(pnpmPath, `#!/bin/sh\nprintf '%s\\n' '${graph}'\n`, "utf8");
+    await chmod(pnpmPath, 0o755);
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+
+    const receipt = await scanRepositoryRights(root, [], new Date("2026-08-18T00:00:00.000Z"));
+    const subject = receipt.subjects.find((candidate) => candidate.id === "package:example@1.0.0");
+    assert.equal(subject?.licenseExpression, "PolyForm-Noncommercial-1.0.0");
+    assert.equal(subject?.state, "DENY");
+    assert.equal(receipt.overall, "FAIL");
+  } finally {
+    process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("waiver and public-tree diagnostics independently fail the repository receipt", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-rights-receipt-diagnostics-"));
   const binDirectory = join(root, "bin");

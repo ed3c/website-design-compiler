@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { isAbsolute, resolve, join, relative } from "node:path";
 
@@ -31,6 +31,7 @@ interface PnpmProject extends PnpmDependency { path?: string; }
 interface PackageEvidenceOverride { license: string; source: string; }
 interface AssetEvidence { sha256: string; license: string; source: string; }
 interface PackageMetadataScan { index: Map<string, { license: string | null; path: string }>; failuresByName: Map<string, string[]>; globalFailures: string[]; }
+type ExactPackageMetadata = { license: string | null; path: string } | { diagnostic: string };
 
 function errorCode(error: unknown): string {
   return error instanceof Error && "code" in error && typeof error.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
@@ -127,6 +128,43 @@ async function indexPackage(path: string, expectedName: string, index: Map<strin
   }
   const license = typeof json.license === "string" ? json.license : legacyLicense;
   index.set(`${expectedName}@${json.version}`, { license, path: relative(root, manifestPath) });
+}
+
+async function packageMetadataAtInstallPath(root: string, installPath: string, expectedName: string, expectedVersion: string): Promise<ExactPackageMetadata> {
+  const repositoryPath = relative(root, installPath);
+  let canonicalRoot: string;
+  let canonicalPath: string;
+  try {
+    canonicalRoot = await realpath(root);
+    canonicalPath = await realpath(installPath);
+  }
+  catch (error) { return { diagnostic: packageMetadataDiagnostic(root, join(installPath, "package.json"), errorCode(error)) }; }
+  const canonicalTraversal = relative(canonicalRoot, canonicalPath);
+  if (canonicalTraversal.split(/[\\/]/)[0] === ".." || isAbsolute(canonicalTraversal)) {
+    return { diagnostic: `diagnostic:package-path:OUTSIDE_ROOT:${expectedName}@${expectedVersion}` };
+  }
+  const manifestPath = join(canonicalPath, "package.json");
+  let source: string;
+  try { source = await readFile(manifestPath, "utf8"); }
+  catch (error) { return { diagnostic: packageMetadataDiagnostic(root, join(installPath, "package.json"), errorCode(error)) }; }
+  let parsed: unknown;
+  try { parsed = JSON.parse(source) as unknown; }
+  catch { return { diagnostic: packageMetadataDiagnostic(root, join(installPath, "package.json"), "INVALID_JSON") }; }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { diagnostic: packageMetadataDiagnostic(root, join(installPath, "package.json"), "INVALID_MANIFEST") };
+  }
+  const json = parsed as { name?: unknown; version?: unknown; license?: unknown; licenses?: unknown };
+  if (json.name !== expectedName || json.version !== expectedVersion || (json.license !== undefined && typeof json.license !== "string")) {
+    return { diagnostic: packageMetadataDiagnostic(root, join(installPath, "package.json"), "IDENTITY_MISMATCH") };
+  }
+  let legacyLicense: string | null = null;
+  if (json.licenses !== undefined) {
+    if (!Array.isArray(json.licenses) || json.licenses.some((entry) => !entry || typeof entry !== "object" || typeof (entry as { type?: unknown }).type !== "string")) {
+      return { diagnostic: packageMetadataDiagnostic(root, join(installPath, "package.json"), "INVALID_MANIFEST") };
+    }
+    legacyLicense = json.licenses.map((entry) => (entry as { type: string }).type).join(" OR ") || null;
+  }
+  return { license: typeof json.license === "string" ? json.license : legacyLicense, path: `${repositoryPath}/package.json` };
 }
 
 async function loadOverrides(root: string): Promise<Record<string, PackageEvidenceOverride>> {
@@ -238,7 +276,7 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
   const metadata = await packageMetadataIndex(root);
   const overrides = await loadOverrides(root);
   const packageDiagnostics = new Set<string>();
-  const packageSubjects: RightsSubject[] = [...dependencies.values()].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)).map(({ name, version, installPath }) => {
+  const packageSubjects: RightsSubject[] = await Promise.all([...dependencies.values()].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)).map(async ({ name, version, installPath }) => {
     const id = `${name}@${version}`;
     const installed = metadata.index.get(id);
     const override = overrides[id];
@@ -253,6 +291,16 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
       packageDiagnostics.add(diagnostic);
       return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: null, state: "UNKNOWN" as const, evidence: [`pnpm production graph:${id}`, diagnostic], attributionRequired: false, distributed: true };
     }
+    if (installPath && installPathIsInsideRoot) {
+      const exact = await packageMetadataAtInstallPath(root, installPath, name, version);
+      if ("diagnostic" in exact) {
+        packageDiagnostics.add(exact.diagnostic);
+        return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: null, state: "UNKNOWN" as const, evidence: [`pnpm production graph:${id}`, exact.diagnostic], attributionRequired: false, distributed: true };
+      }
+      const license = exact.license ?? override?.license ?? null;
+      const state = classifyLicense(license);
+      return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: license, state, evidence: [exact.path, ...(override ? [override.source] : []), `pnpm production graph:${id}`], attributionRequired: state === "ALLOW", distributed: true };
+    }
     if (!installed && metadataFailures.length > 0) {
       for (const diagnostic of metadataFailures) packageDiagnostics.add(diagnostic);
       return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: null, state: "UNKNOWN" as const, evidence: [`pnpm production graph:${id}`, ...metadataFailures], attributionRequired: false, distributed: true };
@@ -261,7 +309,7 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
     const license = installed.license ?? override?.license ?? null;
     const state = classifyLicense(license);
     return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: license, state, evidence: [installed.path, ...(override ? [override.source] : []), `pnpm production graph:${id}`], attributionRequired: state === "ALLOW", distributed: true };
-  });
+  }));
   const fixedSubjects: RightsSubject[] = [
     { id: "font:system-stack", kind: "font", name: "system font stack", versionOrIdentity: "runtime-system", licenseExpression: null, state: "NOT_DISTRIBUTED", evidence: ["system/fallback font names only; no font binary shipped"], attributionRequired: false, distributed: false },
     { id: "model:internal-deterministic-mock", kind: "model", name: "internal deterministic mock", versionOrIdentity: "internal/v1", licenseExpression: "REPO_ORIGINAL", state: "ALLOW", evidence: ["src/media-router.ts", "deterministic worker fixture"], attributionRequired: false, distributed: true },
