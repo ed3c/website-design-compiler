@@ -25,10 +25,11 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["url", "sha256", "verifiedAt"],
+              "required": ["url", "sha256", "bytes", "verifiedAt"],
               "properties": {
                 "url": { "type": "string", "pattern": "^https://[^\\s/?#]+(?:/[^\\s?#]*)?$" },
                 "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                "bytes": { "type": "integer", "minimum": 1 },
                 "verifiedAt": { "type": "string", "format": "date-time" }
               }
             }

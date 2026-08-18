@@ -12,6 +12,7 @@ export interface MediaModelPolicyEntry {
   versionOrCommit: string;
   provenanceSubjectId: string;
   outputTermsSubjectId: string;
+  serviceTermsSubjectId: string;
   reason?: string;
 }
 
@@ -64,6 +65,7 @@ export interface MediaGenerationReceipt {
     versionOrCommit: string;
     provenanceSubjectId: string;
     outputTermsSubjectId: string;
+    serviceTermsSubjectId: string;
   };
   requestSha256: string;
   promptSha256: string;
@@ -114,6 +116,7 @@ export function validateMediaModelPolicy(policy: MediaModelPolicy): string[] {
     if (!entry.versionOrCommit || /^(main|master|latest|head)$/i.test(entry.versionOrCommit)) errors.push(`model ${entry.id} must pin an exact version or commit`);
     if (!entry.provenanceSubjectId) errors.push(`model ${entry.id} is missing provenanceSubjectId`);
     if (!entry.outputTermsSubjectId) errors.push(`model ${entry.id} is missing outputTermsSubjectId`);
+    if (!entry.serviceTermsSubjectId) errors.push(`model ${entry.id} is missing serviceTermsSubjectId`);
     if (entry.kind === "3d" && entry.adapter !== "mock" && entry.adapter !== "three-d-worker") errors.push(`3d model ${entry.id} must use the isolated three-d-worker boundary`);
     if (entry.kind === "image" && entry.adapter !== "mock" && entry.adapter !== "diffusers-image") errors.push(`image model ${entry.id} must use the diffusers-image boundary`);
     if (entry.kind === "video" && entry.adapter !== "mock" && entry.adapter !== "diffusers-video") errors.push(`video model ${entry.id} must use the diffusers-video boundary`);
@@ -161,17 +164,17 @@ export async function routeMediaGeneration(args: {
 
   const policyErrors = validateMediaModelPolicy(policy);
   if (policyErrors.length > 0) {
-    return { receipt: { ...base, overall: "FAIL", model: { id: request.modelId, kind: request.kind, adapter: "mock", admission: "DENY", versionOrCommit: "ABSENT", provenanceSubjectId: "ABSENT", outputTermsSubjectId: "ABSENT" }, reason: `invalid media policy: ${policyErrors.join("; ")}` } };
+    return { receipt: { ...base, overall: "FAIL", model: { id: request.modelId, kind: request.kind, adapter: "mock", admission: "DENY", versionOrCommit: "ABSENT", provenanceSubjectId: "ABSENT", outputTermsSubjectId: "ABSENT", serviceTermsSubjectId: "ABSENT" }, reason: `invalid media policy: ${policyErrors.join("; ")}` } };
   }
   if (!verifyMediaRequest(signed, secret)) {
-    return { receipt: { ...base, overall: "FAIL", model: { id: request.modelId, kind: request.kind, adapter: "mock", admission: "DENY", versionOrCommit: "ABSENT", provenanceSubjectId: "ABSENT", outputTermsSubjectId: "ABSENT" }, reason: "media request authentication failed" } };
+    return { receipt: { ...base, overall: "FAIL", model: { id: request.modelId, kind: request.kind, adapter: "mock", admission: "DENY", versionOrCommit: "ABSENT", provenanceSubjectId: "ABSENT", outputTermsSubjectId: "ABSENT", serviceTermsSubjectId: "ABSENT" }, reason: "media request authentication failed" } };
   }
 
   const model = policy.entries.find((entry) => entry.id === request.modelId);
   if (!model || model.kind !== request.kind) {
-    return { receipt: { ...base, overall: "FAIL", model: { id: request.modelId, kind: request.kind, adapter: "mock", admission: "DENY", versionOrCommit: "ABSENT", provenanceSubjectId: "ABSENT", outputTermsSubjectId: "ABSENT" }, reason: "model is absent from the governed policy or kind does not match" } };
+    return { receipt: { ...base, overall: "FAIL", model: { id: request.modelId, kind: request.kind, adapter: "mock", admission: "DENY", versionOrCommit: "ABSENT", provenanceSubjectId: "ABSENT", outputTermsSubjectId: "ABSENT", serviceTermsSubjectId: "ABSENT" }, reason: "model is absent from the governed policy or kind does not match" } };
   }
-  const modelReceipt = { id: model.id, kind: model.kind, adapter: model.adapter, admission: model.admission, versionOrCommit: model.versionOrCommit, provenanceSubjectId: model.provenanceSubjectId, outputTermsSubjectId: model.outputTermsSubjectId };
+  const modelReceipt = { id: model.id, kind: model.kind, adapter: model.adapter, admission: model.admission, versionOrCommit: model.versionOrCommit, provenanceSubjectId: model.provenanceSubjectId, outputTermsSubjectId: model.outputTermsSubjectId, serviceTermsSubjectId: model.serviceTermsSubjectId };
   if (model.admission !== "ALLOW") return { receipt: { ...base, overall: "FAIL", model: modelReceipt, reason: `model admission is ${model.admission}` } };
   if (model.adapter !== "mock") return { receipt: { ...base, overall: "FAIL", model: modelReceipt, reason: "production adapters must use the independent production provider route" } };
 

@@ -93,7 +93,7 @@ function validReceipts(): Record<string, Record<string, unknown>> {
     media: {
       schema: "website-design-compiler/media-generation-receipt/v1", overall: "PASS", git,
       gate: "DETERMINISTIC_MOCK", productionReleaseEligible: false, requestId: "fixture", requestSha256: hash, promptSha256: hash,
-      model: { id: "mock", kind: "image", adapter: "mock", admission: "ALLOW", versionOrCommit: "v1", provenanceSubjectId: "model:mock", outputTermsSubjectId: "terms:mock" },
+      model: { id: "mock", kind: "image", adapter: "mock", admission: "ALLOW", versionOrCommit: "v1", provenanceSubjectId: "model:mock", outputTermsSubjectId: "terms:mock", serviceTermsSubjectId: "service:mock" },
       parameters: { seed: 1 }, optimization: { target: "web", maxBytes: 1024 }, queue: { maxAttempts: 2, attempts: 1, cancellation: "SUPPORTED" },
       asset: { sha256: hash, bytes: 10, mediaType: "image/svg+xml", extension: "svg" }, productCoreForbiddenImports: ["WanGP"],
       workerIsolation: { diffusersImage: "BOUNDARY_ONLY", diffusersVideo: "BOUNDARY_ONLY", threeDWorker: "BOUNDARY_ONLY", wanGpProductCoreImport: "ABSENT" }

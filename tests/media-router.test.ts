@@ -21,7 +21,8 @@ const policy: MediaModelPolicy = {
       admission: "ALLOW",
       versionOrCommit: "internal:mock-image-v1",
       provenanceSubjectId: "model:mock-image-v1",
-      outputTermsSubjectId: "generated-output:mock-image-v1"
+      outputTermsSubjectId: "generated-output:mock-image-v1",
+      serviceTermsSubjectId: "service:internal-mock"
     },
     {
       id: "review-image",
@@ -30,7 +31,8 @@ const policy: MediaModelPolicy = {
       admission: "REVIEW_REQUIRED",
       versionOrCommit: "adapter-contract:v1",
       provenanceSubjectId: "model:review-image",
-      outputTermsSubjectId: "generated-output:review-image"
+      outputTermsSubjectId: "generated-output:review-image",
+      serviceTermsSubjectId: "service:review-image"
     }
   ]
 };
@@ -74,7 +76,8 @@ test("deterministic mock gate refuses production adapters even when policy says 
       admission: "ALLOW",
       versionOrCommit: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       provenanceSubjectId: "model:fixture-production-image",
-      outputTermsSubjectId: "generated-output:fixture-production-image"
+      outputTermsSubjectId: "generated-output:fixture-production-image",
+      serviceTermsSubjectId: "service:fixture-production-image"
     }]
   };
   const productionRequest = { ...request, modelId: "fixture-production-image" };
@@ -156,13 +159,15 @@ test("policy rejects floating versions, missing rights references, wrong adapter
       admission: "ALLOW",
       versionOrCommit: "latest",
       provenanceSubjectId: "",
-      outputTermsSubjectId: ""
+      outputTermsSubjectId: "",
+      serviceTermsSubjectId: ""
     }]
   };
   const errors = validateMediaModelPolicy(broken).join("\n");
   assert.match(errors, /exact version or commit/);
   assert.match(errors, /provenanceSubjectId/);
   assert.match(errors, /outputTermsSubjectId/);
+  assert.match(errors, /serviceTermsSubjectId/);
   assert.match(errors, /three-d-worker/);
   assert.match(errors, /WanGP/);
 });

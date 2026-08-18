@@ -4,7 +4,7 @@ import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { applyWaivers, classifyLicense, loadTrustedWaivers, scanRepositoryRights, scanShippedAssets, validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt, type RightsSubject } from "../src/repository-rights-clearance.js";
+import { applyWaivers, classifyLicense, classifyProductionRightsEvidence, loadTrustedWaivers, scanRepositoryRights, scanShippedAssets, validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt, type RightsSubject } from "../src/repository-rights-clearance.js";
 
 test("rights classifier covers allow review deny and unknown", () => {
   assert.equal(classifyLicense("MIT"), "ALLOW");
@@ -356,7 +356,7 @@ test("production provider rights enter the canonical scan as human-review-requir
         ...identity,
         name: identity.id,
         licenseExpression: "Provider commercial terms",
-        evidence: [{ url: "https://provider.example/terms", sha256: "b".repeat(64), verifiedAt: "2026-08-19T00:00:00.000Z" }],
+        evidence: [{ url: "https://provider.example/terms", sha256: "b".repeat(64), bytes: 128, verifiedAt: "2026-08-19T00:00:00.000Z" }],
         attributionRequired: false,
         distributed: identity.kind !== "service",
         geographicRestrictions: [],
@@ -376,6 +376,12 @@ test("production provider rights enter the canonical scan as human-review-requir
     process.env.PATH = previousPath;
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("production rights keep explicitly unasserted terms unknown instead of making them waivable", () => {
+  assert.equal(classifyProductionRightsEvidence("NOASSERTION"), "UNKNOWN");
+  assert.equal(classifyProductionRightsEvidence("Provider commercial terms"), "REVIEW_REQUIRED");
+  assert.equal(classifyProductionRightsEvidence("LicenseRef-NON-COMMERCIAL"), "DENY");
 });
 
 test("malformed production rights evidence fails the canonical receipt", async () => {

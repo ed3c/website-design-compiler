@@ -1,5 +1,7 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { buildMediaCandidateRejectionReceipt } from "../src/media-candidate-rejection.js";
 import {
   DeterministicMockMediaWorker,
   routeMediaGeneration,
@@ -43,5 +45,11 @@ await writeFile(join(outputDirectory, "media-generation-receipt.json"), `${JSON.
 }, null, 2)}\n`, "utf8");
 if (!result.asset) throw new Error(`deterministic mock generation failed: ${result.receipt.reason ?? "unknown"}`);
 await writeFile(join(outputDirectory, `fixture.${result.asset.extension}`), result.asset.bytes);
-console.log(JSON.stringify({ overall: result.receipt.overall, assetSha256: result.receipt.asset?.sha256, bytes: result.receipt.asset?.bytes }));
+const rejection = await buildMediaCandidateRejectionReceipt(root, {
+  sha: process.env.GITHUB_SHA ?? execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim(),
+  ref: process.env.GITHUB_REF ?? execFileSync("git", ["symbolic-ref", "--quiet", "HEAD"], { encoding: "utf8" }).trim()
+});
+await writeFile(join(outputDirectory, "media-candidate-rejection.json"), `${JSON.stringify(rejection, null, 2)}\n`, "utf8");
+console.log(JSON.stringify({ overall: result.receipt.overall, assetSha256: result.receipt.asset?.sha256, bytes: result.receipt.asset?.bytes, rejectedCandidates: rejection.candidates.map((candidate) => candidate.modelId) }));
 if (result.receipt.overall !== "PASS") process.exitCode = 1;

@@ -407,7 +407,7 @@ function validateMediaReceipt(value: JsonRecord): string[] {
   requireString(value.requestId, "requestId", errors);
   for (const key of ["requestSha256", "promptSha256"] as const) if (typeof value[key] !== "string" || !SHA256.test(value[key])) errors.push(`${key} must be a SHA-256 digest`);
   const model = requireRecord(value.model, "model", errors);
-  if (model) for (const key of ["id", "kind", "adapter", "admission", "versionOrCommit", "provenanceSubjectId", "outputTermsSubjectId"] as const) requireString(model[key], `model.${key}`, errors);
+  if (model) for (const key of ["id", "kind", "adapter", "admission", "versionOrCommit", "provenanceSubjectId", "outputTermsSubjectId", "serviceTermsSubjectId"] as const) requireString(model[key], `model.${key}`, errors);
   if (!isRecord(value.parameters)) errors.push("parameters must be an object");
   const optimization = requireRecord(value.optimization, "optimization", errors);
   if (optimization && (optimization.target !== "web" || typeof optimization.maxBytes !== "number" || optimization.maxBytes <= 0)) errors.push("optimization is malformed");

@@ -28,12 +28,18 @@ export function classifyLicense(expression: string | null): RightsState {
   return PERMISSIVE.includes(normalized) ? "ALLOW" : "UNKNOWN";
 }
 
+export function classifyProductionRightsEvidence(expression: string): RightsState {
+  const classified = classifyLicense(expression);
+  if (classified === "DENY" || expression === "NOASSERTION") return classified;
+  return "REVIEW_REQUIRED";
+}
+
 interface PnpmDependency { version?: string; path?: string; dependencies?: Record<string, PnpmDependency>; optionalDependencies?: Record<string, PnpmDependency>; }
 interface PnpmProject extends PnpmDependency { path?: string; }
 interface PackageEvidenceOverride { license: string; source: string; }
 export interface AssetProvenanceEntry { path: string; sha256: string; licenseExpression: string; provenance: { kind: "AUTHORED" | "LICENSED" | "PUBLIC_DOMAIN"; source: string }; attributionRequired: boolean; }
 export interface AssetProvenanceManifest { schema: "website-design-compiler/asset-provenance/v1"; assets: AssetProvenanceEntry[]; }
-interface ProductionRightsEvidenceSource { url: string; sha256: string; verifiedAt: string; }
+interface ProductionRightsEvidenceSource { url: string; sha256: string; bytes: number; verifiedAt: string; }
 interface ProductionRightsEvidenceSubject { id: string; kind: "model" | "generated-output" | "service"; name: string; versionOrIdentity: string; licenseExpression: string; evidence: ProductionRightsEvidenceSource[]; attributionRequired: boolean; distributed: boolean; geographicRestrictions: string[]; usageRestrictions: string[]; }
 interface PackageMetadataScan { index: Map<string, { license: string | null; path: string }>; failuresByName: Map<string, string[]>; globalFailures: string[]; }
 type ExactPackageMetadata = { license: string | null; path: string } | { diagnostic: string };
@@ -358,20 +364,20 @@ async function loadProductionRightsEvidence(root: string): Promise<{ subjects: R
     }
     const evidence: string[] = ["rights-production-evidence.json"];
     for (const source of subject.evidence) {
-      if (!isRecord(source) || !exactKeys(source, ["url", "sha256", "verifiedAt"]) || typeof source.url !== "string" || !/^https:\/\/[^\s/?#]+(?:\/[^\s?#]*)?$/.test(source.url) || typeof source.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(source.sha256) || typeof source.verifiedAt !== "string" || Number.isNaN(Date.parse(source.verifiedAt)) || new Date(source.verifiedAt).toISOString() !== source.verifiedAt) {
+      if (!isRecord(source) || !exactKeys(source, ["url", "sha256", "bytes", "verifiedAt"]) || typeof source.url !== "string" || !/^https:\/\/[^\s/?#]+(?:\/[^\s?#]*)?$/.test(source.url) || typeof source.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(source.sha256) || !Number.isInteger(source.bytes) || source.bytes <= 0 || typeof source.verifiedAt !== "string" || Number.isNaN(Date.parse(source.verifiedAt)) || new Date(source.verifiedAt).toISOString() !== source.verifiedAt) {
         return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
       }
-      evidence.push(`${source.url}#sha256=${source.sha256}`, `verified-at:${source.verifiedAt}`);
+      evidence.push(`${source.url}#sha256=${source.sha256}`, `bytes:${source.bytes}`, `verified-at:${source.verifiedAt}`);
     }
     ids.add(subject.id);
-    const classified = classifyLicense(subject.licenseExpression);
+    const classified = classifyProductionRightsEvidence(subject.licenseExpression);
     subjects.push({
       id: subject.id,
       kind: subject.kind,
       name: subject.name,
       versionOrIdentity: subject.versionOrIdentity,
       licenseExpression: subject.licenseExpression,
-      state: classified === "DENY" ? "DENY" : "REVIEW_REQUIRED",
+      state: classified,
       evidence,
       attributionRequired: subject.attributionRequired,
       distributed: subject.distributed,
