@@ -3,7 +3,15 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
 
-type WorkflowStep = { uses?: unknown; name?: unknown; run?: unknown; env?: Record<string, unknown> };
+type WorkflowStep = {
+  id?: unknown;
+  if?: unknown;
+  uses?: unknown;
+  name?: unknown;
+  run?: unknown;
+  env?: Record<string, unknown>;
+  "continue-on-error"?: unknown;
+};
 type WorkflowJob = { steps?: WorkflowStep[] };
 
 test("compiler workflow avoids duplicate branch runs while verifying every published PR head", async () => {
@@ -53,4 +61,30 @@ test("compiler workflow avoids duplicate branch runs while verifying every publi
   assert.match(String(providerStatusStep?.env?.WDC_PRODUCTION_PROVIDER_CONFIG ?? ""), /steps\.production-provider-config\.outputs\.config_path/);
   assert.match(String(providerStatusStep?.env?.WDC_PRODUCTION_REQUEST_SECRET ?? ""), /secrets\.WDC_PRODUCTION_REQUEST_SECRET/);
   assert.match(String(providerStatusStep?.env?.WDC_PRODUCTION_PROVIDER_CREDENTIAL ?? ""), /secrets\.WDC_PRODUCTION_PROVIDER_CREDENTIAL/);
+});
+
+test("human-gated failures preserve one-run review artifacts before the job fails closed", async () => {
+  const workflow = parse(await readFile(".github/workflows/compiler-core.yml", "utf8")) as {
+    jobs?: Record<string, WorkflowJob>;
+  };
+  const steps = workflow.jobs?.verify?.steps ?? [];
+  const visualDirection = steps.find((step) => typeof step.run === "string" && step.run.includes("pnpm v2:visual-directions"));
+  const rights = steps.find((step) => typeof step.run === "string" && step.run.includes("pnpm rights:clearance"));
+  const runtimeGates = steps.find((step) => step.id === "runtime-gates");
+  const evidenceIndex = steps.findIndex((step) => step.id === "compiler-core-evidence");
+  const enforcementIndex = steps.findIndex((step) => step.id === "enforce-verification");
+  const enforcement = steps[enforcementIndex];
+
+  assert.equal(visualDirection?.id, "visual-direction");
+  assert.equal(visualDirection?.["continue-on-error"], true);
+  assert.equal(rights?.id, "rights-clearance");
+  assert.equal(rights?.["continue-on-error"], true);
+  assert.equal(runtimeGates?.["continue-on-error"], true);
+  assert.ok(evidenceIndex >= 0, "the all-path evidence upload must exist");
+  assert.ok(enforcementIndex > evidenceIndex, "verification must fail only after evidence upload");
+  assert.equal(enforcement?.if, "always()");
+  assert.match(String(enforcement?.env?.VISUAL_DIRECTION_OUTCOME ?? ""), /steps\.visual-direction\.outcome/);
+  assert.match(String(enforcement?.env?.RIGHTS_CLEARANCE_OUTCOME ?? ""), /steps\.rights-clearance\.outcome/);
+  assert.match(String(enforcement?.env?.RUNTIME_GATES_OUTCOME ?? ""), /steps\.runtime-gates\.outcome/);
+  assert.match(String(enforcement?.run ?? ""), /exit 1/);
 });

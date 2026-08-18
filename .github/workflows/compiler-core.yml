@@ -40,6 +40,8 @@ jobs:
       - name: Verify six-category claim-safe content architecture
         run: pnpm v2:content-architecture
       - name: Verify deterministic multi-candidate visual direction search
+        id: visual-direction
+        continue-on-error: true
         env:
           WDC_REFERENCE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 }}
         run: |
@@ -59,6 +61,8 @@ jobs:
         run: pnpm v2:complete-page-graph
       - run: pnpm provenance:fixture
       - name: Verify repository-wide rights clearance
+        id: rights-clearance
+        continue-on-error: true
         env:
           WDC_RIGHTS_WAIVERS_SHA256: ${{ vars.WDC_RIGHTS_WAIVERS_SHA256 }}
         run: pnpm rights:clearance
@@ -107,6 +111,7 @@ jobs:
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
         id: runtime-gates
+        continue-on-error: true
         env:
           WDC_REFERENCE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 }}
           WDC_STORYBOOK_VISUAL_GOLDENS_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_GOLDENS_SHA256 }}
@@ -235,3 +240,15 @@ jobs:
             artifacts/release-v2/release-policy-v2-receipt.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: warn
+      - name: Enforce aggregate verification result after evidence upload
+        id: enforce-verification
+        if: always()
+        env:
+          VISUAL_DIRECTION_OUTCOME: ${{ steps.visual-direction.outcome }}
+          RIGHTS_CLEARANCE_OUTCOME: ${{ steps.rights-clearance.outcome }}
+          RUNTIME_GATES_OUTCOME: ${{ steps.runtime-gates.outcome }}
+        run: |
+          if [ "$VISUAL_DIRECTION_OUTCOME" != "success" ] || [ "$RIGHTS_CLEARANCE_OUTCOME" != "success" ] || [ "$RUNTIME_GATES_OUTCOME" != "success" ]; then
+            echo "verification failed after review artifacts were preserved"
+            exit 1
+          fi
