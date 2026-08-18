@@ -64,12 +64,20 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
       mobile: { fontFamily: "Arial", headingFontSizePx: 30, bodyFontSizePx: 16, gridColumnCount: 1, gapPx: 16, cardBorderWidthPx: 1, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 1 }
     };
     const receipt = {
-      schema: "website-design-compiler/observed-visual-fingerprint/v2",
+      schema: "website-design-compiler/observed-visual-fingerprint/v3",
       state: "PASS",
       producer: "playwright-computed-style/v1",
       referenceValueSha256: sourceHashOverride ?? digest(value),
       capturedArtifactSha256: digest(value),
-      evidenceArtifact: { path: "evidence.png", sha256: digest(evidenceBytes) },
+      producerReceipt: {
+        schema: "website-design-compiler/reference-browser-receipt/v2",
+        path: "forged-browser-runtime-receipt.json",
+        sha256: "0".repeat(64)
+      },
+      evidenceArtifacts: [
+        { viewport: "desktop", path: "evidence.png", sha256: digest(evidenceBytes), width: 1280, minimumHeight: 800 },
+        { viewport: "mobile", path: "evidence.png", sha256: digest(evidenceBytes), width: 390, minimumHeight: 844 }
+      ],
       measurements,
       dimensions: deriveObservedVisualDimensions(measurements),
       observations: ["computed typography", "computed layout", "computed spacing", "computed motion", "observed media"]
@@ -87,17 +95,11 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
   }
 }
 
-test("runtime-artifact-bound observed fingerprints make originality distance executable", async () => {
-  await withVisualEvidence(null, async (compilerInput, root) => {
-    const verified = await loadVerifiedVisualReferences(compilerInput, root);
-    const receipt = searchVisualDirections(compilerInput, "website-design-compiler/v2", verified);
-    const selected = receipt.candidates.find((candidate) => candidate.id === receipt.selectedCandidateId)!;
-    assert.equal(receipt.originality.state, "PASS");
-    assert.equal(receipt.originality.observedReferenceCount, 1);
-    assert.equal(receipt.originality.observations.length, 1);
-    assert.ok(receipt.candidates.every((candidate) => candidate.score.originalityDistance !== null));
-    assert.ok((selected.score.originalityDistance ?? 0) >= receipt.originality.threshold);
-  });
+test("caller-authored measurements and fake screenshot bytes cannot promote originality", async () => {
+  await assert.rejects(
+    withVisualEvidence(null, async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root)),
+    /browser runtime receipt/
+  );
 });
 
 test("observed fingerprint dimensions are derived from browser measurements", async () => {
@@ -133,6 +135,21 @@ test("same input and seed produces identical ranking and winner", () => {
   const first = searchVisualDirections(input("interactive-3d"), "stable-seed");
   const second = searchVisualDirections(input("interactive-3d"), "stable-seed");
   assert.deepEqual(first, second);
+});
+
+test("benchmark page families select at least three materially different winners", () => {
+  const pageTypes = ["b2b-product", "editorial", "premium-consumer-brand", "motion-heavy-creative", "interactive-2d", "interactive-3d"];
+  const observedReference = {
+    dimensions: {
+      typography: "neo-grotesk", typeContrast: "dramatic", density: "airy", grid: "modular", surface: "bordered",
+      colorStrategy: "neutral-accent", mediaStrategy: "product-media", motionIntensity: "moderate", signatureInteraction: "none"
+    } as const,
+    receiptSha256: "a".repeat(64),
+    capturedArtifactSha256: "b".repeat(64),
+    evidenceArtifactSha256: "c".repeat(64)
+  };
+  const winners = pageTypes.map((pageType) => searchVisualDirections(input(pageType), "website-design-compiler/v2", [observedReference]).candidates[0]!.signature);
+  assert.ok(new Set(winners).size >= 3, JSON.stringify(winners));
 });
 
 test("winner becomes the single downstream selected visual direction", () => {

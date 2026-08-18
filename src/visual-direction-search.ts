@@ -55,14 +55,40 @@ export interface VisualDirectionSearchReceipt {
 }
 
 interface ObservedVisualFingerprintReceipt {
-  schema: "website-design-compiler/observed-visual-fingerprint/v2";
+  schema: "website-design-compiler/observed-visual-fingerprint/v3";
   state: "PASS";
   producer: "playwright-computed-style/v1";
   referenceValueSha256: string;
   capturedArtifactSha256: string;
-  evidenceArtifact: { path: string; sha256: string };
+  producerReceipt: {
+    schema: "website-design-compiler/reference-browser-receipt/v2";
+    path: string;
+    sha256: string;
+  };
+  evidenceArtifacts: Array<{
+    viewport: "desktop" | "mobile";
+    path: string;
+    sha256: string;
+    width: number;
+    minimumHeight: number;
+  }>;
   measurements: ObservedVisualMeasurements;
   dimensions: VisualDirectionDimensions;
+}
+
+interface ReferenceBrowserReceipt {
+  schema: "website-design-compiler/reference-browser-receipt/v2";
+  overall: "PASS" | "FAIL";
+  execution: {
+    mode: "PLAYWRIGHT_BROWSER";
+    startedAt: string;
+    completedAt: string;
+  };
+  browser: { engine: "chromium"; version: string };
+  capturedArtifactSha256: string;
+  measurementsSha256: string;
+  evidenceArtifacts: ObservedVisualFingerprintReceipt["evidenceArtifacts"];
+  responsiveBehavior: { state: "PASS" | "FAIL" };
 }
 
 export interface ObservedVisualMeasurement {
@@ -128,6 +154,10 @@ const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
   {
     typography: "display-contrast", typeContrast: "dramatic", density: "dense", grid: "asymmetric", surface: "tonal",
     colorStrategy: "high-contrast", mediaStrategy: "interactive-stage", motionIntensity: "expressive", signatureInteraction: "direct-manipulation"
+  },
+  {
+    typography: "humanist-sans", typeContrast: "restrained", density: "dense", grid: "strict", surface: "tonal",
+    colorStrategy: "tonal-brand", mediaStrategy: "text-first", motionIntensity: "minimal", signatureInteraction: "direct-manipulation"
   }
 ];
 
@@ -147,6 +177,19 @@ function resolveWorkspacePath(root: string, path: string): string {
     throw new Error("visual evidence path escapes the workspace");
   }
   return resolved;
+}
+
+function assertPngEvidence(bytes: Uint8Array, expected: { width: number; minimumHeight: number; viewport: string }): void {
+  const value = Buffer.from(bytes);
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (value.length < 24 || !value.subarray(0, 8).equals(signature) || value.toString("ascii", 12, 16) !== "IHDR") {
+    throw new Error(`visual evidence for ${expected.viewport} is not a PNG browser screenshot`);
+  }
+  const width = value.readUInt32BE(16);
+  const height = value.readUInt32BE(20);
+  if (width !== expected.width || height < expected.minimumHeight) {
+    throw new Error(`visual evidence PNG dimensions do not match the ${expected.viewport} browser viewport`);
+  }
 }
 
 export function deriveObservedVisualDimensions(measurements: ObservedVisualMeasurements): VisualDirectionDimensions {
@@ -192,7 +235,7 @@ export async function loadVerifiedVisualReferences(input: CompilerInput, root = 
       throw new Error("visual evidence receipt bytes do not match the compiler input binding");
     }
     const receipt = JSON.parse(receiptBytes.toString("utf8")) as ObservedVisualFingerprintReceipt;
-    await validateAgainstSchema(receipt, "observed-visual-fingerprint-v2.schema.json");
+    await validateAgainstSchema(receipt, "observed-visual-fingerprint-v3.schema.json");
     if (JSON.stringify(deriveObservedVisualDimensions(receipt.measurements)) !== JSON.stringify(receipt.dimensions)) {
       throw new Error("visual evidence dimensions do not match browser measurements");
     }
@@ -203,11 +246,41 @@ export async function loadVerifiedVisualReferences(input: CompilerInput, root = 
     if (capturedArtifactSha256 !== receipt.capturedArtifactSha256) {
       throw new Error("visual evidence captured artifact bytes do not match the receipt");
     }
-    const evidenceBytes = await readFile(resolveWorkspacePath(root, receipt.evidenceArtifact.path));
-    const evidenceArtifactSha256 = createHash("sha256").update(evidenceBytes).digest("hex");
-    if (evidenceArtifactSha256 !== receipt.evidenceArtifact.sha256) {
-      throw new Error("visual evidence screenshot bytes do not match the receipt");
+
+    const producerReceiptBytes = await readFile(resolveWorkspacePath(root, receipt.producerReceipt.path)).catch(() => {
+      throw new Error("visual evidence browser runtime receipt is absent");
+    });
+    const producerReceiptSha256 = createHash("sha256").update(producerReceiptBytes).digest("hex");
+    if (producerReceiptSha256 !== receipt.producerReceipt.sha256) {
+      throw new Error("visual evidence browser runtime receipt bytes do not match the fingerprint");
     }
+    const producerReceipt = JSON.parse(producerReceiptBytes.toString("utf8")) as ReferenceBrowserReceipt;
+    await validateAgainstSchema(producerReceipt, "reference-browser-receipt.schema.json");
+    if (producerReceipt.schema !== receipt.producerReceipt.schema || producerReceipt.overall !== "PASS" || producerReceipt.responsiveBehavior.state !== "PASS") {
+      throw new Error("visual evidence browser runtime receipt did not pass");
+    }
+    if (producerReceipt.capturedArtifactSha256 !== capturedArtifactSha256) {
+      throw new Error("visual evidence browser runtime receipt is not bound to the captured artifact");
+    }
+    if (producerReceipt.measurementsSha256 !== hash(receipt.measurements)) {
+      throw new Error("visual evidence measurements are not bound to the browser runtime receipt");
+    }
+    const viewports = receipt.evidenceArtifacts.map((evidence) => evidence.viewport).sort();
+    if (JSON.stringify(viewports) !== JSON.stringify(["desktop", "mobile"])) {
+      throw new Error("visual evidence must include one desktop and one mobile browser screenshot");
+    }
+    if (JSON.stringify(producerReceipt.evidenceArtifacts) !== JSON.stringify(receipt.evidenceArtifacts)) {
+      throw new Error("visual evidence screenshots are not bound to the browser runtime receipt");
+    }
+    for (const evidence of receipt.evidenceArtifacts) {
+      const evidenceBytes = await readFile(resolveWorkspacePath(root, evidence.path));
+      const evidenceSha256 = createHash("sha256").update(evidenceBytes).digest("hex");
+      if (evidenceSha256 !== evidence.sha256) {
+        throw new Error(`visual evidence screenshot bytes do not match the receipt for ${evidence.viewport}`);
+      }
+      assertPngEvidence(evidenceBytes, evidence);
+    }
+    const evidenceArtifactSha256 = hash(receipt.evidenceArtifacts);
     observations.push({ dimensions: receipt.dimensions, receiptSha256, capturedArtifactSha256, evidenceArtifactSha256 });
   }
   return observations;
@@ -237,6 +310,7 @@ function pageFitBonus(pageType: string, direction: VisualDirectionDimensions): n
   if (value.includes("editorial") && direction.grid === "editorial") return 20;
   if ((value.includes("motion") || value.includes("creative")) && direction.motionIntensity === "expressive") return 20;
   if ((value.includes("3d") || value.includes("2d")) && direction.mediaStrategy === "interactive-stage") return 18;
+  if (value.includes("b2b") && direction.grid === "strict" && direction.mediaStrategy === "text-first") return 24;
   if ((value.includes("product") || value.includes("b2b")) && direction.typography === "neo-grotesk") return 18;
   if ((value.includes("premium") || value.includes("consumer")) && direction.density === "airy" && direction.surface !== "bordered") return 18;
   return 2;
@@ -264,13 +338,14 @@ function scoreCandidate(
 ): VisualDirectionScore {
   const risk = riskFor(direction);
   const offset = candidateIndex * 4;
-  const briefFit = Math.min(100, boundedScore(seedHash, offset, 72, 88) + pageFitBonus(input.brief.pageType, direction));
+  const categoryFit = pageFitBonus(input.brief.pageType, direction);
+  const briefFit = Math.min(100, boundedScore(seedHash, offset, 72, 88) + categoryFit);
   const readability = direction.typeContrast === "dramatic" && direction.density === "dense" ? 72 : boundedScore(seedHash, offset + 2, 82, 97);
   const positiveWeight = 0.77 + (originalityDistance === null ? 0 : 0.15);
   const positiveScore = (
     briefFit * 0.27 + differentiation * 0.18 + readability * 0.18 + risk.responsive * 0.14 + (originalityDistance ?? 0) * 0.15
   ) / positiveWeight;
-  const total = Math.round(positiveScore - risk.accessibility * 0.03 - risk.complexity * 0.025 - risk.performance * 0.025);
+  const total = Math.round(positiveScore + categoryFit * 0.5 - risk.accessibility * 0.03 - risk.complexity * 0.025 - risk.performance * 0.025);
   return {
     briefFit,
     differentiation,
@@ -304,9 +379,26 @@ export function auditCandidateOriginality(
     : [];
 }
 
-function rotateDirections(seedHash: string): VisualDirectionDimensions[] {
-  const start = Number.parseInt(seedHash.slice(0, 2), 16) % BASE_DIRECTIONS.length;
-  return [0, 1, 2].map((offset) => BASE_DIRECTIONS[(start + offset) % BASE_DIRECTIONS.length]!).map((direction) => ({ ...direction }));
+function preferredDirectionIndex(pageType: string): number | null {
+  const value = pageType.toLowerCase();
+  if (value.includes("b2b")) return 4;
+  if (value.includes("editorial")) return 1;
+  if (value.includes("motion") || value.includes("creative")) return 3;
+  if (value.includes("3d") || value.includes("2d")) return 2;
+  if (value.includes("premium") || value.includes("consumer")) return 1;
+  if (value.includes("product")) return 0;
+  return null;
+}
+
+function rotateDirections(seedHash: string, pageType: string): VisualDirectionDimensions[] {
+  const seededStart = Number.parseInt(seedHash.slice(0, 2), 16) % BASE_DIRECTIONS.length;
+  const preferred = preferredDirectionIndex(pageType);
+  const indices = preferred === null ? [] : [preferred];
+  for (let offset = 0; indices.length < 3 && offset < BASE_DIRECTIONS.length; offset += 1) {
+    const index = (seededStart + offset) % BASE_DIRECTIONS.length;
+    if (!indices.includes(index)) indices.push(index);
+  }
+  return indices.map((index) => ({ ...BASE_DIRECTIONS[index]! }));
 }
 
 export function searchVisualDirections(
@@ -317,7 +409,7 @@ export function searchVisualDirections(
   const inputSha256 = visualDirectionInputSha256(input);
   const seedHash = hash({ seed, inputSha256, project: input.project });
   const observedReferences = verifiedReferences.map((reference) => reference.dimensions);
-  const directions = rotateDirections(seedHash);
+  const directions = rotateDirections(seedHash, input.brief.pageType);
   const pairwiseDistances = directions.flatMap((direction, index) =>
     directions.slice(index + 1).map((other) => visualDirectionDistance(direction, other))
   );
