@@ -38,6 +38,17 @@ export function sameNetworkAddress(left: string, right: string): boolean {
   return normalize(left) === normalize(right);
 }
 
+export function requirePinnedConnectedAddress(
+  connectedAddress: string | null | undefined,
+  resolvedAddress: string
+): string {
+  if (!connectedAddress) throw new Error("connected peer address is unavailable for pinned DNS verification");
+  if (!sameNetworkAddress(connectedAddress, resolvedAddress)) {
+    throw new Error("connected peer address does not match pinned DNS resolution");
+  }
+  return connectedAddress;
+}
+
 export async function productionPinnedTransport(input: PinnedTransportRequest): Promise<PinnedTransportResponse> {
   return await new Promise((resolveResponse, rejectResponse) => {
     const family = isIP(input.resolvedAddress);
@@ -72,6 +83,14 @@ export async function productionPinnedTransport(input: PinnedTransportRequest): 
       rejectResponse(error instanceof Error ? error : new Error("remote reference transport failed"));
     };
     const clientRequest = requestFn(input.url, options, (response) => {
+      let connectedAddress: string;
+      try {
+        connectedAddress = requirePinnedConnectedAddress(response.socket?.remoteAddress, input.resolvedAddress);
+      } catch (error) {
+        response.resume();
+        fail(error);
+        return;
+      }
       const chunks: Buffer[] = [];
       let byteCount = 0;
       response.on("data", (chunk: Buffer) => {
@@ -85,11 +104,6 @@ export async function productionPinnedTransport(input: PinnedTransportRequest): 
       response.on("error", fail);
       response.on("end", () => {
         if (settled) return;
-        const connectedAddress = response.socket.remoteAddress ?? "";
-        if (!sameNetworkAddress(connectedAddress, input.resolvedAddress)) {
-          fail(new Error("connected peer address does not match pinned DNS resolution"));
-          return;
-        }
         settled = true;
         clearTimeout(totalTimer);
         resolveResponse({
