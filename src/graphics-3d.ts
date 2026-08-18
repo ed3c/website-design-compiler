@@ -1,23 +1,65 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { buildLicenseReceipt, hashAssetFile, loadLicensePolicy, type ProvenanceSubject } from "./license-provenance.js";
+import { GRAPHICS_3D_RUNTIME_BUDGETS } from "./graphics-3d-renderer-policy.js";
 import { validateAgainstSchema } from "./validate.js";
 
 const IMG2THREEJS_COMMIT = "d6673386f89673a58736f8d398dd16ece67874f5";
 
 export interface Graphics3DPlan {
-  schema: "website-design-compiler/graphics-3d-plan/v1";
+  schema: "website-design-compiler/graphics-3d-plan/v2";
   engine: { renderer: "webgl"; three: "0.184.0"; reactThreeFiber: "9.6.1" };
+  rendererPolicy: {
+    stableDefault: "webgl";
+    webgpuOptInFallbackOrder: ["webgpu", "webgl", "static"];
+    receiptStates: ["WEBGPU_PASS", "WEBGL_FALLBACK", "STATIC_FALLBACK"];
+  };
+  webgpuAdapter: {
+    adapter: "navigator.gpu";
+    renderer: "three.WebGPURenderer";
+    rendererVersion: "0.184.0";
+    tslModule: "three/tsl@0.184.0";
+    requiredFeatures: [];
+    capabilityIdentity: ["adapter-info", "features", "limits"];
+  };
   scene: { id: "procedural-proof"; purpose: "illustration"; criticalContent: false; frameloop: "demand" };
   camera: { type: "perspective"; position: [number, number, number]; fov: number; near: number; far: number };
   lights: Array<{ type: "ambient" | "directional" | "hemisphere"; intensity: number }>;
-  materials: { policy: "standard-only-fixture"; maxMaterials: number };
+  materials: {
+    policy: "tsl-node-material";
+    webgpu: "MeshStandardNodeMaterial";
+    webglFallback: "MeshStandardMaterial";
+    staticFallback: "DOM-owned-poster";
+    criticalContent: false;
+    maxMaterials: number;
+  };
   interaction: { pointerRequired: false; primaryActionDependency: false };
   lod: { policy: "procedural-complexity-cap"; mobileSimplification: true };
   dprPolicy: { desktopMax: 1.75; coarsePointerMax: 1.25 };
-  fallback: { semanticDom: "REQUIRED"; staticPoster: "REQUIRED"; failedWebglHook: "graphics3d=off" };
-  lifecycle: { lazyChunk: true; frameloopDemand: true; disposeGeneratedGeometry: true; disposeGeneratedMaterial: true };
-  assetBudget: { externalBytes: 0; textureBytes: 0; maxTriangles: number; maxDrawCalls: number };
+  fallback: {
+    semanticDom: "REQUIRED";
+    staticPoster: "REQUIRED";
+    failedWebglHook: "graphics3d=off";
+    webgpuOptInHook: "graphics3d=webgpu";
+  };
+  lifecycle: {
+    lazyChunk: true;
+    lazyWebgpuImport: true;
+    frameloopDemand: true;
+    continuousFrameLoop: false;
+    deviceLossFallback: true;
+    disposeGeneratedGeometry: true;
+    disposeGeneratedMaterial: true;
+    disposeRendererAndDevice: true;
+  };
+  assetBudget: {
+    externalBytes: 0;
+    textureBytes: 0;
+    maxTextureMemoryBytes: 16777216;
+    maxTriangles: number;
+    maxDrawCalls: number;
+    maxFramesPerInvalidation: 1;
+  };
   proceduralAdapter: {
     name: "img2threejs";
     sourceRepository: "img2threejs/img2threejs";
@@ -32,8 +74,21 @@ export interface Graphics3DPlan {
 
 export function buildGraphics3DPlan(): Graphics3DPlan {
   return {
-    schema: "website-design-compiler/graphics-3d-plan/v1",
+    schema: "website-design-compiler/graphics-3d-plan/v2",
     engine: { renderer: "webgl", three: "0.184.0", reactThreeFiber: "9.6.1" },
+    rendererPolicy: {
+      stableDefault: "webgl",
+      webgpuOptInFallbackOrder: ["webgpu", "webgl", "static"],
+      receiptStates: ["WEBGPU_PASS", "WEBGL_FALLBACK", "STATIC_FALLBACK"]
+    },
+    webgpuAdapter: {
+      adapter: "navigator.gpu",
+      renderer: "three.WebGPURenderer",
+      rendererVersion: "0.184.0",
+      tslModule: "three/tsl@0.184.0",
+      requiredFeatures: [],
+      capabilityIdentity: ["adapter-info", "features", "limits"]
+    },
     scene: { id: "procedural-proof", purpose: "illustration", criticalContent: false, frameloop: "demand" },
     camera: { type: "perspective", position: [2.8, 2, 4.2], fov: 42, near: 0.1, far: 50 },
     lights: [
@@ -41,13 +96,44 @@ export function buildGraphics3DPlan(): Graphics3DPlan {
       { type: "directional", intensity: 1.45 },
       { type: "directional", intensity: 0.55 }
     ],
-    materials: { policy: "standard-only-fixture", maxMaterials: 3 },
+    materials: {
+      policy: "tsl-node-material",
+      webgpu: "MeshStandardNodeMaterial",
+      webglFallback: "MeshStandardMaterial",
+      staticFallback: "DOM-owned-poster",
+      criticalContent: false,
+      maxMaterials: 3
+    },
     interaction: { pointerRequired: false, primaryActionDependency: false },
     lod: { policy: "procedural-complexity-cap", mobileSimplification: true },
-    dprPolicy: { desktopMax: 1.75, coarsePointerMax: 1.25 },
-    fallback: { semanticDom: "REQUIRED", staticPoster: "REQUIRED", failedWebglHook: "graphics3d=off" },
-    lifecycle: { lazyChunk: true, frameloopDemand: true, disposeGeneratedGeometry: true, disposeGeneratedMaterial: true },
-    assetBudget: { externalBytes: 0, textureBytes: 0, maxTriangles: 2500, maxDrawCalls: 8 },
+    dprPolicy: {
+      desktopMax: GRAPHICS_3D_RUNTIME_BUDGETS.desktopDprMax,
+      coarsePointerMax: GRAPHICS_3D_RUNTIME_BUDGETS.coarsePointerDprMax
+    },
+    fallback: {
+      semanticDom: "REQUIRED",
+      staticPoster: "REQUIRED",
+      failedWebglHook: "graphics3d=off",
+      webgpuOptInHook: "graphics3d=webgpu"
+    },
+    lifecycle: {
+      lazyChunk: true,
+      lazyWebgpuImport: true,
+      frameloopDemand: true,
+      continuousFrameLoop: false,
+      deviceLossFallback: true,
+      disposeGeneratedGeometry: true,
+      disposeGeneratedMaterial: true,
+      disposeRendererAndDevice: true
+    },
+    assetBudget: {
+      externalBytes: 0,
+      textureBytes: 0,
+      maxTextureMemoryBytes: GRAPHICS_3D_RUNTIME_BUDGETS.maxTextureMemoryBytes,
+      maxTriangles: GRAPHICS_3D_RUNTIME_BUDGETS.maxTriangles,
+      maxDrawCalls: GRAPHICS_3D_RUNTIME_BUDGETS.maxDrawCalls,
+      maxFramesPerInvalidation: GRAPHICS_3D_RUNTIME_BUDGETS.maxFramesPerInvalidation
+    },
     proceduralAdapter: {
       name: "img2threejs",
       sourceRepository: "img2threejs/img2threejs",
