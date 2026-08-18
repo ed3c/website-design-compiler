@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
-import { compileCompletePageGraph } from "../src/complete-page-graph.js";
+import type { CompletePageGraph } from "../src/complete-page-graph.js";
 import { evaluateDesignQuality, type OriginalitySubject, type QualityViewport } from "../src/design-quality-eval.js";
 import type { DesignQualityBrowserObservation,RuntimeTokenMatch,VisualOriginalitySubject } from "../src/design-quality-observation.js";
 import { validateDesignQualityReleaseProfile, type DesignQualityReleaseProfile } from "../src/design-quality-profile.js";
@@ -42,7 +41,10 @@ const generatedReceipt=JSON.parse(await readFile(join(process.cwd(),"artifacts",
 if(generatedReceipt.schema!=="website-design-compiler/generated-page-browser-receipt/v3")throw new Error(`generated page receipt schema is ${generatedReceipt.schema}`);
 const tokenReceipt=JSON.parse(await readFile(join(process.cwd(),"artifacts","v2","semantic-design-tokens","receipt.json"),"utf8")) as TokenReceipt;
 if(tokenReceipt.overall!=="PASS")throw new Error(`semantic-token benchmark receipt is ${tokenReceipt.overall}`);
-const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
+const projection=JSON.parse(await readFile(join(process.cwd(),"apps","site","generated","benchmark-page-graphs.json"),"utf8")) as {schema:string;source:string;graphs:Record<string,CompletePageGraph>};
+if(projection.schema!=="website-design-compiler/site-page-graph-projection/v2"||projection.source!=="production-site-compiler")throw new Error("design-quality evaluation requires the production site graph projection");
+const graphs=Object.values(projection.graphs);
+if(graphs.some((graph)=>graph.source.mode!=="PRODUCTION"))throw new Error("design-quality evaluation refuses fixture page graphs");
 const corpus:OriginalitySubject[]=graphs.map((graph)=>({id:graph.category,signature:graph.signature}));
 const observations=new Map<string,{observation:DesignQualityBrowserObservation;fileSha256:string}>();
 for(const evidence of generatedReceipt.qualityEvidence){
@@ -68,6 +70,7 @@ for(const graph of graphs){
     const tokenBytes=await readFile(tokenPath);
     const tokens=JSON.parse(tokenBytes.toString("utf8")) as SemanticTokens;
     const designTokensSha256=sha256(tokenBytes);
+    if(sha256(JSON.stringify(tokens))!==graph.source.artifacts.semanticDesignTokens)throw new Error(`${graph.category}: semantic-token artifact drifted from the production page graph source binding`);
     const tokenMatch=runtimeTokenMatch(tokens,observed.observation);
     const visualCorpus:VisualOriginalitySubject[]=[...observations.values()].map((entry)=>entry.observation).filter((entry)=>entry.viewport===viewport&&entry.category!==graph.category).map((observation)=>({id:observation.category,observation}));
     const card=evaluateDesignQuality(graph,viewport,profile.premiumQualityThreshold,[],originalityCorpus,profile.originalitySimilarityThreshold,observed.observation,tokenMatch,[],visualCorpus);

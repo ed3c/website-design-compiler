@@ -64,7 +64,7 @@ for(const category of categories)test(`${category} emits browser-derived visual 
     const gapVariance=gaps.reduce((sum,value)=>sum+(value-gapMean)**2,0)/Math.max(1,gaps.length);
     const actions=[...element.querySelectorAll<HTMLElement>("[data-governed-section='cta'] a,[data-governed-section='cta'] button")];
     const actionTargets=actions.map((action)=>{const rect=action.getBoundingClientRect();return{width:rect.width,height:rect.height,visible:rect.width>0&&rect.height>0&&getComputedStyle(action).visibility!=="hidden"};});
-    const styles=getComputedStyle(document.documentElement);
+    const styles=getComputedStyle(element);
     const tokenNames=["--wdc-color-background","--wdc-color-surface","--wdc-color-text-primary","--wdc-color-text-muted","--wdc-color-accent","--wdc-color-on-accent","--wdc-color-focus","--wdc-font-display","--wdc-font-body","--wdc-space-sm","--wdc-space-md","--wdc-space-lg","--wdc-motion-fast","--wdc-motion-base","--wdc-container-max","--wdc-gutter"];
     return{
       viewport:{width:window.innerWidth,height:window.innerHeight},h1Count:h1.length,h2Count:h2.length,h1Px:h1[0]?fontSize(h1[0]):0,medianH2Px:h2Sizes[Math.floor(h2Sizes.length/2)]??0,
