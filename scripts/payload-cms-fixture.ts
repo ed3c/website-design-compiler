@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getPayload } from "payload";
@@ -19,6 +20,11 @@ const receiptPath = join(outputDirectory, "payload-cms-receipt.json");
 const publishedFixturePath = join(root, "apps", "site", "generated", "payload-published-authoring-data.json");
 const sourceFixturePath = join(root, "apps", "site", "generated", "showcase-authoring-data.json");
 const productionProjectionPath=join(root,"apps","site","generated","benchmark-page-graphs.json");
+const git = {
+  ref: `refs/heads/${execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" }).trim()}`,
+  sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim()
+};
 
 await mkdir(outputDirectory, { recursive: true });
 await rm(dbPath, { force: true });
@@ -46,7 +52,20 @@ try {
     data: { email: "fixture-editor@example.invalid", password: randomBytes(24).toString("base64url"), role: "admin" }
   });
 
-  const compiledGraphRows: Array<{category:string;route:string;sourceMode:string;readiness:string;fingerprint:string;declaredFingerprint:string;restoredFingerprint:string;puckState:string}> = [];
+  const compiledGraphRows: Array<{
+    category: string;
+    declaredFingerprint: string;
+    fingerprint: string;
+    provenanceComplete: boolean;
+    puckState: string;
+    readiness: string;
+    restoredFingerprint: string;
+    route: string;
+    semanticOrder: string[];
+    sharedChrome: CompletePageGraph["sharedChrome"];
+    sourceArtifacts: Record<string, string>;
+    sourceMode: string;
+  }> = [];
   let compiledDraftPublishedDistinguishable = false;
   let guestCompiledDraftExposed = false;
   let guestCanReadCompiledPublished = true;
@@ -136,7 +155,21 @@ try {
     guestCanReadCompiledPublished = guestCanReadCompiledPublished
       && guestPublished.graphFingerprint === fingerprint
       && pageGraphFingerprint(puckToPageGraph(payloadToPuck(guestPublished.graph as PayloadPageGraphDocument))) === fingerprint;
-    compiledGraphRows.push({category:sourceGraph.category,route:sourceGraph.route,sourceMode:sourceGraph.source.mode,readiness:sourceGraph.readiness,fingerprint,declaredFingerprint:String(publishedCompiled.graphFingerprint),restoredFingerprint:pageGraphFingerprint(restoredGraph),puckState:validateAuthoringData(persistedPuck).overall});
+    compiledGraphRows.push({
+      category: sourceGraph.category,
+      declaredFingerprint: String(publishedCompiled.graphFingerprint),
+      fingerprint,
+      provenanceComplete: sourceGraph.missingEvidence.length === 0
+        && sourceGraph.nodes.every((node) => Object.keys(node.section.props).every((key) => Boolean(node.section.provenance[key]))),
+      puckState: validateAuthoringData(persistedPuck).overall,
+      readiness: sourceGraph.readiness,
+      restoredFingerprint: pageGraphFingerprint(restoredGraph),
+      route: sourceGraph.route,
+      semanticOrder: sourceGraph.semanticOrder,
+      sharedChrome: sourceGraph.sharedChrome,
+      sourceArtifacts: sourceGraph.source.artifacts,
+      sourceMode: sourceGraph.source.mode
+    });
   }
 
   const media = await api.create({
@@ -244,6 +277,7 @@ try {
     productionCredentialInSource: false,
     compiledPageGraphCountSix: compiledGraphRows.length === 6,
     compiledPageGraphsAreReadyProduction:compiledGraphRows.every((row)=>row.sourceMode==="PRODUCTION"&&row.readiness==="READY"),
+    compiledPageGraphProvenanceComplete: compiledGraphRows.every((row) => row.provenanceComplete),
     compiledPageGraphFingerprintsMatch: compiledGraphRows.every((row) => row.fingerprint === row.declaredFingerprint && row.fingerprint === row.restoredFingerprint),
     compiledPageGraphsValidateForPuckRegistry: compiledGraphRows.every((row) => row.puckState === "PASS"),
     compiledDraftPublishedDistinguishable,
@@ -269,6 +303,7 @@ try {
     && checks.productionCredentialInSource === false;
   const pageGraphOverall = checks.compiledPageGraphCountSix
     && checks.compiledPageGraphsAreReadyProduction
+    && checks.compiledPageGraphProvenanceComplete
     && checks.compiledPageGraphFingerprintsMatch
     && checks.compiledPageGraphsValidateForPuckRegistry
     && checks.compiledDraftPublishedDistinguishable
@@ -282,7 +317,7 @@ try {
   const receipt = {
     schema: "website-design-compiler/payload-cms-receipt/v2",
     overall: finalOverall ? "PASS" : "FAIL",
-    git: { sha: process.env.GITHUB_SHA ?? "UNBOUND", ref: process.env.GITHUB_REF ?? "UNBOUND" },
+    git,
     payload: {
       version: PAYLOAD_VERSION,
       adapter: "@payloadcms/db-sqlite",
