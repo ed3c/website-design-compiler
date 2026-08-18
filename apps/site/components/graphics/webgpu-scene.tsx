@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { WebGPUFailureDetail } from "../../../../src/graphics-3d-renderer-policy";
+import { buildWebGPUAdapterInfoEvidence, type WebGPUAdapterInfoEvidence } from "../../../../src/webgpu-runtime-identity";
 
 class WebGPUSceneError extends Error {
   constructor(readonly code: WebGPUFailureDetail) {
@@ -14,12 +15,7 @@ export interface WebGPURuntimeIdentity {
   renderer: "three.WebGPURenderer";
   rendererVersion: "0.184.0";
   tslModule: "three/tsl@0.184.0";
-  adapterInfo: {
-    vendor: string;
-    architecture: string;
-    device: string;
-    description: string;
-  };
+  adapterInfo: WebGPUAdapterInfoEvidence;
   features: string[];
   limits: {
     maxTextureDimension2D: number | null;
@@ -199,6 +195,7 @@ export default function WebGPUScene({
         }
 
         const adapterInfo = adapter.info ?? {};
+        const adapterInfoEvidence = await buildWebGPUAdapterInfoEvidence(adapterInfo);
         onReady({
           state: "WEBGPU_PASS",
           identity: {
@@ -206,12 +203,7 @@ export default function WebGPUScene({
             renderer: "three.WebGPURenderer",
             rendererVersion: "0.184.0",
             tslModule: "three/tsl@0.184.0",
-            adapterInfo: {
-              vendor: adapterInfo.vendor ?? "UNREPORTED",
-              architecture: adapterInfo.architecture ?? "UNREPORTED",
-              device: adapterInfo.device ?? "UNREPORTED",
-              description: adapterInfo.description ?? "UNREPORTED"
-            },
+            adapterInfo: adapterInfoEvidence,
             features: [...adapter.features.keys()].sort(),
             limits: {
               maxTextureDimension2D: numericLimit(device.limits, "maxTextureDimension2D"),
