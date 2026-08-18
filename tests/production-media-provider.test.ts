@@ -537,6 +537,21 @@ test("production policy rejects floating identities, incomplete rights bindings,
   assert.match(errors, /revocation.*effectiveAt/);
 });
 
+test("production policy rejects abbreviated commit identities", () => {
+  const invalid: ProductionProviderPolicy = {
+    ...policy,
+    identity: {
+      ...policy.identity,
+      serviceRevision: "commit:1234567",
+      modelRevision: "commit:1234567890abcdef1234567890abcdef1234567"
+    }
+  };
+
+  const errors = validateProductionProviderPolicy(invalid).join("\n");
+  assert.match(errors, /serviceRevision.*exact/);
+  assert.match(errors, /modelRevision.*exact/);
+});
+
 test("production request rejects non-finite parameters and unbounded response budgets before transport", async () => {
   const invalidRequest: MediaRequest = {
     ...request,

@@ -225,7 +225,7 @@ function isVersionRevision(value: string): boolean {
 }
 
 function isDigestOrCommitRevision(value: string): boolean {
-  return /^sha256:[a-f0-9]{64}$/i.test(value) || /^commit:[a-f0-9]{7,64}$/i.test(value);
+  return /^sha256:[a-f0-9]{64}$/i.test(value) || /^commit:[a-f0-9]{40}$/i.test(value);
 }
 
 function isDateRevision(value: string): boolean {
