@@ -1,0 +1,17 @@
+{
+  "binding": "repository-control-plane",
+  "repo_owned": [],
+  "schema": "shared-skills/consumer-requirements/v1",
+  "shared": [
+    "shared-skills-infra",
+    "procedural-shadow-runtime",
+    "agentic-tech-lead-orchestration",
+    "spatial-loop-systems-engineering",
+    "git-town-stacked-pr-worker",
+    "dual-forge-repository-loop"
+  ],
+  "surfaces": {
+    "claude": ".claude/skills",
+    "codex": ".agents/skills"
+  }
+}
