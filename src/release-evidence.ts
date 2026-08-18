@@ -13,6 +13,7 @@ import { buildFrontendPlan } from "./frontend-builder.js";
 import { buildGraphics2DPlan } from "./graphics-2d.js";
 import { buildGraphics3DPlan } from "./graphics-3d.js";
 import { buildMotionDirectorPlan } from "./motion-director.js";
+import { GENERATED_PAGE_CANONICAL_VIEWPORTS, validateTrustedGeneratedPageBrowserAdmission } from "./generated-page-browser-admission.js";
 import { assertPngEvidence } from "./png-evidence.js";
 import { buildReferenceManifest } from "./reference-intelligence.js";
 import { compileAllSectionPageFixtures } from "./section-page-fixtures.js";
@@ -785,6 +786,14 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
   const receiptGit = isRecord(receipt.git) ? receipt.git : null;
   const generatedGit = isRecord(generatedReceipt?.git) ? generatedReceipt.git : null;
   if (!generatedGit || generatedGit.sha !== receiptGit?.sha || generatedGit.ref !== receiptGit?.ref) errors.push("generated-page browser receipt is not bound to the premium subject");
+  if (generatedReceiptArtifact && generatedReceipt) {
+    errors.push(...await validateTrustedGeneratedPageBrowserAdmission(root, generatedReceiptArtifact.bytes, generatedReceipt, {
+      sha: String(receiptGit?.sha ?? ""),
+      ref: String(receiptGit?.ref ?? "")
+    }));
+  } else {
+    errors.push("trusted generated-page browser admission is absent");
+  }
   if (!tokenReceipt || tokenReceipt.schema !== "website-design-compiler/semantic-token-benchmark-receipt/v2" || tokenReceipt.overall !== "PASS") errors.push("semantic-token receipt is not PASS evidence");
   if (!visualReceipt || visualReceipt.schema !== "website-design-compiler/visual-direction-benchmark-receipt/v2" || visualReceipt.overall !== "PASS") errors.push("visual-direction receipt is not PASS evidence");
 
@@ -821,6 +830,10 @@ async function validatePremiumArtifacts(root: string, receipt: JsonRecord): Prom
     const expectedProject = card.viewport === "mobile" ? "mobile-chromium" : "desktop-chromium";
     if (!observationValue || observationValue.category !== card.category || observationValue.project !== expectedProject) errors.push(`${label}.visualObservation identity mismatch`);
     const viewport = isRecord(observationValue?.viewport) ? observationValue.viewport : null;
+    const canonicalViewport = GENERATED_PAGE_CANONICAL_VIEWPORTS[expectedProject];
+    if (!viewport || viewport.width !== canonicalViewport.width || viewport.height !== canonicalViewport.height) {
+      errors.push(`${label}.visualObservation does not match the canonical browser viewport`);
+    }
     if (screenshot && viewport && typeof viewport.width === "number" && typeof viewport.height === "number") {
       try { assertPngEvidence(screenshot.bytes, { width: viewport.width, maximumWidth: Math.ceil(viewport.width * 4), minimumHeight: viewport.height, viewport: `${String(card.category)}/${String(card.viewport)}` }); }
       catch (error) { errors.push(`${label}.screenshot ${error instanceof Error ? error.message : "failed PNG validation"}`); }

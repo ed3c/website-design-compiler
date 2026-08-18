@@ -349,6 +349,8 @@ test("premium PASS cannot be promoted without artifact readback", async () => {
     await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
     const result = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
     assert.equal(result.state, "FAIL");
+    assert.match(result.errors.join("; "), /trusted generated-page browser admission is absent/);
+    assert.match(result.errors.join("; "), /canonical browser viewport/);
     assert.match(result.errors.join("; "), /not a PNG browser screenshot/);
     assert.match(result.errors.join("; "), /card does not match current graph, observation, and profile/);
   } finally {

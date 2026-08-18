@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/generated-page-browser-admission/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "state", "producer", "subject", "sourceFilesSha256", "generatedPageReceiptSha256", "screenshotSetSha256", "observationSetSha256", "authority"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/generated-page-browser-admission/v1" },
+    "state": { "const": "PASS" },
+    "producer": { "const": "playwright-generated-page-observation/v1" },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "ref"],
+      "properties": {
+        "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "generatedPageReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "screenshotSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "observationSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identity", "admittedAt"],
+      "properties": {
+        "kind": { "enum": ["human", "repository-administrator"] },
+        "identity": { "type": "string", "minLength": 1 },
+        "admittedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
