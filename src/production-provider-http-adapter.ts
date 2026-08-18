@@ -27,6 +27,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function isCanonicalBase64(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && canonicalBase64.test(value) && Buffer.from(value, "base64").toString("base64") === value;
+}
+
 export function validateHttpProductionProviderAdapterConfig(config: HttpProductionProviderAdapterConfig): string[] {
   const errors: string[] = [];
   if (config.schema !== "website-design-compiler/http-production-provider-adapter/v1") errors.push("HTTP adapter schema is invalid");
@@ -105,7 +109,7 @@ function parseTransportResult(value: unknown, maxAssetBytes: number): Production
   )) {
     throw new ProductionProviderError("INVALID_RESPONSE", "provider post-processing provenance is invalid");
   }
-  if (typeof value.asset.bytesBase64 !== "string" || !canonicalBase64.test(value.asset.bytesBase64) || value.asset.bytesBase64.length === 0) {
+  if (!isCanonicalBase64(value.asset.bytesBase64)) {
     throw new ProductionProviderError("INVALID_RESPONSE", "provider asset bytes are not canonical base64");
   }
   const bytes = new Uint8Array(Buffer.from(value.asset.bytesBase64, "base64"));
@@ -161,7 +165,10 @@ export function createHttpProductionProviderTransport(args: {
       if (!response.ok) throw new ProductionProviderError("INVALID_RESPONSE", "provider rejected the request");
       const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
       if (contentType !== "application/json") throw new ProductionProviderError("INVALID_RESPONSE", "provider response content type is not application/json");
-      const source = await readBoundedResponse(response, Math.max(65_536, request.optimization.maxBytes * 2));
+      const source = await readBoundedResponse(
+        response,
+        Math.min(67_108_864, Math.max(65_536, request.optimization.maxBytes * 2))
+      );
       let value: unknown;
       try {
         value = JSON.parse(source);

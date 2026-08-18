@@ -113,13 +113,20 @@ function validatePng(bytes: Uint8Array): ValidatedMediaAssetContent {
   }
   if (!sawHeader || !sawData || !sawEnd) fail("PNG is missing IHDR, IDAT, or IEND");
   let decoded: Uint8Array;
+  const scanlineBytes = Math.ceil(width * bitsPerPixel / 8);
+  const expectedDecodedBytes = height * (scanlineBytes + 1);
+  if (!Number.isSafeInteger(expectedDecodedBytes) || expectedDecodedBytes > 134_217_728) {
+    fail("PNG decoded pixel buffer exceeds the admitted memory budget");
+  }
   try {
-    decoded = inflateSync(Buffer.concat(compressed.map((entry) => Buffer.from(entry))));
+    decoded = inflateSync(
+      Buffer.concat(compressed.map((entry) => Buffer.from(entry))),
+      { maxOutputLength: expectedDecodedBytes + 1 }
+    );
   } catch {
     fail("PNG image data cannot be decompressed");
   }
-  const scanlineBytes = Math.ceil(width * bitsPerPixel / 8);
-  if (decoded.length !== height * (scanlineBytes + 1)) fail("PNG decoded scanline length does not match its dimensions");
+  if (decoded.length !== expectedDecodedBytes) fail("PNG decoded scanline length does not match its dimensions");
   for (let row = 0; row < height; row += 1) {
     const filter = decoded[row * (scanlineBytes + 1)];
     if (filter === undefined || filter > 4) fail("PNG scanline uses an invalid filter");

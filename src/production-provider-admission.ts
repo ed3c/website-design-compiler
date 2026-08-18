@@ -63,6 +63,10 @@ const safeOpaqueId = /^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$/;
 const sha256Hex = /^[a-f0-9]{64}$/;
 const canonicalBase64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
+function isCanonicalBase64(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && canonicalBase64.test(value) && Buffer.from(value, "base64").toString("base64") === value;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -136,7 +140,7 @@ export function validateProductionAdmissionPacket(args: {
     if (!Number.isSafeInteger(packet[key]) || (packet[key] as number) < 0) errors.push(`${key} must be a non-negative safe integer`);
   }
   if (packet.signatureAlgorithm !== "Ed25519") errors.push("admission signature algorithm must be Ed25519");
-  if (typeof packet.signatureBase64 !== "string" || !canonicalBase64.test(packet.signatureBase64) || packet.signatureBase64.length === 0) {
+  if (!isCanonicalBase64(packet.signatureBase64)) {
     errors.push("admission signature must be canonical base64");
   }
 

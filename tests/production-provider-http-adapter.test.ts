@@ -82,3 +82,21 @@ test("HTTP adapter rejects extra response fields and never returns provider erro
     (error: unknown) => error instanceof ProductionProviderError && error.code === "INVALID_RESPONSE" && !error.message.includes("do-not-publish")
   );
 });
+
+test("HTTP adapter rejects base64 with non-canonical padding bits", async () => {
+  const transport = createHttpProductionProviderTransport({
+    config,
+    credential: "fixture-secret",
+    fetchImpl: async () => new Response(JSON.stringify({
+      schema: "website-design-compiler/http-production-provider-response/v1",
+      providerRequestId: "provider-job-1",
+      seed: 42,
+      postProcessing: [],
+      asset: { mediaType: "image/png", extension: "png", bytesBase64: "AB==" }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+  await assert.rejects(
+    transport.generate({ request, signal: new AbortController().signal, attempt: 1 }),
+    (error: unknown) => error instanceof ProductionProviderError && error.code === "INVALID_RESPONSE"
+  );
+});
