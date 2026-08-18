@@ -76,6 +76,7 @@ const rightsReceipt: RepositoryClearanceReceipt = {
   counts: { ALLOW: 3, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 },
   unresolved: [],
   expiredWaivers: [],
+  diagnostics: [],
   noticeSubjects: [],
   legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"
 };
