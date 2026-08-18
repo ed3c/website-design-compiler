@@ -69,7 +69,7 @@
           ]
         },
         "provenance": {
-          "heading": "information-architecture:features",
+          "heading": "ia.fallback:features",
           "items": "ia.fallback:features"
         },
         "tokenRef": "semantic-design-tokens/v2"
@@ -110,7 +110,7 @@
           }
         },
         "provenance": {
-          "headline": "information-architecture:conversion",
+          "headline": "ia.fallback:conversion",
           "action": "ia.fallback:conversion"
         },
         "tokenRef": "semantic-design-tokens/v2"
