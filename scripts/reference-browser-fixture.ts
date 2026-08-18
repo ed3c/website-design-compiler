@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observation-fixture.js";
+import { deriveObservedVisualDimensions, type ObservedVisualMeasurement } from "../src/visual-direction-search.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const FIXTURE_HTML = `<!doctype html>
@@ -42,6 +43,7 @@ type Snapshot = {
   layout: { gridColumnCount: number; gridTemplateColumns: string; gap: string };
   motion: { transitionDuration: string; transitionProperty: string };
   assets: { images: number; videos: number; canvases: number };
+  visualMeasurement: ObservedVisualMeasurement;
 };
 
 async function observe(page: Page, width: number, height: number): Promise<Snapshot> {
@@ -56,6 +58,8 @@ async function observe(page: Page, width: number, height: number): Promise<Snaps
     const h1Style = getComputedStyle(h1);
     const gridStyle = getComputedStyle(grid);
     const cardStyle = getComputedStyle(card);
+    const bodyStyle = getComputedStyle(document.body);
+    const linkStyle = getComputedStyle(document.querySelector("a") as HTMLElement);
     const columns = gridStyle.gridTemplateColumns.split(/\s+/).filter(Boolean);
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },
@@ -87,6 +91,25 @@ async function observe(page: Page, width: number, height: number): Promise<Snaps
         images: document.images.length,
         videos: document.querySelectorAll("video").length,
         canvases: document.querySelectorAll("canvas").length
+      },
+      visualMeasurement: {
+        fontFamily: h1Style.fontFamily,
+        headingFontSizePx: Number.parseFloat(h1Style.fontSize),
+        bodyFontSizePx: Number.parseFloat(bodyStyle.fontSize),
+        gridColumnCount: columns.length,
+        gapPx: Number.parseFloat(gridStyle.gap),
+        cardBorderWidthPx: Number.parseFloat(cardStyle.borderTopWidth),
+        cardBackgroundColor: cardStyle.backgroundColor,
+        bodyColor: bodyStyle.color,
+        bodyBackgroundColor: bodyStyle.backgroundColor,
+        linkColor: linkStyle.color,
+        images: document.images.length,
+        videos: document.querySelectorAll("video").length,
+        canvases: document.querySelectorAll("canvas").length,
+        transitionDurationMs: Number.parseFloat(cardStyle.transitionDuration) * (cardStyle.transitionDuration.endsWith("ms") ? 1 : 1000),
+        transitionProperty: cardStyle.transitionProperty,
+        interactiveControlCount: document.querySelectorAll("button,input,select,textarea,[role='button']").length,
+        revealTargetCount: document.querySelectorAll("[data-reveal],[aria-expanded]").length
       }
     };
   });
@@ -102,13 +125,15 @@ try {
   await page.screenshot({ path: evidencePath, fullPage: true });
   const mobile = await observe(page, 390, 844);
   const responsiveChanged = desktop.layout.gridColumnCount === 2 && mobile.layout.gridColumnCount === 1 && desktop.typography.fontSize !== mobile.typography.fontSize;
+  const { visualMeasurement: desktopMeasurement, ...desktopObservation } = desktop;
+  const { visualMeasurement: mobileMeasurement, ...mobileObservation } = mobile;
 
   const receipt = {
     schema: "website-design-compiler/reference-browser-receipt/v1",
     overall: responsiveChanged ? "PASS" as const : "FAIL" as const,
     browser: { engine: "chromium", version: browser.version() },
     sourceMode: "DETERMINISTIC_HTML_FIXTURE",
-    observations: { desktop, mobile },
+    observations: { desktop: desktopObservation, mobile: mobileObservation },
     responsiveBehavior: {
       state: responsiveChanged ? "PASS" as const : "FAIL" as const,
       desktopColumns: desktop.layout.gridColumnCount,
@@ -126,6 +151,7 @@ try {
   await writeFile(outputPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
   const evidenceBytes = await import("node:fs/promises").then(({ readFile }) => readFile(evidencePath));
   const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+  const measurements = { desktop: desktopMeasurement, mobile: mobileMeasurement };
   const visualFingerprint = {
     schema: "website-design-compiler/observed-visual-fingerprint/v2",
     state: "PASS",
@@ -136,17 +162,8 @@ try {
       path: "artifacts/reference-browser/observed-visual-reference.png",
       sha256: sha256(evidenceBytes)
     },
-    dimensions: {
-      typography: "neo-grotesk",
-      typeContrast: "dramatic",
-      density: "airy",
-      grid: "modular",
-      surface: "bordered",
-      colorStrategy: "neutral-accent",
-      mediaStrategy: "product-media",
-      motionIntensity: "moderate",
-      signatureInteraction: "progressive-reveal"
-    },
+    measurements,
+    dimensions: deriveObservedVisualDimensions(measurements),
     observations: [
       `desktop computed heading: ${desktop.typography.fontFamily} ${desktop.typography.fontSize}/${desktop.typography.lineHeight}`,
       `responsive grid columns: ${desktop.layout.gridColumnCount} desktop, ${mobile.layout.gridColumnCount} mobile`,

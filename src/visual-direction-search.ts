@@ -61,7 +61,33 @@ interface ObservedVisualFingerprintReceipt {
   referenceValueSha256: string;
   capturedArtifactSha256: string;
   evidenceArtifact: { path: string; sha256: string };
+  measurements: ObservedVisualMeasurements;
   dimensions: VisualDirectionDimensions;
+}
+
+export interface ObservedVisualMeasurement {
+  fontFamily: string;
+  headingFontSizePx: number;
+  bodyFontSizePx: number;
+  gridColumnCount: number;
+  gapPx: number;
+  cardBorderWidthPx: number;
+  cardBackgroundColor: string;
+  bodyColor: string;
+  bodyBackgroundColor: string;
+  linkColor: string;
+  images: number;
+  videos: number;
+  canvases: number;
+  transitionDurationMs: number;
+  transitionProperty: string;
+  interactiveControlCount: number;
+  revealTargetCount: number;
+}
+
+export interface ObservedVisualMeasurements {
+  desktop: ObservedVisualMeasurement;
+  mobile: ObservedVisualMeasurement;
 }
 
 interface VerifiedVisualReference {
@@ -123,6 +149,30 @@ function resolveWorkspacePath(root: string, path: string): string {
   return resolved;
 }
 
+export function deriveObservedVisualDimensions(measurements: ObservedVisualMeasurements): VisualDirectionDimensions {
+  const { desktop, mobile } = measurements;
+  const family = desktop.fontFamily.toLowerCase();
+  const headingRatio = desktop.bodyFontSizePx > 0 ? desktop.headingFontSizePx / desktop.bodyFontSizePx : 0;
+  const responsiveGrid = desktop.gridColumnCount > 1 && mobile.gridColumnCount === 1;
+  const hasAccent = desktop.linkColor !== desktop.bodyColor;
+  const hasLayer = desktop.cardBackgroundColor !== "rgba(0, 0, 0, 0)" && desktop.cardBackgroundColor !== "transparent";
+  const maxTransitionMs = Math.max(desktop.transitionDurationMs, mobile.transitionDurationMs);
+  const interactiveControls = Math.max(desktop.interactiveControlCount, mobile.interactiveControlCount);
+  const revealTargets = Math.max(desktop.revealTargetCount, mobile.revealTargetCount);
+  const canvases = Math.max(desktop.canvases, mobile.canvases);
+  return {
+    typography: family.includes("arial") || family.includes("helvetica") || family.includes("sans-serif") ? "neo-grotesk" : family.includes("serif") ? "editorial-serif" : "humanist-sans",
+    typeContrast: headingRatio >= 2 ? "dramatic" : headingRatio >= 1.4 ? "balanced" : "restrained",
+    density: desktop.gapPx >= 20 ? "airy" : desktop.gapPx >= 12 ? "balanced" : "dense",
+    grid: responsiveGrid ? "modular" : desktop.gridColumnCount > 1 ? "strict" : "editorial",
+    surface: desktop.cardBorderWidthPx > 0 ? "bordered" : hasLayer ? "layered" : "flat",
+    colorStrategy: hasAccent ? "neutral-accent" : "high-contrast",
+    mediaStrategy: canvases > 0 ? "interactive-stage" : desktop.videos > 0 ? "editorial-media" : desktop.images > 0 ? "product-media" : "text-first",
+    motionIntensity: maxTransitionMs >= 500 ? "expressive" : maxTransitionMs > 0 ? "moderate" : "minimal",
+    signatureInteraction: revealTargets > 0 ? "progressive-reveal" : interactiveControls > 1 ? "direct-manipulation" : canvases > 0 ? "spatial-focus" : "none"
+  };
+}
+
 async function referenceArtifactBytes(reference: CompilerReference, root: string): Promise<Uint8Array> {
   if (reference.kind !== "html") throw new Error("verified visual fingerprints currently require an observed HTML reference");
   if (/<(?:!doctype|html|head|body|main|section|div|article|header|footer)\b/i.test(reference.value)) {
@@ -143,6 +193,9 @@ export async function loadVerifiedVisualReferences(input: CompilerInput, root = 
     }
     const receipt = JSON.parse(receiptBytes.toString("utf8")) as ObservedVisualFingerprintReceipt;
     await validateAgainstSchema(receipt, "observed-visual-fingerprint-v2.schema.json");
+    if (JSON.stringify(deriveObservedVisualDimensions(receipt.measurements)) !== JSON.stringify(receipt.dimensions)) {
+      throw new Error("visual evidence dimensions do not match browser measurements");
+    }
     if (receipt.referenceValueSha256 !== hashText(reference.value)) {
       throw new Error("visual evidence receipt is not bound to the supplied reference value");
     }

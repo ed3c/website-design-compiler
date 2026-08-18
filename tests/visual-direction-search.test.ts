@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
 import { validateAgainstSchema } from "../src/validate.js";
-import { auditCandidateOriginality, loadVerifiedVisualReferences, searchVisualDirections } from "../src/visual-direction-search.js";
+import { auditCandidateOriginality, deriveObservedVisualDimensions, loadVerifiedVisualReferences, searchVisualDirections } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
   return {
@@ -55,11 +55,14 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
   const root = await mkdtemp(join(tmpdir(), "wdc-visual-evidence-"));
   try {
     const compilerInput = input("premium-consumer");
-    const observed = searchVisualDirections(compilerInput).candidates[0]!.dimensions;
     const value = "<!doctype html><main><h1>Observed reference</h1></main>";
     const evidenceBytes = new TextEncoder().encode("deterministic screenshot bytes");
     await writeFile(join(root, "evidence.png"), evidenceBytes);
     const digest = (content: string | Uint8Array) => createHash("sha256").update(content).digest("hex");
+    const measurements = {
+      desktop: { fontFamily: "Arial", headingFontSizePx: 40, bodyFontSizePx: 16, gridColumnCount: 2, gapPx: 24, cardBorderWidthPx: 1, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 1 },
+      mobile: { fontFamily: "Arial", headingFontSizePx: 30, bodyFontSizePx: 16, gridColumnCount: 1, gapPx: 16, cardBorderWidthPx: 1, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 1 }
+    };
     const receipt = {
       schema: "website-design-compiler/observed-visual-fingerprint/v2",
       state: "PASS",
@@ -67,7 +70,8 @@ async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (co
       referenceValueSha256: sourceHashOverride ?? digest(value),
       capturedArtifactSha256: digest(value),
       evidenceArtifact: { path: "evidence.png", sha256: digest(evidenceBytes) },
-      dimensions: observed,
+      measurements,
+      dimensions: deriveObservedVisualDimensions(measurements),
       observations: ["computed typography", "computed layout", "computed spacing", "computed motion", "observed media"]
     };
     const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
@@ -94,6 +98,28 @@ test("runtime-artifact-bound observed fingerprints make originality distance exe
     assert.ok(receipt.candidates.every((candidate) => candidate.score.originalityDistance !== null));
     assert.ok((selected.score.originalityDistance ?? 0) >= receipt.originality.threshold);
   });
+});
+
+test("observed fingerprint dimensions are derived from browser measurements", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    const receiptPath = join(root, "receipt.json");
+    const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+    receipt.dimensions.signatureInteraction = "none";
+    const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
+    await writeFile(receiptPath, receiptText, "utf8");
+    compilerInput.references![0]!.visualEvidence!.receiptSha256 = createHash("sha256").update(receiptText).digest("hex");
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /dimensions do not match browser measurements/);
+  });
+});
+
+test("measurement derivation does not invent progressive reveal", () => {
+  const measurements = {
+    desktop: { fontFamily: "Arial", headingFontSizePx: 40, bodyFontSizePx: 16, gridColumnCount: 2, gapPx: 24, cardBorderWidthPx: 0, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 0 },
+    mobile: { fontFamily: "Arial", headingFontSizePx: 30, bodyFontSizePx: 16, gridColumnCount: 1, gapPx: 16, cardBorderWidthPx: 0, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 0 }
+  };
+  assert.equal(deriveObservedVisualDimensions(measurements).signatureInteraction, "none");
+  assert.equal(deriveObservedVisualDimensions(measurements).surface, "flat");
+  assert.equal(deriveObservedVisualDimensions(measurements).typography, "neo-grotesk");
 });
 
 test("an observed fingerprint with the wrong source hash fails closed", async () => {

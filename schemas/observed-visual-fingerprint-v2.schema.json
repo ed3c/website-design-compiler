@@ -3,7 +3,7 @@
   "$id": "website-design-compiler/observed-visual-fingerprint/v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "state", "producer", "referenceValueSha256", "capturedArtifactSha256", "evidenceArtifact", "dimensions", "observations"],
+  "required": ["schema", "state", "producer", "referenceValueSha256", "capturedArtifactSha256", "evidenceArtifact", "measurements", "dimensions", "observations"],
   "properties": {
     "schema": { "const": "website-design-compiler/observed-visual-fingerprint/v2" },
     "state": { "const": "PASS" },
@@ -19,10 +19,43 @@
         "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       }
     },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desktop", "mobile"],
+      "properties": {
+        "desktop": { "$ref": "#/$defs/measurement" },
+        "mobile": { "$ref": "#/$defs/measurement" }
+      }
+    },
     "dimensions": { "$ref": "#/$defs/dimensions" },
     "observations": { "type": "array", "minItems": 5, "items": { "type": "string", "minLength": 1 } }
   },
   "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fontFamily", "headingFontSizePx", "bodyFontSizePx", "gridColumnCount", "gapPx", "cardBorderWidthPx", "cardBackgroundColor", "bodyColor", "bodyBackgroundColor", "linkColor", "images", "videos", "canvases", "transitionDurationMs", "transitionProperty", "interactiveControlCount", "revealTargetCount"],
+      "properties": {
+        "fontFamily": { "type": "string", "minLength": 1 },
+        "headingFontSizePx": { "type": "number", "exclusiveMinimum": 0 },
+        "bodyFontSizePx": { "type": "number", "exclusiveMinimum": 0 },
+        "gridColumnCount": { "type": "integer", "minimum": 1 },
+        "gapPx": { "type": "number", "minimum": 0 },
+        "cardBorderWidthPx": { "type": "number", "minimum": 0 },
+        "cardBackgroundColor": { "type": "string", "minLength": 1 },
+        "bodyColor": { "type": "string", "minLength": 1 },
+        "bodyBackgroundColor": { "type": "string", "minLength": 1 },
+        "linkColor": { "type": "string", "minLength": 1 },
+        "images": { "type": "integer", "minimum": 0 },
+        "videos": { "type": "integer", "minimum": 0 },
+        "canvases": { "type": "integer", "minimum": 0 },
+        "transitionDurationMs": { "type": "number", "minimum": 0 },
+        "transitionProperty": { "type": "string", "minLength": 1 },
+        "interactiveControlCount": { "type": "integer", "minimum": 0 },
+        "revealTargetCount": { "type": "integer", "minimum": 0 }
+      }
+    },
     "dimensions": {
       "type": "object",
       "additionalProperties": false,
