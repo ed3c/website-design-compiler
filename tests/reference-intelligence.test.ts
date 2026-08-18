@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildOriginalityPlan, buildReferenceManifest } from "../src/reference-intelligence.js";
 import { captureRemoteUrl, isPublicIpAddress, observeHtml } from "../src/reference-capture.js";
+import { validateAgainstSchema } from "../src/validate.js";
 import type { CompilerInput } from "../src/contracts.js";
 
 const input: CompilerInput = {
@@ -50,14 +51,18 @@ test("remote capture records deterministic HTML provenance with injected public 
     })
   });
 
-  assert.equal(result.state, "PASS");
+  assert.equal(result.state, "NOT_EXERCISED");
+  assert.match(result.reason ?? "", /cannot promote production remote evidence/);
   assert.equal(result.provenance.sourceMode, "REMOTE");
+  assert.equal(result.provenance.transportMode, "INJECTED");
+  assert.equal(result.provenance.connectedAddress, "93.184.216.34");
   assert.equal(result.provenance.finalUrl, "https://reference.example/page");
   assert.equal(result.provenance.httpStatus, 200);
   assert.equal(result.provenance.contentType, "text/html");
   assert.match(result.provenance.responseSha256 ?? "", /^[a-f0-9]{64}$/);
   assert.ok(result.facts.includes("document title: Remote Evidence"));
   assert.ok(result.facts.includes("h1 headings: Observed"));
+  await validateAgainstSchema({schema:"website-design-compiler/reference-manifest/v1",project:"remote-fixture",entries:[{id:"ref-001",kind:"url",source:"https://reference.example/page",captureState:result.state,observableFacts:result.facts,unknownImplementationDetails:true,provenance:result.provenance,reason:result.reason}]},"reference-manifest.schema.json");
 });
 
 test("remote capture fails closed for private and metadata-style targets before transport", async () => {
@@ -88,8 +93,49 @@ test("remote capture revalidates redirect targets and rejects redirect to loopba
   assert.match(result.reason ?? "", /non-public address/);
 });
 
+test("remote capture rejects a connected peer that differs from the pinned DNS address", async () => {
+  const result = await captureRemoteUrl("https://reference.example/", {
+    maxRedirects: 0,
+    resolveHost: async () => ["93.184.216.34"],
+    transport: async () => ({
+      status: 200,
+      headers: { "content-type": "text/html" },
+      body: new TextEncoder().encode("<main></main>"),
+      connectedAddress: "127.0.0.1",
+      mode: "INJECTED"
+    })
+  });
+  assert.equal(result.state, "FAIL");
+  assert.match(result.reason ?? "", /connected peer address/);
+});
+
+test("one deadline covers DNS and transport instead of resetting between phases", async () => {
+  let transportReached = false;
+  const result = await captureRemoteUrl("https://reference.example/", {
+    timeoutMs: 20,
+    resolveHost: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      return ["93.184.216.34"];
+    },
+    transport: async () => {
+      transportReached = true;
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      return {
+        status: 200,
+        headers: { "content-type": "text/html" },
+        body: new TextEncoder().encode("<main></main>"),
+        connectedAddress: "93.184.216.34",
+        mode: "INJECTED"
+      };
+    }
+  });
+  assert.equal(transportReached, true);
+  assert.equal(result.state, "FAIL");
+  assert.match(result.reason ?? "", /total deadline exceeded during transport/);
+});
+
 test("remote target IP policy rejects private/link-local/loopback and allows public addresses", () => {
-  for (const address of ["127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "169.254.169.254", "::1", "fd00::1", "fe80::1"]) {
+  for (const address of ["127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "169.254.169.254", "::1", "fd00::1", "fe80::1", "::ffff:c0a8:101", "::c0a8:101"]) {
     assert.equal(isPublicIpAddress(address), false, address);
   }
   assert.equal(isPublicIpAddress("93.184.216.34"), true);

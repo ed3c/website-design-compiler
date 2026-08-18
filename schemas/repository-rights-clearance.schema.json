@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/repository-rights-clearance.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "generatedAt", "subjects", "counts", "unresolved", "expiredWaivers", "noticeSubjects", "legalDisclaimer", "git"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/repository-rights-clearance/v2" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "subjects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "name", "versionOrIdentity", "licenseExpression", "state", "evidence", "attributionRequired", "distributed"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["package", "asset", "font", "model", "generated-output", "service"] },
+          "name": { "type": "string", "minLength": 1 },
+          "versionOrIdentity": { "type": "string", "minLength": 1 },
+          "licenseExpression": { "type": ["string", "null"] },
+          "state": { "enum": ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"] },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "attributionRequired": { "type": "boolean" },
+          "distributed": { "type": "boolean" },
+          "geographicRestrictions": { "type": "array", "items": { "type": "string" } },
+          "usageRestrictions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"],
+      "properties": {
+        "ALLOW": { "type": "integer", "minimum": 0 },
+        "REVIEW_REQUIRED": { "type": "integer", "minimum": 0 },
+        "DENY": { "type": "integer", "minimum": 0 },
+        "UNKNOWN": { "type": "integer", "minimum": 0 },
+        "NOT_DISTRIBUTED": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "unresolved": { "type": "array", "items": { "type": "string" } },
+    "expiredWaivers": { "type": "array", "items": { "type": "string" } },
+    "noticeSubjects": { "type": "array", "items": { "type": "string" } },
+    "legalDisclaimer": { "const": "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE" },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "ref"],
+      "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } }
+    }
+  }
+}
