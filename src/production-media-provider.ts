@@ -99,6 +99,7 @@ export interface ProductionProviderReceipt {
   requestSha256: string;
   promptSha256: string;
   configurationSha256: string;
+  executionInputSha256: string | "ABSENT";
   attempts: number;
   admissionEvidence: {
     humanAdmissionReceiptId: string | "ABSENT";
@@ -381,6 +382,7 @@ export async function routeProductionMediaGeneration(args: {
   sleep?: (milliseconds: number) => Promise<void>;
   cancelled?: () => boolean;
   signal?: AbortSignal;
+  executionInputSha256?: string;
 }): Promise<{ receipt: ProductionProviderReceipt; asset?: MediaAsset }> {
   const request = args.signed.request;
   const receiptProvider: ProductionProviderIdentity = {
@@ -419,6 +421,7 @@ export async function routeProductionMediaGeneration(args: {
     requestSha256,
     promptSha256: sha256(typeof request.prompt === "string" ? request.prompt : canonicalMediaValue(request.prompt)),
     configurationSha256: sha256(canonicalMediaValue({ prompt: request.prompt, parameters: request.parameters })),
+    executionInputSha256: args.executionInputSha256 && /^[a-f0-9]{64}$/.test(args.executionInputSha256) ? args.executionInputSha256 : "ABSENT",
     attempts: 0,
     admissionEvidence: {
       humanAdmissionReceiptId: args.executionAdmission?.admissionId

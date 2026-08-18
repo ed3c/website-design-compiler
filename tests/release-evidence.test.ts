@@ -343,6 +343,55 @@ test("runtime evidence binds the governed input and rejects symlinked artifacts"
   }
 });
 
+test("production provider PASS cannot be reconstructed from a hollow execution receipt", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-provider-release-hollow-"));
+  try {
+    const spec = RELEASE_CAPABILITY_SPECS.productionProvider;
+    const directory = join(root, "artifacts/media-generator");
+    await mkdir(directory, { recursive: true });
+    const assetBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAAF0lEQVR4nGOsCDjBQApgIkn1qIYRpAEAsVkBqEXr8uYAAAAASUVORK5CYII=", "base64");
+    const assetSha256 = createHash("sha256").update(assetBytes).digest("hex");
+    const execution = {
+      schema: "website-design-compiler/production-provider-receipt/v2",
+      overall: "PASS",
+      asset: { sha256: assetSha256, bytes: assetBytes.byteLength }
+    };
+    const executionBytes = Buffer.from(`${JSON.stringify(execution, null, 2)}\n`);
+    const executionSha256 = createHash("sha256").update(executionBytes).digest("hex");
+    await writeFile(join(directory, "production-provider-execution-receipt.json"), executionBytes);
+    await writeFile(join(directory, "production-provider-asset.png"), assetBytes);
+    const status = {
+      schema: spec.schema,
+      gate: "PRODUCTION_PROVIDER",
+      overall: "PASS",
+      admissionState: "ADMITTED",
+      productionReleaseEligible: true,
+      providerIdentity: `sha256:${hash}`,
+      modelIdentity: `sha256:${hash}`,
+      rightsClearance: "PASS",
+      runtimeCredentials: "AVAILABLE",
+      budgetAuthorization: "AUTHORIZED",
+      deterministicMockGate: "SEPARATE",
+      executionReceiptSha256: executionSha256,
+      requestSha256: hash,
+      assetSha256,
+      reason: "forged shell",
+      artifacts: {
+        executionReceipt: { path: "production-provider-execution-receipt.json", sha256: executionSha256, bytes: executionBytes.byteLength },
+        asset: { path: "production-provider-asset.png", sha256: assetSha256, bytes: assetBytes.byteLength, mediaType: "image/png" }
+      },
+      git
+    };
+    await writeFile(join(root, spec.path), `${JSON.stringify(status, null, 2)}\n`, "utf8");
+
+    const result = await readBoundReleaseEvidence(root, spec.path, spec.schema, git);
+    assert.equal(result.state, "FAIL");
+    assert.match(result.errors.join("; "), /execution input|admission|provider receipt/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("legacy premium evidence cannot impersonate the v3 artifact-bound contract", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-premium-artifacts-"));
   try {

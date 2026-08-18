@@ -15,9 +15,17 @@ import { buildGraphics2DPlan } from "./graphics-2d.js";
 import { buildGraphics3DPlan } from "./graphics-3d.js";
 import { buildMotionDirectorPlan } from "./motion-director.js";
 import { GENERATED_PAGE_CANONICAL_VIEWPORTS, validateTrustedGeneratedPageBrowserAdmission } from "./generated-page-browser-admission.js";
+import { validateProductionMediaAssetContent } from "./media-asset-validation.js";
+import { canonicalMediaValue, sha256 as sha256Value } from "./media-router.js";
 import { assertPngEvidence } from "./png-evidence.js";
 import { buildReferenceManifest } from "./reference-intelligence.js";
 import { validateRepositoryClearanceReceipt } from "./repository-rights-clearance.js";
+import { productionAdmissionPacketSha256 } from "./production-provider-admission.js";
+import {
+  CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH,
+  validateProductionProviderExecutionEvidence
+} from "./production-provider-execution.js";
+import { productionRightsIdentities, validateProductionProviderPolicy } from "./production-media-provider.js";
 import { compileAllSectionPageFixtures } from "./section-page-fixtures.js";
 import {
   CAPABILITY_RECEIPT_CONTRACTS,
@@ -56,6 +64,8 @@ const JSON_SCHEMA_FILES: Record<string, string> = {
   "website-design-compiler/live-reference-receipt/v2": "live-reference-receipt.schema.json",
   "website-design-compiler/webgpu-runtime-receipt/v1": "webgpu-runtime-receipt.schema.json",
   "website-design-compiler/production-provider-status/v2": "production-provider-status.schema.json",
+  "website-design-compiler/production-provider-execution-evidence/v1": "production-provider-execution-evidence.schema.json",
+  "website-design-compiler/production-provider-receipt/v2": "production-provider-receipt.schema.json",
   "website-design-compiler/design-quality-eval-receipt/v3": "design-quality-eval-receipt-v3.schema.json"
 };
 const jsonSchemaValidators = new Map<string, ValidateFunction>();
@@ -553,7 +563,10 @@ function validateProductionProviderStatus(value: JsonRecord): string[] {
   if(value.overall==="PASS"){
     if(value.admissionState!=="ADMITTED"||value.productionReleaseEligible!==true||value.rightsClearance!=="PASS"||value.runtimeCredentials!=="AVAILABLE"||value.budgetAuthorization!=="AUTHORIZED")errors.push("PASS provider status lacks admitted runtime, rights, credentials, or budget evidence");
     for(const key of ["executionReceiptSha256","requestSha256","assetSha256"] as const)if(typeof value[key]!=="string"||!SHA256.test(value[key]))errors.push(`${key} is not a SHA-256 digest`);
-    if(!isRecord(value.artifacts))errors.push("PASS provider status lacks persisted artifact bindings");
+    if(typeof value.executedAt!=="string"||Number.isNaN(Date.parse(value.executedAt))||new Date(value.executedAt).toISOString()!==value.executedAt)errors.push("PASS provider status lacks an exact execution timestamp");
+    const artifacts=isRecord(value.artifacts)?value.artifacts:null;
+    if(!artifacts)errors.push("PASS provider status lacks persisted artifact bindings");
+    else for(const key of ["executionInput","executionReceipt","asset"] as const)if(!isRecord(artifacts[key]))errors.push(`PASS provider status lacks ${key} artifact binding`);
   }else if(value.productionReleaseEligible!==false)errors.push("non-PASS provider status cannot be release eligible");
   requireString(value.reason, "reason", errors);
   return errors;
@@ -739,6 +752,7 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
   if(receipt.overall!=="PASS")return[];
   const errors:string[]=[];
   const artifacts=isRecord(receipt.artifacts)?receipt.artifacts:null;
+  const executionInput=artifacts&&isRecord(artifacts.executionInput)?artifacts.executionInput:null;
   const execution=artifacts&&isRecord(artifacts.executionReceipt)?artifacts.executionReceipt:null;
   const asset=artifacts&&isRecord(artifacts.asset)?artifacts.asset:null;
   const readBound=async(binding:JsonRecord|null,label:string):Promise<Buffer|null>=>{
@@ -754,16 +768,79 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
       return bytes;
     }catch{errors.push(`${label} is missing or unreadable`);return null;}
   };
+  const readCanonical=async(path:string,label:string):Promise<Buffer|null>=>{
+    try{
+      const canonicalRoot=await realpath(root);const target=resolve(root,path);const canonicalTarget=await realpath(target);
+      if(canonicalTarget!==resolve(canonicalRoot,path)){errors.push(`${label} resolves through a symbolic link or outside the release workspace`);return null;}
+      return await readFile(canonicalTarget);
+    }catch{errors.push(`${label} is missing or unreadable`);return null;}
+  };
+  if(executionInput?.path!=="production-provider-execution-input.json")errors.push("production execution input path is not canonical");
+  if(execution?.path!=="production-provider-execution-receipt.json")errors.push("production execution receipt path is not canonical");
+  const inputBytes=await readBound(executionInput,"production execution input");
   const executionBytes=await readBound(execution,"production execution receipt");
   const assetBytes=await readBound(asset,"production provider asset");
   if(execution?.sha256!==receipt.executionReceiptSha256)errors.push("status executionReceiptSha256 does not match its artifact binding");
   if(asset?.sha256!==receipt.assetSha256)errors.push("status assetSha256 does not match its artifact binding");
-  if(executionBytes){
-    try{
-      const value=JSON.parse(executionBytes.toString("utf8")) as unknown;
-      if(!isRecord(value)||value.schema!=="website-design-compiler/production-provider-receipt/v2"||value.overall!=="PASS"||!isRecord(value.asset)||value.asset.sha256!==receipt.assetSha256||value.asset.bytes!==assetBytes?.byteLength)errors.push("production execution receipt does not bind the persisted PASS asset");
-    }catch{errors.push("production execution receipt is not valid JSON");}
+  let input:JsonRecord|null=null;let executed:JsonRecord|null=null;
+  if(inputBytes){try{const value=JSON.parse(inputBytes.toString("utf8")) as unknown;if(isRecord(value)){input=value;errors.push(...validatePublishedSchema(value,"website-design-compiler/production-provider-execution-evidence/v1").map((error)=>`production execution input ${error}`));}else errors.push("production execution input must be an object");}catch{errors.push("production execution input is not valid JSON");}}
+  if(executionBytes){try{const value=JSON.parse(executionBytes.toString("utf8")) as unknown;if(isRecord(value)){executed=value;errors.push(...validatePublishedSchema(value,"website-design-compiler/production-provider-receipt/v2").map((error)=>`production execution receipt ${error}`));}else errors.push("production execution receipt must be an object");}catch{errors.push("production execution receipt is not valid JSON");}}
+  const canonicalRights=isRecord(input?.canonicalRights)?input.canonicalRights:null;
+  const rightsBytes=canonicalRights?.path===CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH
+    ?await readCanonical(CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH,"canonical repository rights receipt")
+    :null;
+  let rights:JsonRecord|null=null;
+  if(!canonicalRights)errors.push("production execution input lacks canonical rights binding");
+  if(rightsBytes){
+    if(canonicalRights?.bytesSha256!==sha256Value(rightsBytes))errors.push("canonical repository rights receipt byte digest mismatch");
+    try{const value=JSON.parse(rightsBytes.toString("utf8")) as unknown;if(isRecord(value)){rights=value;errors.push(...validatePublishedSchema(value,"website-design-compiler/repository-rights-clearance/v2").map((error)=>`canonical repository rights receipt ${error}`));}else errors.push("canonical repository rights receipt must be an object");}catch{errors.push("canonical repository rights receipt is not valid JSON");}
   }
+  if(input&&rights)errors.push(...validateProductionProviderExecutionEvidence(input,rights));
+  if(!input||!executed||!rights||!inputBytes||!executionBytes||!assetBytes)return errors;
+
+  const git=isRecord(input.git)?input.git:null;const statusGit=isRecord(receipt.git)?receipt.git:null;const rightsGit=isRecord(rights.git)?rights.git:null;
+  if(!git||!statusGit||!rightsGit||!jsonEqual(git,statusGit)||!jsonEqual(rightsGit,statusGit))errors.push("provider input, rights, and status do not bind the same Git subject");
+  if(input.executedAt!==receipt.executedAt)errors.push("provider status does not bind the execution timestamp");
+  if(executed.executionInputSha256!==sha256Value(inputBytes)||executionInput?.sha256!==executed.executionInputSha256)errors.push("execution receipt does not bind the exact execution input bytes");
+  if(executed.overall!=="PASS"||executed.admissionState!=="ADMITTED"||executed.productionReleaseEligible!==true)errors.push("production execution receipt is not an admitted PASS");
+
+  const policy=isRecord(input.policy)?input.policy:null;const adapter=isRecord(input.adapter)?input.adapter:null;const requestBinding=isRecord(input.requestBinding)?input.requestBinding:null;const packet=isRecord(input.admissionPacket)?input.admissionPacket:null;
+  const identity=policy&&isRecord(policy.identity)?policy.identity:null;const controls=policy&&isRecord(policy.controls)?policy.controls:null;const policyRights=policy&&isRecord(policy.rights)?policy.rights:null;const admissionEvidence=isRecord(executed.admissionEvidence)?executed.admissionEvidence:null;
+  if(!policy||!adapter||!requestBinding||!packet||!identity||!controls||!policyRights||!admissionEvidence){errors.push("production evidence omits governed policy, request, adapter, or admission fields");return errors;}
+  errors.push(...validateProductionProviderPolicy(policy as never));
+  const providerDigest=sha256Value(canonicalMediaValue(identity));
+  const modelDigest=sha256Value(canonicalMediaValue({modelId:identity.modelId,modelRevision:identity.modelRevision,kind:identity.kind}));
+  if(receipt.providerIdentity!==`sha256:${providerDigest}`||receipt.modelIdentity!==`sha256:${modelDigest}`)errors.push("provider status identity digests do not match the governed policy");
+  if(!jsonEqual(executed.provider,identity))errors.push("execution receipt provider identity does not match the governed policy");
+  for(const key of ["requestId","requestSha256","promptSha256","configurationSha256"] as const)if(executed[key]!==requestBinding[key])errors.push(`execution receipt ${key} does not match the execution input`);
+  if(receipt.requestSha256!==requestBinding.requestSha256||receipt.requestSha256!==executed.requestSha256)errors.push("provider status request digest does not match execution evidence");
+  if(typeof executed.attempts!=="number"||!Number.isSafeInteger(executed.attempts)||executed.attempts<1||executed.attempts>Number(controls.maxAttempts)||executed.attempts>Number(packet.rateLimitRemaining)||executed.attempts*Number(controls.quotaUnitsPerRequest)>Number(packet.quotaUnitsRemaining))errors.push("production execution attempts exceed admitted policy capacity");
+  if(receipt.reason!==executed.reason)errors.push("provider status reason does not match the execution receipt");
+
+  const rightsBindings=["modelWeight","generatedOutput","hostedService"] as const;
+  const subjectIds=rightsBindings.map((key)=>isRecord(policyRights[key])?String(policyRights[key].subjectId):"");
+  const expectedRights=productionRightsIdentities(identity as never);
+  const kinds={modelWeight:"model",generatedOutput:"generated-output",hostedService:"service"} as const;
+  const rightSubjects=Array.isArray(rights.subjects)?rights.subjects.filter(isRecord):[];
+  const expectedReceiptSubjects=rightsBindings.map((key,index)=>{
+    const subject=rightSubjects.find((candidate)=>candidate.id===subjectIds[index]);
+    if(!subject||subject.kind!==kinds[key]||subject.versionOrIdentity!==expectedRights[key]||subject.state!=="ALLOW")errors.push(`${key} rights evidence does not match the admitted provider identity`);
+    return {id:subjectIds[index],state:subject?.state??"ABSENT",versionOrIdentitySha256:sha256Value(String(subject?.versionOrIdentity??"ABSENT")),attributionRequired:subject?.attributionRequired??false,geographicRestrictionsSha256:Array.isArray(subject?.geographicRestrictions)?sha256Value(canonicalMediaValue(subject.geographicRestrictions)):"ABSENT",usageRestrictionsSha256:Array.isArray(subject?.usageRestrictions)?sha256Value(canonicalMediaValue(subject.usageRestrictions)):"ABSENT"};
+  });
+  if(!jsonEqual(admissionEvidence.rightsSubjectIds,subjectIds)||!jsonEqual(admissionEvidence.rightsSubjects,expectedReceiptSubjects)||admissionEvidence.repositoryRightsGeneratedAt!==rights.generatedAt)errors.push("execution receipt rights projection does not match the canonical receipt");
+  if(admissionEvidence.humanAdmissionReceiptId!==packet.admissionId||admissionEvidence.admissionPacketSha256!==productionAdmissionPacketSha256(packet as never)||admissionEvidence.admissionAuthorityKeySha256!==packet.authorityKeySha256||admissionEvidence.transportSha256!==sha256Value(canonicalMediaValue(adapter))||admissionEvidence.credentials!=="AVAILABLE"||admissionEvidence.budget!=="AUTHORIZED")errors.push("execution receipt does not match the signed production admission");
+  if(Array.isArray(policy.revocations)&&policy.revocations.some((entry)=>isRecord(entry)&&entry.providerId===identity.providerId&&entry.modelId===identity.modelId&&entry.modelRevision===identity.modelRevision&&typeof entry.effectiveAt==="string"&&Date.parse(entry.effectiveAt)<=Date.parse(String(input.executedAt))))errors.push("production provider identity was revoked at execution time");
+
+  const executedAsset=isRecord(executed.asset)?executed.asset:null;const provenance=isRecord(executed.provenance)?executed.provenance:null;const parameters=isRecord(requestBinding.parameters)?requestBinding.parameters:null;const optimization=isRecord(requestBinding.optimization)?requestBinding.optimization:null;
+  if(!executedAsset||!provenance||!parameters||!optimization){errors.push("production execution receipt lacks asset or provenance evidence");return errors;}
+  if(asset?.path!==`production-provider-asset.${String(executedAsset.extension)}`||asset?.mediaType!==executedAsset.mediaType)errors.push("production asset binding path or media type does not match the execution receipt");
+  if(executedAsset.sha256!==sha256Value(assetBytes)||executedAsset.sha256!==receipt.assetSha256||executedAsset.bytes!==assetBytes.byteLength||assetBytes.byteLength>Number(optimization.maxBytes))errors.push("production execution receipt does not bind the persisted asset bytes and budget");
+  try{
+    const content=validateProductionMediaAssetContent(String(requestBinding.kind) as never,{bytes:assetBytes,mediaType:String(executedAsset.mediaType),extension:String(executedAsset.extension)},parameters as never);
+    if(executedAsset.format!==content.format||executedAsset.width!==content.width||executedAsset.height!==content.height||executedAsset.validation!==content.validation)errors.push("production asset content claims do not match decoded bytes");
+  }catch(error){errors.push(`production asset content validation failed: ${error instanceof Error?error.message:"unknown error"}`);}
+  if(provenance.promptConfigurationSha256!==requestBinding.configurationSha256||typeof provenance.providerRequestId!=="string"||!/^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$/.test(provenance.providerRequestId)||!Array.isArray(provenance.postProcessing)||provenance.postProcessing.some((entry)=>!isRecord(entry)||typeof entry.operation!=="string"||!/^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$/.test(entry.operation)||typeof entry.revision!=="string"||!(/^(?:sha256:[a-f0-9]{64}|commit:[a-f0-9]{40}|version:v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?|date:\d{4}-\d{2}-\d{2})$/i.test(entry.revision))))errors.push("production asset provenance is incomplete or malformed");
+  if(parameters.seed!==undefined&&provenance.seed!==parameters.seed)errors.push("production provenance seed does not match the governed request parameters");
   return errors;
 }
 

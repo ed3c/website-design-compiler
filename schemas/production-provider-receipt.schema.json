@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/production-provider-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "gate", "overall", "admissionState", "productionReleaseEligible", "requestId", "provider", "requestSha256", "promptSha256", "configurationSha256", "executionInputSha256", "attempts", "admissionEvidence", "reason"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-provider-receipt/v2" },
+    "gate": { "const": "PRODUCTION_PROVIDER" },
+    "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] },
+    "admissionState": { "enum": ["ADMITTED", "NEEDS_HUMAN_ADMIT", "DENIED", "REVOKED"] },
+    "productionReleaseEligible": { "type": "boolean" },
+    "requestId": { "$ref": "#/$defs/opaqueId" },
+    "provider": { "$ref": "#/$defs/identity" },
+    "requestSha256": { "$ref": "#/$defs/sha256" },
+    "promptSha256": { "$ref": "#/$defs/sha256" },
+    "configurationSha256": { "$ref": "#/$defs/sha256" },
+    "executionInputSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "admissionEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["humanAdmissionReceiptId", "admissionPacketSha256", "admissionAuthorityKeySha256", "transportSha256", "repositoryRightsGeneratedAt", "rightsSubjectIds", "rightsSubjects", "credentials", "budget"],
+      "properties": {
+        "humanAdmissionReceiptId": { "oneOf": [{ "$ref": "#/$defs/opaqueId" }, { "const": "ABSENT" }] },
+        "admissionPacketSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+        "admissionAuthorityKeySha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+        "transportSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+        "repositoryRightsGeneratedAt": { "type": "string", "minLength": 1 },
+        "rightsSubjectIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/opaqueId" } },
+        "rightsSubjects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "state", "versionOrIdentitySha256", "attributionRequired", "geographicRestrictionsSha256", "usageRestrictionsSha256"],
+            "properties": {
+              "id": { "$ref": "#/$defs/opaqueId" },
+              "state": { "type": "string", "minLength": 1 },
+              "versionOrIdentitySha256": { "$ref": "#/$defs/sha256" },
+              "attributionRequired": { "type": "boolean" },
+              "geographicRestrictionsSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+              "usageRestrictionsSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] }
+            }
+          }
+        },
+        "credentials": { "enum": ["AVAILABLE", "ABSENT"] },
+        "budget": { "enum": ["AUTHORIZED", "NOT_AUTHORIZED"] }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes", "mediaType", "extension", "format", "width", "height", "validation"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "mediaType": { "type": "string", "minLength": 1 },
+        "extension": { "type": "string", "pattern": "^[A-Za-z0-9]+$" },
+        "format": { "type": "string", "minLength": 1 },
+        "width": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+        "height": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+        "validation": { "const": "CONTENT_VALIDATION_PASS" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerRequestId", "promptConfigurationSha256", "seed", "postProcessing"],
+      "properties": {
+        "providerRequestId": { "$ref": "#/$defs/opaqueId" },
+        "promptConfigurationSha256": { "$ref": "#/$defs/sha256" },
+        "seed": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "null" }] },
+        "postProcessing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["operation", "revision"],
+            "properties": {
+              "operation": { "$ref": "#/$defs/opaqueId" },
+              "revision": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "revocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effectiveAt", "reasonSha256"],
+      "properties": {
+        "effectiveAt": { "type": "string", "format": "date-time" },
+        "reasonSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "reason": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] },
+      "then": {
+        "required": ["asset", "provenance"],
+        "properties": {
+          "asset": {},
+          "provenance": {},
+          "admissionState": { "const": "ADMITTED" },
+          "productionReleaseEligible": { "const": true },
+          "executionInputSha256": { "$ref": "#/$defs/sha256" },
+          "attempts": { "type": "integer", "minimum": 1 },
+          "admissionEvidence": {
+            "type": "object",
+            "properties": {
+              "humanAdmissionReceiptId": { "$ref": "#/$defs/opaqueId" },
+              "admissionPacketSha256": { "$ref": "#/$defs/sha256" },
+              "admissionAuthorityKeySha256": { "$ref": "#/$defs/sha256" },
+              "transportSha256": { "$ref": "#/$defs/sha256" },
+              "credentials": { "const": "AVAILABLE" },
+              "budget": { "const": "AUTHORIZED" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "not": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] } },
+      "then": { "properties": { "productionReleaseEligible": { "const": false } } }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "opaqueId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerId", "serviceRevision", "modelId", "modelRevision", "adapter", "kind"],
+      "properties": {
+        "providerId": { "$ref": "#/$defs/opaqueId" },
+        "serviceRevision": { "type": "string", "minLength": 1 },
+        "modelId": { "$ref": "#/$defs/opaqueId" },
+        "modelRevision": { "type": "string", "minLength": 1 },
+        "adapter": { "enum": ["diffusers-image", "diffusers-video", "three-d-worker"] },
+        "kind": { "enum": ["image", "video", "3d"] }
+      }
+    }
+  }
+}

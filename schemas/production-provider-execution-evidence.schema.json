@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/production-provider-execution-evidence.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "git", "executedAt", "requestBinding", "policy", "adapter", "admissionPacket", "admissionAuthority", "canonicalRights"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-provider-execution-evidence/v1" },
+    "git": { "$ref": "#/$defs/git" },
+    "executedAt": { "type": "string", "format": "date-time" },
+    "requestBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "kind", "modelId", "requestSha256", "promptSha256", "configurationSha256", "parameters", "optimization"],
+      "properties": {
+        "requestId": { "$ref": "#/$defs/opaqueId" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "modelId": { "$ref": "#/$defs/opaqueId" },
+        "requestSha256": { "$ref": "#/$defs/sha256" },
+        "promptSha256": { "$ref": "#/$defs/sha256" },
+        "configurationSha256": { "$ref": "#/$defs/sha256" },
+        "parameters": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$" },
+          "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
+        },
+        "optimization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "maxBytes"],
+          "properties": {
+            "target": { "const": "web" },
+            "maxBytes": { "type": "integer", "minimum": 1, "maximum": 33554432 }
+          }
+        }
+      }
+    },
+    "policy": { "$ref": "#/$defs/policy" },
+    "adapter": { "$ref": "#/$defs/adapter" },
+    "admissionPacket": { "$ref": "#/$defs/admissionPacket" },
+    "admissionAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorityId", "publicKeyPem"],
+      "properties": {
+        "authorityId": { "$ref": "#/$defs/opaqueId" },
+        "publicKeyPem": { "type": "string", "minLength": 1 }
+      }
+    },
+    "canonicalRights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytesSha256", "canonicalValueSha256"],
+      "properties": {
+        "path": { "const": "artifacts/rights-clearance/repository-rights-clearance.json" },
+        "bytesSha256": { "$ref": "#/$defs/sha256" },
+        "canonicalValueSha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "opaqueId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$" },
+    "kind": { "enum": ["image", "video", "3d"] },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "ref"],
+      "properties": {
+        "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "ref": { "type": "string", "pattern": "^refs/" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerId", "serviceRevision", "modelId", "modelRevision", "adapter", "kind"],
+      "properties": {
+        "providerId": { "$ref": "#/$defs/opaqueId" },
+        "serviceRevision": { "type": "string", "minLength": 1 },
+        "modelId": { "$ref": "#/$defs/opaqueId" },
+        "modelRevision": { "type": "string", "minLength": 1 },
+        "adapter": { "enum": ["diffusers-image", "diffusers-video", "three-d-worker"] },
+        "kind": { "$ref": "#/$defs/kind" }
+      }
+    },
+    "rightsBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subjectId", "expectedIdentity"],
+      "properties": {
+        "subjectId": { "$ref": "#/$defs/opaqueId" },
+        "expectedIdentity": { "type": "string", "minLength": 1 }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "identity", "rights", "controls", "revocations"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/production-provider-policy/v1" },
+        "identity": { "$ref": "#/$defs/identity" },
+        "rights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["modelWeight", "generatedOutput", "hostedService"],
+          "properties": {
+            "modelWeight": { "$ref": "#/$defs/rightsBinding" },
+            "generatedOutput": { "$ref": "#/$defs/rightsBinding" },
+            "hostedService": { "$ref": "#/$defs/rightsBinding" }
+          }
+        },
+        "controls": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["timeoutMs", "maxAttempts", "retryBackoffMs", "requestsPerWindow", "quotaUnitsPerRequest"],
+          "properties": {
+            "timeoutMs": { "type": "integer", "minimum": 1 },
+            "maxAttempts": { "type": "integer", "minimum": 1 },
+            "retryBackoffMs": { "type": "integer", "minimum": 0 },
+            "requestsPerWindow": { "type": "integer", "minimum": 1 },
+            "quotaUnitsPerRequest": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "revocations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["providerId", "modelId", "modelRevision", "reason", "effectiveAt"],
+            "properties": {
+              "providerId": { "$ref": "#/$defs/opaqueId" },
+              "modelId": { "$ref": "#/$defs/opaqueId" },
+              "modelRevision": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 },
+              "effectiveAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "identity", "endpoint"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/http-production-provider-adapter/v1" },
+        "identity": { "$ref": "#/$defs/identity" },
+        "endpoint": { "type": "string", "format": "uri", "pattern": "^https://" }
+      }
+    },
+    "admissionPacket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "state", "admissionId", "approvedBy", "issuedAt", "expiresAt", "requestSha256", "providerIdentitySha256", "transportSha256", "modelIdentitySha256", "policySha256", "rightsReceiptSha256", "credentials", "budget", "rateLimitRemaining", "quotaUnitsRemaining", "authorityKeySha256", "signatureAlgorithm", "signatureBase64"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/production-provider-admission/v1" },
+        "state": { "const": "ADMITTED" },
+        "admissionId": { "$ref": "#/$defs/opaqueId" },
+        "approvedBy": { "$ref": "#/$defs/opaqueId" },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "requestSha256": { "$ref": "#/$defs/sha256" },
+        "providerIdentitySha256": { "$ref": "#/$defs/sha256" },
+        "transportSha256": { "$ref": "#/$defs/sha256" },
+        "modelIdentitySha256": { "$ref": "#/$defs/sha256" },
+        "policySha256": { "$ref": "#/$defs/sha256" },
+        "rightsReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "credentials": { "const": "AVAILABLE" },
+        "budget": { "const": "AUTHORIZED" },
+        "rateLimitRemaining": { "type": "integer", "minimum": 0 },
+        "quotaUnitsRemaining": { "type": "integer", "minimum": 0 },
+        "authorityKeySha256": { "$ref": "#/$defs/sha256" },
+        "signatureAlgorithm": { "const": "Ed25519" },
+        "signatureBase64": { "type": "string", "minLength": 4, "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" }
+      }
+    }
+  }
+}

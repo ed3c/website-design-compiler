@@ -10,22 +10,26 @@
     "runtimeCredentials": { "enum": ["AVAILABLE", "ABSENT"] }, "budgetAuthorization": { "enum": ["AUTHORIZED", "ABSENT"] }, "deterministicMockGate": { "const": "SEPARATE" },
     "executionReceiptSha256": { "$ref": "#/$defs/rawDigestOrAbsent" }, "requestSha256": { "$ref": "#/$defs/rawDigestOrAbsent" }, "assetSha256": { "$ref": "#/$defs/rawDigestOrAbsent" },
     "reason": { "type": "string" },
+    "executedAt": { "type": "string", "format": "date-time" },
     "artifacts": {
-      "type":"object","additionalProperties":false,"required":["executionReceipt","asset"],
+      "type":"object","additionalProperties":false,"required":["executionInput","executionReceipt","asset"],
       "properties":{
-        "executionReceipt":{"$ref":"#/$defs/artifact"},
+        "executionInput":{"allOf":[{"$ref":"#/$defs/artifact"},{"type":"object","properties":{"path":{"const":"production-provider-execution-input.json"}}}]},
+        "executionReceipt":{"allOf":[{"$ref":"#/$defs/artifact"},{"type":"object","properties":{"path":{"const":"production-provider-execution-receipt.json"}}}]},
         "asset":{"allOf":[{"$ref":"#/$defs/artifact"},{"type":"object","required":["mediaType"],"properties":{"mediaType":{"type":"string","minLength":1}}}]}
       }
     },
-    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } }
+    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 } } }
   },
   "allOf": [
     {
       "if": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] },
       "then": {
-        "required":["artifacts"],
+        "required":["artifacts","executedAt"],
         "properties": {
           "artifacts": {},
+          "executedAt": { "type": "string", "format": "date-time" },
+          "git": { "type": "object", "properties": { "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" }, "ref": { "type": "string", "pattern": "^refs/" } } },
           "admissionState": { "const": "ADMITTED" }, "productionReleaseEligible": { "const": true },
           "providerIdentity": { "$ref": "#/$defs/digest" }, "modelIdentity": { "$ref": "#/$defs/digest" },
           "rightsClearance": { "const": "PASS" }, "runtimeCredentials": { "const": "AVAILABLE" },
