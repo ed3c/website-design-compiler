@@ -4,7 +4,8 @@ import { scanRepositoryRights, type Waiver } from "../src/repository-rights-clea
 
 let waivers: Waiver[] = [];
 try { waivers = JSON.parse(await readFile(resolve("rights-waivers.json"), "utf8")) as Waiver[]; } catch { /* no waivers */ }
-const receipt = await scanRepositoryRights(process.cwd(), waivers);
+const scanned = await scanRepositoryRights(process.cwd(), waivers);
+const receipt = {...scanned,git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"}};
 const directory = resolve("artifacts/rights-clearance");
 await mkdir(directory, { recursive: true });
 await writeFile(resolve(directory, "repository-rights-clearance.json"), `${JSON.stringify(receipt, null, 2)}\n`, "utf8");

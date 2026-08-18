@@ -107,6 +107,9 @@ jobs:
           if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
+      - name: Verify canonical v2 release policy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pnpm release:v2
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -147,5 +150,6 @@ jobs:
             artifacts/accessibility-performance/
             artifacts/arena/
             artifacts/release/release-gate-receipt.json
+            artifacts/release-v2/release-policy-v2-receipt.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: warn
