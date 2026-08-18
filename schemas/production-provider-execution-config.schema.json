@@ -3,12 +3,11 @@
   "$id": "https://example.invalid/website-design-compiler/production-provider-execution-config.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "signedRequestPath", "policyPath", "rightsReceiptPath", "admissionPacketPath", "admissionAuthority", "adapter", "requestSecretEnv", "credentialEnv"],
+  "required": ["schema", "signedRequestPath", "policyPath", "admissionPacketPath", "admissionAuthority", "adapter", "requestSecretEnv", "credentialEnv"],
   "properties": {
     "schema": { "const": "website-design-compiler/production-provider-execution-config/v1" },
     "signedRequestPath": { "$ref": "#/$defs/relativePath" },
     "policyPath": { "$ref": "#/$defs/relativePath" },
-    "rightsReceiptPath": { "$ref": "#/$defs/relativePath" },
     "admissionPacketPath": { "$ref": "#/$defs/relativePath" },
     "admissionAuthority": {
       "type": "object", "additionalProperties": false, "required": ["authorityId", "publicKeyPath"],

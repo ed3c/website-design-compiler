@@ -17,13 +17,14 @@ export interface ProductionProviderExecutionConfig {
   schema: "website-design-compiler/production-provider-execution-config/v1";
   signedRequestPath: string;
   policyPath: string;
-  rightsReceiptPath: string;
   admissionPacketPath: string;
   admissionAuthority: { authorityId: string; publicKeyPath: string };
   adapter: HttpProductionProviderAdapterConfig;
   requestSecretEnv: string;
   credentialEnv: string;
 }
+
+export const CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH = "artifacts/rights-clearance/repository-rights-clearance.json";
 
 const safeEnvironmentName = /^[A-Z][A-Z0-9_]{2,63}$/;
 const reservedEnvironmentNames = new Set(["HOME", "PATH", "SHELL", "USER", "TMPDIR", "PWD", "OLDPWD"]);
@@ -32,7 +33,7 @@ const relativeFilePath = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._/-]+$/;
 export function validateProductionProviderExecutionConfig(config: ProductionProviderExecutionConfig): string[] {
   const errors: string[] = [];
   if (config.schema !== "website-design-compiler/production-provider-execution-config/v1") errors.push("production execution config schema is invalid");
-  for (const key of ["signedRequestPath", "policyPath", "rightsReceiptPath", "admissionPacketPath"] as const) {
+  for (const key of ["signedRequestPath", "policyPath", "admissionPacketPath"] as const) {
     if (!relativeFilePath.test(config[key])) errors.push(`${key} must be a safe relative file path`);
   }
   if (!relativeFilePath.test(config.admissionAuthority.publicKeyPath)) errors.push("admission authority publicKeyPath must be a safe relative file path");

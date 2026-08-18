@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { buildUnconfiguredProductionProviderStatus } from "../src/production-media-provider.js";
-import { executeProductionProviderConfiguration, validateProductionProviderExecutionConfig, type ProductionProviderExecutionConfig } from "../src/production-provider-execution.js";
+import { CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH, executeProductionProviderConfiguration, validateProductionProviderExecutionConfig, type ProductionProviderExecutionConfig } from "../src/production-provider-execution.js";
 import type { SignedMediaRequest } from "../src/media-router.js";
 import type { ProductionProviderPolicy, ProductionProviderReceipt } from "../src/production-media-provider.js";
 import type { ProductionAdmissionPacket } from "../src/production-provider-admission.js";
@@ -43,7 +43,7 @@ if (configPath) {
     const [signed, policy, rightsReceipt, admissionPacket, admissionPublicKeyPem] = await Promise.all([
       readJson<SignedMediaRequest>(await resolveConfigFile(configDirectory, config.signedRequestPath)),
       readJson<ProductionProviderPolicy>(await resolveConfigFile(configDirectory, config.policyPath)),
-      readJson<RepositoryClearanceReceipt & {git:{sha:string;ref:string}}>(await resolveConfigFile(configDirectory, config.rightsReceiptPath)),
+      readJson<RepositoryClearanceReceipt & {git:{sha:string;ref:string}}>(resolve(CANONICAL_REPOSITORY_RIGHTS_RECEIPT_PATH)),
       readJson<ProductionAdmissionPacket>(await resolveConfigFile(configDirectory, config.admissionPacketPath)),
       readFile(await resolveConfigFile(configDirectory, config.admissionAuthority.publicKeyPath), "utf8")
     ]);

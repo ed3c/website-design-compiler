@@ -67,7 +67,6 @@ const config: ProductionProviderExecutionConfig = {
   schema: "website-design-compiler/production-provider-execution-config/v1",
   signedRequestPath: "signed-request.json",
   policyPath: "policy.json",
-  rightsReceiptPath: "rights.json",
   admissionPacketPath: "admission.json",
   admissionAuthority: { authorityId: "fixture-reviewer", publicKeyPath: "reviewer.pub.pem" },
   adapter: {
@@ -156,4 +155,11 @@ test("execution config rejects traversal, common environment variables, and secr
   assert.match(errors, /requestSecretEnv.*dedicated/);
   assert.match(errors, /credentialEnv.*dedicated/);
   assert.match(errors, /separate environment/);
+});
+
+test("execution config cannot select an alternate repository rights receipt", async () => {
+  await assert.rejects(
+    validateAgainstSchema({ ...config, rightsReceiptPath: "alternate-rights.json" }, "production-provider-execution-config.schema.json"),
+    /additional properties/
+  );
 });
