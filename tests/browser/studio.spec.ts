@@ -17,9 +17,12 @@ test("governed authoring render uses production registry components", async ({ p
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/studio/render", { waitUntil: "networkidle" });
   await expect(page.locator("[data-authoring-renderer='puck-production-registry']")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open compiler contract" })).toBeVisible();
-  await expect(page.getByText("Governed component plan emitted")).toBeVisible();
-  await expect(page.locator("[data-authoring-section='true'][data-surface-token='surface-muted']")).toBeVisible();
+  await expect(page.locator("[data-governed-section]")).toHaveCount(6);
+  await expect(page.locator("[data-governed-section='navigation']")).toBeVisible();
+  await expect(page.locator("[data-governed-section='hero']")).toBeVisible();
+  await expect(page.locator("[data-governed-section='proof-cloud']")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue" }).first()).toBeVisible();
+  await expect(page.getByText("Omit proof section until evidence is supplied.")).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
@@ -29,8 +32,12 @@ test("Payload-persisted published data renders through the same production regis
   await page.goto("/studio/render?source=payload", { waitUntil: "networkidle" });
   await expect(page.locator("main[data-authoring-source='payload']")).toBeVisible();
   await expect(page.locator("[data-authoring-renderer='puck-production-registry']")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open compiler contract" })).toBeVisible();
-  await expect(page.getByText("Governed component plan emitted")).toBeVisible();
+  await expect(page.locator("[data-governed-section]")).toHaveCount(6);
+  await expect(page.locator("[data-governed-section='navigation']")).toBeVisible();
+  await expect(page.locator("[data-governed-section='hero']")).toBeVisible();
+  await expect(page.locator("[data-governed-section='proof-cloud']")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue" }).first()).toBeVisible();
+  await expect(page.getByText("Omit proof section until evidence is supplied.")).toBeVisible();
   await expect(page.getByText("Newer draft content stored only in Payload versions")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
