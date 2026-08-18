@@ -149,6 +149,8 @@ jobs:
           STORYBOOK_QA_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_qa_status }}
           WDC_STORYBOOK_CANDIDATE_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           WDC_STORYBOOK_CANDIDATE_GIT_REF: ${{ github.head_ref && format('refs/heads/{0}', github.head_ref) || github.ref }}
+          WDC_STORYBOOK_RUNTIME_GIT_SHA: ${{ github.sha }}
+          WDC_STORYBOOK_RUNTIME_GIT_REF: ${{ github.ref }}
         run: pnpm storybook:golden-candidate
       - name: Upload review-required Storybook golden candidate manifest
         if: always() && steps.storybook-golden-candidate.outcome == 'success'

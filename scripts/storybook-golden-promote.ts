@@ -106,6 +106,7 @@ export async function promoteStorybookGoldenCandidate(options: {
   const candidateValue = JSON.parse(candidateBytes.toString("utf8")) as unknown;
   const reviewValue = JSON.parse(reviewBytes.toString("utf8")) as unknown;
   const candidate = await validateAgainstSchema<StorybookGoldenCandidate>(candidateValue, "storybook-golden-candidate.schema.json", process.cwd());
+  if (!candidate.source.runtimeGit) throw new Error("Storybook candidate does not bind the runtime Git subject that produced its screenshots");
   const review = await validateAgainstSchema<GoldenReview>(reviewValue, "storybook-golden-review.schema.json", process.cwd());
   assertPublicReview(review);
   if (options.githubRunId === candidate.source.workflow.runId) {

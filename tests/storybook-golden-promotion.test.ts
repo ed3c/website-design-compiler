@@ -37,6 +37,8 @@ async function candidateFixture(options: { duplicatePixels?: boolean; mobileStat
     environment: {
       gitSha: "a".repeat(40),
       gitRef: "refs/pull/42/merge",
+      runtimeGitSha: "c".repeat(40),
+      runtimeGitRef: "refs/pull/42/merge",
       repository: "ed3c/website-design-compiler",
       workflow: "compiler-core",
       runId: 1234,
@@ -89,6 +91,8 @@ test("candidate environment requires explicit zero build and browser QA exit out
     GITHUB_REF: "refs/pull/42/merge",
     WDC_STORYBOOK_CANDIDATE_GIT_SHA: "b".repeat(40),
     WDC_STORYBOOK_CANDIDATE_GIT_REF: "refs/heads/codex/review",
+    WDC_STORYBOOK_RUNTIME_GIT_SHA: "a".repeat(40),
+    WDC_STORYBOOK_RUNTIME_GIT_REF: "refs/pull/42/merge",
     GITHUB_REPOSITORY: "ed3c/website-design-compiler",
     GITHUB_WORKFLOW: "compiler-core",
     GITHUB_RUN_ID: "1234",
@@ -107,6 +111,8 @@ test("candidate environment binds the durable branch head instead of the synthet
     GITHUB_REF: "refs/pull/42/merge",
     WDC_STORYBOOK_CANDIDATE_GIT_SHA: "b".repeat(40),
     WDC_STORYBOOK_CANDIDATE_GIT_REF: "refs/heads/codex/review",
+    WDC_STORYBOOK_RUNTIME_GIT_SHA: "a".repeat(40),
+    WDC_STORYBOOK_RUNTIME_GIT_REF: "refs/pull/42/merge",
     GITHUB_REPOSITORY: "ed3c/website-design-compiler",
     GITHUB_WORKFLOW: "compiler-core",
     GITHUB_RUN_ID: "1234",
@@ -120,6 +126,8 @@ test("candidate environment binds the durable branch head instead of the synthet
   const candidate = candidateEnvironmentFromProcess(environment);
   assert.equal(candidate.gitSha, "b".repeat(40));
   assert.equal(candidate.gitRef, "refs/heads/codex/review");
+  assert.equal(candidate.runtimeGitSha, "a".repeat(40));
+  assert.equal(candidate.runtimeGitRef, "refs/pull/42/merge");
 });
 
 test("workflow uploads a candidate manifest only after zero Storybook exits and producer success", async () => {
@@ -134,6 +142,8 @@ test("workflow uploads a candidate manifest only after zero Storybook exits and 
   assert.match(candidate?.env?.STORYBOOK_BUILD_EXIT_CODE ?? "", /runtime-gates\.outputs\.storybook_build_status/);
   assert.match(candidate?.env?.WDC_STORYBOOK_CANDIDATE_GIT_SHA ?? "", /pull_request\.head\.sha.*github\.sha/);
   assert.match(candidate?.env?.WDC_STORYBOOK_CANDIDATE_GIT_REF ?? "", /github\.head_ref.*github\.ref/);
+  assert.match(candidate?.env?.WDC_STORYBOOK_RUNTIME_GIT_SHA ?? "", /github\.sha/);
+  assert.match(candidate?.env?.WDC_STORYBOOK_RUNTIME_GIT_REF ?? "", /github\.ref/);
   assert.equal(candidateUpload?.if, "always() && steps.storybook-golden-candidate.outcome == 'success'");
   const evidenceUpload = steps.find((step) => step.id === "compiler-core-evidence");
   assert.match(String(evidenceUpload?.with?.path ?? ""), /artifacts\/design-quality-browser\//);

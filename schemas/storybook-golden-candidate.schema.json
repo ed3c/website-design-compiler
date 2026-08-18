@@ -22,6 +22,15 @@
             "ref": { "type": "string", "minLength": 1 }
           }
         },
+        "runtimeGit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha", "ref"],
+          "properties": {
+            "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+            "ref": { "type": "string", "minLength": 1 }
+          }
+        },
         "workflow": {
           "type": "object",
           "additionalProperties": false,
