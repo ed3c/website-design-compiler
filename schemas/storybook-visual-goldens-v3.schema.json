@@ -1,11 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "website-design-compiler/storybook-visual-goldens/v3",
+  "$id": "website-design-compiler/legacy-storybook-visual-goldens/v3",
+  "$comment": "Retained for historical fixtures only. The runtime contract is schemas/storybook-visual-goldens.schema.json.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "source", "screenshots"],
   "properties": {
-    "schema": { "const": "website-design-compiler/storybook-visual-goldens/v3" },
+    "schema": { "const": "website-design-compiler/legacy-storybook-visual-goldens/v3" },
     "source": {
       "type": "object",
       "additionalProperties": false,

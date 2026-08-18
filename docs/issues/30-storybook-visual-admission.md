@@ -1,10 +1,26 @@
-# Storybook visual-review admission
+# Storybook visual-golden admission
 
-The screenshot review file is evidence content, not its own trust anchor. It cannot promote the Storybook gate to `PASS` merely by declaring a different reviewer identity or context.
+The active runtime has one admission contract. A GitHub Actions run produces a
+`storybook-golden-candidate/v1` document and exactly 90 Ubuntu screenshots. A
+separate reviewer inspects those exact bytes and writes a
+`storybook-golden-review/v1` document. Outside GitHub Actions, the promotion
+command embeds both documents in `fixtures/storybook/visual-goldens.json`.
 
-An admission requires both inputs:
+The resulting file must validate against
+`schemas/storybook-visual-goldens.schema.json` as
+`website-design-compiler/storybook-visual-goldens/v3`.
 
-1. `fixtures/storybook/visual-review-admission.json`, validated by `schemas/storybook-visual-review-admission-v1.schema.json`, must bind the exact review receipt bytes, Git subject, reviewed source hash, screenshot-set hash, and reviewer identity/context.
-2. `WDC_STORYBOOK_VISUAL_ADMISSION_SHA256` must be supplied through an external Human/orchestrator trust channel and equal the admission file's SHA-256. Do not hard-code that value in the repository or derive it inside the validator invocation.
+Admission additionally requires the repository variable
+`WDC_STORYBOOK_VISUAL_GOLDENS_SHA256` to equal the exact byte SHA-256 of that
+manifest. The variable is an external Human/administrator trust input: do not
+hard-code it in the repository or derive it inside the validator invocation.
 
-If either input is absent or mismatched, `pnpm storybook:receipt` records the boundary and returns `FAIL`. A fresh review file, a self-declared context, or unique long prose cannot substitute for admission.
+The candidate must bind a durable branch-head commit rather than a synthetic
+`refs/pull/*/merge` commit. It must be an ancestor of the evaluated head, and no
+reviewed source may have changed between the candidate and that head.
+
+If the manifest, external hash, candidate ancestry, 90 screenshot hashes, or
+review receipt is absent or mismatched, `pnpm storybook:receipt` records the
+boundary and returns `FAIL`. The historical
+`WDC_STORYBOOK_VISUAL_ADMISSION_SHA256`/`visual-review-admission/v1` path is not
+an alias and must not be configured.
