@@ -23,9 +23,15 @@ export interface InformationArchitecturePlan {
   family: string;
   primaryIntent: string;
   navigation: {
-    mode: "single-page" | "content-led" | "multi-route-ready";
+    mode: "content-led" | "multi-route-ready";
     mobilePriority: string[];
   };
+  routes: Array<{
+    route: string;
+    label: string;
+    intent: string;
+    sectionIds: string[];
+  }>;
   sections: IaSection[];
   forbiddenInventions: string[];
 }
@@ -130,18 +136,37 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
   ];
 }
 
+function routesForFamily(family: string, sections: readonly IaSection[]): InformationArchitecturePlan["routes"] {
+  const sectionIds=sections.map((section)=>section.id);
+  const secondary:Record<string,{route:string;label:string}>={
+    "b2b-product":{route:"/product",label:"Product"},
+    editorial:{route:"/stories",label:"Stories"},
+    "premium-consumer":{route:"/collection",label:"Collection"},
+    "motion-heavy-creative":{route:"/work",label:"Work"},
+    "interactive-2d":{route:"/experience",label:"Experience"},
+    "interactive-3d":{route:"/showcase",label:"Showcase"}
+  };
+  const route=secondary[family]!;
+  return [
+    {route:"/",label:"Home",intent:"Establish the primary intent and governed conversion path.",sectionIds:[...sectionIds]},
+    {route:route.route,label:route.label,intent:`Provide a dedicated ${route.label.toLowerCase()} route without changing the governed content contract.`,sectionIds:[...sectionIds]}
+  ];
+}
+
 export function compileInformationArchitecture(input: CompilerInput): InformationArchitecturePlan {
   const family = familyFromPageType(input.brief.pageType);
+  const sections=sectionsForFamily(family,input);
   return {
     schema: "website-design-compiler/information-architecture/v2",
     project: input.project,
     family,
     primaryIntent: input.brief.objective,
     navigation: {
-      mode: family === "editorial" ? "content-led" : "single-page",
+      mode: family === "editorial" ? "content-led" : "multi-route-ready",
       mobilePriority: ["primary-action", "primary-content", "supporting-content"]
     },
-    sections: sectionsForFamily(family, input),
+    routes:routesForFamily(family,sections),
+    sections,
     forbiddenInventions: ["customer-logos", "testimonials", "metrics", "pricing", "customer-names", "performance-claims"]
   };
 }

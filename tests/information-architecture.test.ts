@@ -39,7 +39,16 @@ test("six benchmark page families produce materially different IA graphs", () =>
       assert.ok(section.requiredContent.length > 0);
       assert.ok(section.fallback.length > 0);
     }
+    assert.equal(plan.routes.length,2);
+    assert.equal(plan.routes[0]?.route,"/");
+    assert.ok(plan.routes.every((route)=>route.sectionIds.every((id)=>plan.sections.some((section)=>section.id===id))));
   }
+});
+
+test("IA owns unique governed routes instead of leaving page graphs fixed at root",()=>{
+  const plan=compileInformationArchitecture(input("interactive 3d showcase"));
+  assert.deepEqual(plan.routes.map((entry)=>entry.route),["/","/showcase"]);
+  assert.equal(new Set(plan.routes.map((entry)=>entry.route)).size,plan.routes.length);
 });
 
 test("B2B IA never fabricates social proof and marks it NEEDS_INPUT", () => {
