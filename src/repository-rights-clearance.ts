@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { resolve, join, relative } from "node:path";
@@ -27,6 +28,7 @@ export function classifyLicense(expression: string | null): RightsState {
 interface PnpmDependency { version?: string; dependencies?: Record<string, PnpmDependency>; optionalDependencies?: Record<string, PnpmDependency>; }
 interface PnpmProject extends PnpmDependency { path?: string; }
 interface PackageEvidenceOverride { license: string; source: string; }
+interface AssetEvidence { sha256: string; license: string; source: string; }
 
 function flattenTree(projects: PnpmProject[]): Map<string, { name: string; version: string }> {
   const found = new Map<string, { name: string; version: string }>();
@@ -76,8 +78,14 @@ async function loadOverrides(root: string): Promise<Record<string, PackageEviden
   catch { return {}; }
 }
 
-async function shippedAssets(root: string): Promise<RightsSubject[]> {
+async function loadAssetEvidence(root: string): Promise<Record<string, AssetEvidence>> {
+  try { return JSON.parse(await readFile(resolve(root, "rights-asset-evidence.json"), "utf8")) as Record<string, AssetEvidence>; }
+  catch { return {}; }
+}
+
+export async function scanShippedAssets(root: string): Promise<RightsSubject[]> {
   const publicDir = resolve(root, "apps/site/public");
+  const evidenceIndex = await loadAssetEvidence(root);
   const subjects: RightsSubject[] = [];
   async function walk(dir: string): Promise<void> {
     let entries;
@@ -85,7 +93,28 @@ async function shippedAssets(root: string): Promise<RightsSubject[]> {
     for (const entry of entries) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await walk(path);
-      else if (entry.isFile()) subjects.push({ id: `asset:${relative(root, path)}`, kind: "asset", name: relative(publicDir, path), versionOrIdentity: relative(root, path), licenseExpression: "REPO_ORIGINAL", state: "ALLOW", evidence: [relative(root, path), "repository-owned static asset declaration"], attributionRequired: false, distributed: true });
+      else if (entry.isFile()) {
+        const repositoryPath = relative(root, path);
+        const declared = evidenceIndex[repositoryPath];
+        const contentSha256 = createHash("sha256").update(await readFile(path)).digest("hex");
+        const declarationMatches = declared?.sha256 === contentSha256;
+        const license = declarationMatches ? declared.license : null;
+        const state = declarationMatches ? classifyLicense(license) : "UNKNOWN";
+        subjects.push({
+          id: `asset:${repositoryPath}`,
+          kind: "asset",
+          name: relative(publicDir, path),
+          versionOrIdentity: contentSha256,
+          licenseExpression: license,
+          state,
+          evidence: [
+            repositoryPath,
+            declarationMatches ? `rights-asset-evidence.json:${declared.source}` : "rights-asset-evidence.json:ABSENT_OR_HASH_MISMATCH"
+          ],
+          attributionRequired: state === "ALLOW" && license !== "REPO_ORIGINAL",
+          distributed: true
+        });
+      }
     }
   }
   await walk(publicDir); return subjects;
@@ -103,7 +132,7 @@ export function applyWaivers(subjects: RightsSubject[], waivers: Waiver[], now: 
 }
 
 export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver[] = [], now = new Date()): Promise<RepositoryClearanceReceipt> {
-  const { stdout } = await execFileAsync("pnpm", ["list", "--prod", "--json", "--depth", "Infinity"], { cwd: root, maxBuffer: 16 * 1024 * 1024 });
+  const { stdout } = await execFileAsync("pnpm", ["-r", "list", "--prod", "--json", "--depth", "Infinity"], { cwd: root, maxBuffer: 16 * 1024 * 1024 });
   const dependencies = flattenTree(JSON.parse(stdout) as PnpmProject[]);
   const metadata = await packageMetadataIndex(root);
   const overrides = await loadOverrides(root);
@@ -121,7 +150,7 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
     { id: "model:internal-deterministic-mock", kind: "model", name: "internal deterministic mock", versionOrIdentity: "internal/v1", licenseExpression: "REPO_ORIGINAL", state: "ALLOW", evidence: ["src/media-router.ts", "deterministic worker fixture"], attributionRequired: false, distributed: true },
     { id: "service:none-required", kind: "service", name: "no mandatory third-party hosted service", versionOrIdentity: "v1-core", licenseExpression: "REPO_POLICY", state: "ALLOW", evidence: ["core runtime operates without third-party hosted service credentials"], attributionRequired: false, distributed: false }
   ];
-  const applied = applyWaivers([...packageSubjects, ...await shippedAssets(root), ...fixedSubjects], waivers, now);
+  const applied = applyWaivers([...packageSubjects, ...await scanShippedAssets(root), ...fixedSubjects], waivers, now);
   const counts = { ALLOW: 0, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 } satisfies Record<RightsState, number>;
   for (const subject of applied.subjects) counts[subject.state] += 1;
   const unresolved = applied.subjects.filter((subject) => subject.distributed && subject.state !== "ALLOW").map((subject) => subject.id);
