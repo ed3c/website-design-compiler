@@ -2,8 +2,8 @@
   "schema": "website-design-compiler/storybook-visual-goldens/v3",
   "source": {
     "kind": "agent-visual-review",
-    "sourceFilesSha256": "390537d5d7fc03affd8142bf7e5e8bd267b44f0e74055c6ba0c30b65f2e3a954",
-    "reviewReceiptSha256": "b41254ba0d1a5ee4d32727b308068893095aa83ec114260502bcd8186287fcc6",
+    "sourceFilesSha256": "8a9ceab3107b178155969b2c71bacc23022197966b6bae5d53723ec9b7e93d4d",
+    "reviewReceiptSha256": "e4f24fea2c1d2e66a09e7444aef20c0e4aba1f59d2f37d359fa2fa951f1e4084",
     "node": "v22.23.2",
     "playwright": "1.62.1",
     "browser": "Chromium 151.0.7922.34",

@@ -1,6 +1,6 @@
 {
   "schema": "website-design-compiler/storybook-visual-review/v1",
-  "sourceFilesSha256": "390537d5d7fc03affd8142bf7e5e8bd267b44f0e74055c6ba0c30b65f2e3a954",
+  "sourceFilesSha256": "8a9ceab3107b178155969b2c71bacc23022197966b6bae5d53723ec9b7e93d4d",
   "reviewer": {
     "kind": "agent",
     "identity": "Codex runtime visual review 2026-08-18"
