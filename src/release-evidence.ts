@@ -674,6 +674,14 @@ function fileFailure(path: string, message: string, sha256: string | null = null
   return { state: "FAIL", binding: "ABSENT", schema: null, git: null, errors: [message], path, sha256 };
 }
 
+async function readCanonicalWorkspaceFile(root:string,path:string):Promise<Buffer>{
+  if(isAbsolute(path)||relative(".",path).split(/[\\/]/)[0]==="..")throw new Error("workspace artifact path is unsafe");
+  const canonicalRoot=await realpath(root);
+  const canonicalTarget=await realpath(resolve(root,path));
+  if(canonicalTarget!==resolve(canonicalRoot,path))throw new Error("workspace artifact resolves through a symbolic link or outside the workspace");
+  return readFile(canonicalTarget);
+}
+
 async function validateRuntimeArtifacts(root: string, receiptPath: string, receipt: JsonRecord): Promise<string[]> {
   const errors: string[] = [];
   if (!Array.isArray(receipt.stages)) return errors;
@@ -760,11 +768,8 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
   const readBound=async(binding:JsonRecord|null,label:string):Promise<Buffer|null>=>{
     if(!binding||typeof binding.path!=="string"||!/^[A-Za-z0-9._-]+$/.test(binding.path)){errors.push(`${label} path is unsafe`);return null;}
     const path=binding.path;
-    const base=resolve(root,"artifacts/media-generator");
     try{
-      const canonicalBase=await realpath(base);const target=resolve(base,path);const canonicalTarget=await realpath(target);
-      if(canonicalTarget!==resolve(canonicalBase,path)){errors.push(`${label} resolves through a symbolic link or outside its artifact directory`);return null;}
-      const bytes=await readFile(canonicalTarget);const digest=createHash("sha256").update(bytes).digest("hex");
+      const bytes=await readCanonicalWorkspaceFile(root,join("artifacts/media-generator",path));const digest=createHash("sha256").update(bytes).digest("hex");
       if(binding.sha256!==digest)errors.push(`${label} SHA-256 mismatch`);
       if(binding.bytes!==bytes.byteLength)errors.push(`${label} byte count mismatch`);
       return bytes;
@@ -808,7 +813,7 @@ async function validateProductionProviderArtifacts(root:string,receipt:JsonRecor
     errors.push(...await validateMediaCandidateRejectionReadback({
       root,
       binding:candidateRejection as unknown as MediaCandidateRejectionBinding,
-      expectedGit:{sha:statusGit.sha,ref:statusGit.ref,...(expectedGit?.tree?{tree:expectedGit.tree}:{})},
+      expectedGit:expectedGit??{sha:statusGit.sha,ref:statusGit.ref},
       ...(trustedRightsEvidenceSha256?{trustedRightsEvidenceSha256}:{}),
       ...(trustedGitTree?{trustedGitTree}:{})
     }));
@@ -1116,7 +1121,7 @@ export async function readBoundReleaseEvidence(
   expectedGit: { sha: string; ref: string; tree?: string }
 ): Promise<ReleaseEvidenceFileBinding> {
   try {
-    const bytes = await readFile(join(root, path));
+    const bytes = await readCanonicalWorkspaceFile(root,path);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     try {
       const receipt = JSON.parse(bytes.toString("utf8")) as unknown;
@@ -1181,7 +1186,7 @@ export async function readCapabilityEvidence(root: string, capability: Capabilit
   const contract = CAPABILITY_RECEIPT_CONTRACTS[capability];
   let bytes: Buffer;
   try {
-    bytes = await readFile(join(root, contract.path));
+    bytes = await readCanonicalWorkspaceFile(root,contract.path);
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return { state: "ABSENT", gitSha: null, identity: null, artifactPath: contract.path, artifactSha256: null };
@@ -1197,7 +1202,7 @@ export async function readCapabilityEvidence(root: string, capability: Capabilit
   const git = isRecord(receipt.git) ? receipt.git : null;
   if (!git || typeof git.sha !== "string" || !GIT_SHA.test(git.sha)) throw new Error(`${capability} receipt has no exact git SHA`);
   if(typeof git.ref!=="string"||!git.ref.startsWith("refs/"))throw new Error(`${capability} receipt has no exact git ref`);
-  const structural=bindReleaseEvidenceStructure(receipt,contract.identity,{sha:git.sha,ref:git.ref});
+  const structural=bindReleaseEvidenceStructure(receipt,contract.identity,expectedGit??{sha:git.sha,ref:git.ref});
   const artifactErrors=capability==="productionProvider"
     ?await validateProductionProviderArtifacts(root,receipt,expectedGit)
     :capability==="premiumQuality"

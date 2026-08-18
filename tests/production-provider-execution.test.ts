@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -16,7 +16,7 @@ import {
 import { productionRightsAdmissionSha256, type ProductionProviderPolicy } from "../src/production-media-provider.js";
 import type { RepositoryClearanceReceipt, RightsSubject } from "../src/repository-rights-clearance.js";
 import { validateAgainstSchema } from "../src/validate.js";
-import { RELEASE_CAPABILITY_SPECS, readBoundReleaseEvidence } from "../src/release-evidence.js";
+import { RELEASE_CAPABILITY_SPECS, readBoundReleaseEvidence, readCapabilityEvidence } from "../src/release-evidence.js";
 import { buildMediaCandidateRejectionReceipt } from "../src/media-candidate-rejection.js";
 
 const secret = "fixture-request-secret";
@@ -165,6 +165,7 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
   }, "production-provider-status.schema.json");
 
   const root=await mkdtemp(join(tmpdir(),"wdc-provider-release-valid-"));
+  const outside=await mkdtemp(join(tmpdir(),"wdc-provider-status-outside-"));
   const previousTrustedRights=process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256;
   const previousTrustedTree=process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE;
   try{
@@ -172,6 +173,7 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
     const rightsPath=join(root,"artifacts/rights-clearance/repository-rights-clearance.json");
     await mkdir(providerDirectory,{recursive:true});
     await mkdir(dirname(rightsPath),{recursive:true});
+    await mkdir(join(root,"schemas"),{recursive:true});
     await mkdir(join(root,"fixtures/media"),{recursive:true});
     const [candidatePolicyBytes,candidateRightsBytes]=await Promise.all([
       readFile(join(process.cwd(),"fixtures/media/model-policy.json")),
@@ -179,7 +181,8 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
     ]);
     await Promise.all([
       writeFile(join(root,"fixtures/media/model-policy.json"),candidatePolicyBytes),
-      writeFile(join(root,"rights-production-evidence.json"),candidateRightsBytes)
+      writeFile(join(root,"rights-production-evidence.json"),candidateRightsBytes),
+      writeFile(join(root,"schemas/production-provider-status.schema.json"),await readFile(join(process.cwd(),"schemas/production-provider-status.schema.json")))
     ]);
     const trustedRightsEvidenceSha256=sha256(candidateRightsBytes);
     process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256=trustedRightsEvidenceSha256;
@@ -201,6 +204,19 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
     ]);
     const bound=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
     assert.equal(bound.state,"PASS",bound.errors.join("; "));
+    const wrongRef=await readCapabilityEvidence(root,"productionProvider",{...releaseGit,ref:"refs/heads/main"});
+    assert.equal(wrongRef.state,"FAIL","capability evidence must bind the externally expected Git ref");
+
+    const statusPath=join(root,RELEASE_CAPABILITY_SPECS.productionProvider.path);
+    const statusBytes=await readFile(statusPath);
+    const outsideStatus=join(outside,"production-provider-status.json");
+    await writeFile(outsideStatus,statusBytes);
+    await rm(statusPath);
+    await symlink(outsideStatus,statusPath);
+    const symlinkedStatus=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
+    assert.equal(symlinkedStatus.state,"FAIL","top-level provider status symlinks must fail closed");
+    await rm(statusPath);
+    await writeFile(statusPath,statusBytes);
 
     await rm(join(providerDirectory,"media-candidate-rejection.json"));
     const missingCandidate=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
@@ -230,6 +246,7 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
     if(previousTrustedTree===undefined)delete process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE;
     else process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE=previousTrustedTree;
     await rm(root,{recursive:true,force:true});
+    await rm(outside,{recursive:true,force:true});
   }
 });
 

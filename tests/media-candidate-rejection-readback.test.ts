@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -97,4 +97,22 @@ test("candidate rejection readback binds the protected tree to the release subje
     });
     assert.match(errors.join("; "),/release Git tree does not match the externally trusted Git tree/);
   }finally{await rm(value.root,{recursive:true,force:true});}
+});
+
+test("candidate rejection readback rejects a symlinked artifact directory",async()=>{
+  const value=await fixture();
+  const outside=await mkdtemp(join(tmpdir(),"wdc-rejection-directory-outside-"));
+  try{
+    const directory=join(value.root,"artifacts/media-generator");
+    const outsideDirectory=join(outside,"media-generator");
+    await rename(directory,outsideDirectory);
+    await symlink(outsideDirectory,directory,"dir");
+    const errors=await validateMediaCandidateRejectionReadback({
+      root:value.root,binding:value.binding,expectedGit:git,trustedRightsEvidenceSha256:value.trustedRightsEvidenceSha256,trustedGitTree:git.tree
+    });
+    assert.match(errors.join("; "),/directory resolves through a symbolic link|outside the workspace/);
+  }finally{
+    await rm(value.root,{recursive:true,force:true});
+    await rm(outside,{recursive:true,force:true});
+  }
 });

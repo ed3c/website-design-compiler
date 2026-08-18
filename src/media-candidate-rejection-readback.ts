@@ -50,7 +50,12 @@ export async function validateMediaCandidateRejectionReadback(args:{
   const directory=resolve(args.root,"artifacts/media-generator");
   let bytes:Buffer;
   try{
+    const canonicalRoot=await realpath(args.root);
     const canonicalDirectory=await realpath(directory);
+    if(canonicalDirectory!==resolve(canonicalRoot,"artifacts/media-generator")){
+      errors.push("candidate rejection artifact directory resolves through a symbolic link or outside the workspace");
+      return errors;
+    }
     const target=resolve(directory,args.binding.path);
     const canonicalTarget=await realpath(target);
     if(canonicalTarget!==resolve(canonicalDirectory,args.binding.path)){

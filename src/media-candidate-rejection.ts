@@ -12,6 +12,7 @@ import {
   type MediaRequest
 } from "./media-router.js";
 import {
+  productionRightsIdentities,
   routeProductionMediaGeneration,
   type ProductionProviderPolicy,
   type ProductionProviderTransport
@@ -106,26 +107,15 @@ function productionPolicy(entry: MediaModelPolicyEntry): ProductionProviderPolic
   if (entry.adapter === "mock") throw new Error(`denied candidate ${entry.id} cannot use the mock adapter`);
   if (!entry.productionIdentity) throw new Error(`denied candidate ${entry.id} lacks an explicit production identity`);
   const { providerId, serviceRevision, modelRevision } = entry.productionIdentity;
+  const identity={providerId,serviceRevision,modelId:entry.id,modelRevision,adapter:entry.adapter,kind:entry.kind};
+  const rightsIdentities=productionRightsIdentities(identity);
   return {
     schema: "website-design-compiler/production-provider-policy/v1",
-    identity: {
-      providerId,
-      serviceRevision,
-      modelId: entry.id,
-      modelRevision,
-      adapter: entry.adapter,
-      kind: entry.kind
-    },
+    identity,
     rights: {
-      modelWeight: { subjectId: entry.provenanceSubjectId, expectedIdentity: modelRevision },
-      generatedOutput: {
-        subjectId: entry.outputTermsSubjectId,
-        expectedIdentity: `${providerId}@${serviceRevision}/${entry.id}@${modelRevision}`
-      },
-      hostedService: {
-        subjectId: entry.serviceTermsSubjectId,
-        expectedIdentity: `${providerId}@${serviceRevision}`
-      }
+      modelWeight: { subjectId: entry.provenanceSubjectId, expectedIdentity: rightsIdentities.modelWeight },
+      generatedOutput: { subjectId: entry.outputTermsSubjectId, expectedIdentity: rightsIdentities.generatedOutput },
+      hostedService: { subjectId: entry.serviceTermsSubjectId, expectedIdentity: rightsIdentities.hostedService }
     },
     controls: {
       timeoutMs: 100,
