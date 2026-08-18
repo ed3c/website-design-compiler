@@ -71,7 +71,7 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
       nav,
       section("editorial-hero", "hero-editorial", "Establish topic, editorial promise and reading context.", "PRIMARY", ["headline", "dek"], "Use brief objective as the dek if supported.", evidence),
       section("article-body", "editorial-prose", "Deliver the main evidence-backed narrative.", "PRIMARY", ["body-content"], "Mark content as NEEDS_INPUT when no source material is supplied.", evidence, "NEEDS_INPUT"),
-      section("related-content", "related-content", "Offer optional continuation without fabricating articles.", "SECONDARY", ["related-items"], "Omit when no related items are provided.", evidence, "NEEDS_INPUT"),
+      section("editorial-media", "editorial-media", "Pair the narrative with explicitly supplied editorial media.", "SECONDARY", ["editorial-media-asset-id", "editorial-media-alt"], "Omit media when no approved asset and alternative text are provided.", evidence, "NEEDS_INPUT"),
       footer
     ];
   }
@@ -80,7 +80,7 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
     return [
       nav,
       section("brand-hero", "hero-premium", "Create a high-confidence first impression around the product or brand promise.", "PRIMARY", ["headline", "primary-action"], "Use a text-first hero when premium media is unavailable.", evidence),
-      section("product-showcase", "product-showcase", "Show product form, use or differentiated experience.", "PRIMARY", ["product-description"], "Use semantic copy and a static media placeholder when no approved asset exists.", evidence),
+      section("product-showcase", "product-showcase", "Show product form, use or differentiated experience.", "PRIMARY", ["product-description", "product-media-asset-id", "product-media-alt"], "Omit product media until an approved asset and alternative text are supplied.", evidence),
       section("brand-proof", "proof", "Provide supported reasons to trust the product.", "SECONDARY", ["proof-items"], "Omit social proof until evidence is supplied.", evidence, "NEEDS_INPUT"),
       section("conversion", "cta-band", "Provide the primary conversion action.", "PRIMARY", ["cta-label"], "Use the brief objective as action context without inventing commercial terms.", evidence),
       footer
@@ -91,8 +91,8 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
     return [
       nav,
       section("creative-hero", "hero-creative", "Establish the concept and a signature interaction opportunity.", "PRIMARY", ["headline", "primary-action"], "Fall back to static semantic hero when motion is disabled.", evidence),
-      section("narrative-sequence", "narrative-sequence", "Build a paced story across distinct semantic beats.", "PRIMARY", ["story-beats"], "Render beats as ordinary sections without scroll choreography.", evidence, "NEEDS_INPUT"),
-      section("interactive-showcase", "interactive-stage", "Provide a justified interactive demonstration.", "SECONDARY", ["interaction-purpose"], "Use static poster and explanatory DOM copy.", evidence),
+      section("narrative-sequence", "bento-grid", "Build a paced story across distinct semantic beats.", "PRIMARY", ["story-beats"], "Render beats as ordinary sections without scroll choreography.", evidence, "NEEDS_INPUT"),
+      section("interactive-showcase", "media-stage", "Provide a justified interactive demonstration.", "SECONDARY", ["interaction-purpose", "stage-media-asset-id", "stage-media-alt"], "Omit the media stage until approved media and explanatory copy are supplied.", evidence),
       section("conversion", "cta-band", "Return from exploration to the primary action.", "PRIMARY", ["cta-label"], "Render a simple CTA band.", evidence),
       footer
     ];
@@ -132,6 +132,17 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
 
 export function compileInformationArchitecture(input: CompilerInput): InformationArchitecturePlan {
   const family = familyFromPageType(input.brief.pageType);
+  const availableContent = new Set([
+    "brand-or-project-name",
+    "project-name",
+    ...Object.keys(input.authoredContent ?? {})
+  ]);
+  const sections = sectionsForFamily(family, input).map((entry) => ({
+    ...entry,
+    status: entry.requiredContent.every((slot) => availableContent.has(slot))
+      ? "READY" as const
+      : "NEEDS_INPUT" as const
+  }));
   return {
     schema: "website-design-compiler/information-architecture/v2",
     project: input.project,
@@ -141,7 +152,7 @@ export function compileInformationArchitecture(input: CompilerInput): Informatio
       mode: family === "editorial" ? "content-led" : "single-page",
       mobilePriority: ["primary-action", "primary-content", "supporting-content"]
     },
-    sections: sectionsForFamily(family, input),
+    sections,
     forbiddenInventions: ["customer-logos", "testimonials", "metrics", "pricing", "customer-names", "performance-claims"]
   };
 }

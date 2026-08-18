@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ARENA_CATEGORIES } from "../../src/arena.js";
 import { validateAgainstSchema } from "../../src/validate.js";
 
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
+const categories=ARENA_CATEGORIES;
 
 test("generated pages execute bounded media strategies and deterministic fallbacks",async({page},testInfo)=>{
   test.skip(testInfo.project.name!=="desktop-chromium","one browser lane owns the aggregate media runtime receipt");

@@ -117,6 +117,30 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     };
   }
 
+  const authoredValue = input.authoredContent?.[slot];
+  if (authoredValue !== undefined) {
+    if (authoredValue.length > maxCharacters) {
+      return {
+        slot,
+        state: "NEEDS_INPUT",
+        sourceType: "placeholder_required",
+        value: null,
+        publishable: false,
+        provenance: [`compiler.authoredContent:${slot}`],
+        lengthBudget: { maxCharacters }
+      };
+    }
+    return {
+      slot,
+      state: "READY",
+      sourceType: "user_supplied_claim",
+      value: authoredValue,
+      publishable: true,
+      provenance: [`compiler.authoredContent:${slot}`],
+      lengthBudget: { maxCharacters }
+    };
+  }
+
   if (PLACEHOLDER_SLOTS.has(slot)) {
     return {
       slot,
@@ -165,6 +189,13 @@ function qualityFor(fields: ContentFieldContract[]): SectionContentContract["qua
 export function compileContentArchitecture(input: CompilerInput): ContentArchitecturePlan {
   const ia = compileInformationArchitecture(input);
   const forbidden = new Set(ia.forbiddenInventions);
+  const requiredSlots = new Set(ia.sections.flatMap((section) => section.requiredContent));
+  const unownedSlots = Object.keys(input.authoredContent ?? {})
+    .filter((slot) => !requiredSlots.has(slot))
+    .sort();
+  if (unownedSlots.length > 0) {
+    throw new Error(`authored content is not owned by this page architecture: ${unownedSlots.join(", ")}`);
+  }
   const sections = ia.sections.map<SectionContentContract>((section) => {
     const fields = section.requiredContent.map((slot) => fieldFor(slot, input, section, forbidden));
     return {

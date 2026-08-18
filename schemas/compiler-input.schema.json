@@ -24,6 +24,11 @@
       "uniqueItems": true,
       "default": []
     },
+    "authoredContent": {
+      "type": "object",
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
     "briefSourceEvidence": {
       "type": "object",
       "additionalProperties": false,

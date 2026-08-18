@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import type { CompilerInput } from "../src/contracts.js";
+import { buildFrontendPlan } from "../src/frontend-builder.js";
 import { exportFrontendPlan, importFrontendPlan, validateAuthoringData, type FrontendPlanLike } from "../src/puck-authoring.js";
 
 test("compiler frontend plan round-trips through governed authoring data", async () => {
@@ -8,6 +10,22 @@ test("compiler frontend plan round-trips through governed authoring data", async
   const data = importFrontendPlan(raw);
   assert.equal(validateAuthoringData(data).overall, "PASS");
   assert.deepEqual(exportFrontendPlan(data, raw.project), raw);
+});
+
+test("compiler rich-section output round-trips through governed authoring without field loss", () => {
+  const input: CompilerInput = {
+    schema: "website-design-compiler/input/v1",
+    project: "rich-authoring-roundtrip",
+    brief: {
+      pageType: "interactive-3d",
+      audience: "evaluation teams",
+      objective: "inspect a governed spatial experience"
+    },
+    requestedStages: ["information-architecture", "content-architecture", "frontend-builder"]
+  };
+  const plan = buildFrontendPlan(input);
+  assert.ok(plan.components.every((component) => component.component === "rich-section"));
+  assert.deepEqual(exportFrontendPlan(importFrontendPlan(plan), input.project), plan);
 });
 
 test("unknown component type fails closed", () => {

@@ -44,6 +44,7 @@ export interface CompilerInput {
   project: string;
   brief: { pageType: string; audience: string; objective: string; };
   hardConstraints?: string[];
+  authoredContent?: Record<string, string>;
   briefSourceEvidence?: CompilerBriefSourceEvidence;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
