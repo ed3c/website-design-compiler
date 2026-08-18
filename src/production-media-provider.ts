@@ -1,6 +1,7 @@
 import type { MediaAdapter, MediaAsset, MediaKind, SignedMediaRequest } from "./media-router.js";
 import { canonicalMediaValue, sha256, verifyMediaRequest } from "./media-router.js";
 import type { RepositoryClearanceReceipt } from "./repository-rights-clearance.js";
+import { MediaAssetContentError, validateProductionMediaAssetContent } from "./media-asset-validation.js";
 import {
   productionAdmissionPacketSha256,
   validateProductionAdmissionPacket,
@@ -73,6 +74,7 @@ class ProviderReceiptValidationError extends Error {}
 
 function providerFailureReason(error: unknown, timeoutMs: number): string {
   if (error instanceof ProviderReceiptValidationError) return error.message;
+  if (error instanceof MediaAssetContentError) return error.message;
   if (!(error instanceof ProductionProviderError)) return "production provider failed";
   const reasons: Record<ProductionProviderErrorCode, string> = {
     OUTAGE: "production provider outage",
@@ -86,7 +88,7 @@ function providerFailureReason(error: unknown, timeoutMs: number): string {
 }
 
 export interface ProductionProviderReceipt {
-  schema: "website-design-compiler/production-provider-receipt/v1";
+  schema: "website-design-compiler/production-provider-receipt/v2";
   gate: "PRODUCTION_PROVIDER";
   overall: "PASS" | "FAIL" | "NOT_EXERCISED";
   admissionState: "ADMITTED" | "NEEDS_HUMAN_ADMIT" | "DENIED" | "REVOKED";
@@ -119,6 +121,10 @@ export interface ProductionProviderReceipt {
     bytes: number;
     mediaType: string;
     extension: string;
+    format: string;
+    width: number | null;
+    height: number | null;
+    validation: "CONTENT_VALIDATION_PASS";
   };
   provenance?: {
     providerRequestId: string;
@@ -327,7 +333,7 @@ export async function routeProductionMediaGeneration(args: {
   const policySha256 = sha256(canonicalMediaValue(args.policy));
   const rightsReceiptSha256 = sha256(canonicalMediaValue(args.rightsReceipt));
   const base: ProductionProviderReceipt = {
-    schema: "website-design-compiler/production-provider-receipt/v1",
+    schema: "website-design-compiler/production-provider-receipt/v2",
     gate: "PRODUCTION_PROVIDER",
     overall: "NOT_EXERCISED",
     admissionState: "NEEDS_HUMAN_ADMIT",
@@ -630,6 +636,7 @@ export async function routeProductionMediaGeneration(args: {
       if (generated.asset.bytes.byteLength > request.optimization.maxBytes) {
         throw new ProviderReceiptValidationError("generated asset exceeds optimization maxBytes");
       }
+      const content = validateProductionMediaAssetContent(request.kind, generated.asset, request.parameters);
       return {
         asset: generated.asset,
         receipt: {
@@ -642,7 +649,8 @@ export async function routeProductionMediaGeneration(args: {
             sha256: sha256(generated.asset.bytes),
             bytes: generated.asset.bytes.byteLength,
             mediaType: generated.asset.mediaType,
-            extension: generated.asset.extension
+            extension: generated.asset.extension,
+            ...content
           },
           provenance: {
             providerRequestId: generated.providerRequestId,

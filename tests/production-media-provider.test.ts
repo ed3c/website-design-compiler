@@ -24,7 +24,7 @@ const request: MediaRequest = {
   kind: "image",
   modelId: "fixture-model",
   prompt: "A neutral geometric product scene",
-  parameters: { width: 1, height: 1, seed: 42 },
+  parameters: { width: 16, height: 12, seed: 42 },
   optimization: { target: "web", maxBytes: 65536 }
 };
 
@@ -95,8 +95,8 @@ const { publicKey: admissionPublicKey, privateKey: admissionPrivateKey } = gener
 const admissionPublicKeyPem = admissionPublicKey.export({ type: "spki", format: "pem" }).toString();
 const admissionAuthorityKeySha256 = sha256(admissionPublicKey.export({ type: "spki", format: "der" }));
 const admissionAuthorities = [{ authorityId: "fixture-reviewer", publicKeyPem: admissionPublicKeyPem }] as const;
-const validWebp = new Uint8Array(Buffer.from(
-  "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==",
+const validPng = new Uint8Array(Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAAF0lEQVR4nGOsCDjBQApgIkn1qIYRpAEAsVkBqEXr8uYAAAAASUVORK5CYII=",
   "base64"
 ));
 
@@ -361,13 +361,13 @@ test("successful real-provider receipt binds exact identity and complete artifac
       assert.equal(attempt, 1);
       return {
         asset: {
-          mediaType: "image/webp",
-          extension: "webp",
-          bytes: validWebp
+          mediaType: "image/png",
+          extension: "png",
+          bytes: validPng
         },
         providerRequestId: "provider-job-fixture-1",
         seed: 42,
-        postProcessing: [{ operation: "webp-encode", revision: "version:1.0.0" }]
+        postProcessing: [{ operation: "png-encode", revision: "version:1.0.0" }]
       };
     }
   };
@@ -388,14 +388,24 @@ test("successful real-provider receipt binds exact identity and complete artifac
     "service:fixture-provider"
   ]);
   assert.deepEqual(result.receipt.provider, policy.identity);
-  assert.equal(result.receipt.asset?.sha256, "05d3010ac1117dad75abd1617997d5d223ec88142422f6f8f123ed899cd434dc");
+  assert.equal(result.receipt.asset?.sha256, "762e248eb4fb1e1b20cfa39c256b4d796b97d71f3090c8712b7d2b766df8d1af");
+  assert.deepEqual(result.receipt.asset, {
+    sha256: "762e248eb4fb1e1b20cfa39c256b4d796b97d71f3090c8712b7d2b766df8d1af",
+    bytes: 80,
+    mediaType: "image/png",
+    extension: "png",
+    format: "png",
+    width: 16,
+    height: 12,
+    validation: "CONTENT_VALIDATION_PASS"
+  });
   assert.match(result.receipt.admissionEvidence.admissionPacketSha256, /^[a-f0-9]{64}$/);
   assert.equal(result.receipt.admissionEvidence.admissionAuthorityKeySha256, admissionAuthorityKeySha256);
   assert.equal(result.receipt.provenance?.providerRequestId, "provider-job-fixture-1");
   assert.equal(result.receipt.provenance?.seed, 42);
   assert.equal(result.receipt.provenance?.promptConfigurationSha256, result.receipt.configurationSha256);
   assert.deepEqual(result.receipt.provenance?.postProcessing, [
-    { operation: "webp-encode", revision: "version:1.0.0" }
+    { operation: "png-encode", revision: "version:1.0.0" }
   ]);
   assert.ok(result.asset);
 });
@@ -413,7 +423,7 @@ test("transient provider outage retries within the policy bound and records the 
       calls += 1;
       if (attempt === 1) throw new ProductionProviderError("OUTAGE", "fixture provider unavailable");
       return {
-        asset: { mediaType: "image/webp", extension: "webp", bytes: validWebp },
+        asset: { mediaType: "image/png", extension: "png", bytes: validPng },
         providerRequestId: "provider-job-fixture-retry",
         seed: 42,
         postProcessing: []
@@ -750,4 +760,32 @@ test("provider asset MIME and extension must describe the same format", async ()
   assert.equal(result.receipt.overall, "FAIL");
   assert.equal(result.receipt.productionReleaseEligible, false);
   assert.match(result.receipt.reason, /mediaType.*extension|format/);
+});
+
+test("text bytes labeled as WebP cannot become a production PASS", async () => {
+  const transport: ProductionProviderTransport = {
+    identity: policy.identity,
+    async generate() {
+      return {
+        asset: {
+          mediaType: "image/webp",
+          extension: "webp",
+          bytes: new TextEncoder().encode("production-fixture")
+        },
+        providerRequestId: "provider-job-fake-webp",
+        seed: 42,
+        postProcessing: []
+      };
+    }
+  };
+
+  const result = await routeProductionMediaGeneration({
+    signed: signed(), secret, policy, rightsReceipt, transport,
+    executionAdmission: admittedExecution
+  });
+
+  assert.equal(result.receipt.overall, "FAIL");
+  assert.equal(result.receipt.productionReleaseEligible, false);
+  assert.match(result.receipt.reason, /WebP.*signature/);
+  assert.equal(result.asset, undefined);
 });
