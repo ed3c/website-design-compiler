@@ -96,6 +96,8 @@ jobs:
           browser_receipt_status=$?
           pnpm generated-pages:receipt
           generated_pages_status=$?
+          pnpm site-graphs:browser-receipt
+          site_graphs_status=$?
           pnpm v2:design-quality
           design_quality_status=$?
           pnpm quality:receipt
@@ -106,7 +108,7 @@ jobs:
           arena_status=$?
           pnpm release:receipt
           release_status=$?
-          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$site_graphs_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
       - name: Verify canonical v2 release policy
