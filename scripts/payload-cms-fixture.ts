@@ -117,9 +117,10 @@ try {
   });
 
   const draftSource: AuthoringData = structuredClone(source);
-  const statusNode = (draftSource.content[0]?.props.content as AuthoringData["content"] | undefined)?.find((node) => node.type === "StatusPanelBlock");
-  if (!statusNode) throw new Error("fixture status block missing");
-  statusNode.props.message = "Newer draft content stored only in Payload versions";
+  const heroNode = draftSource.content.find((node) => node.type === "RichSectionBlock" && node.props.kind === "hero");
+  const heroFields = heroNode?.props.fields as Record<string, unknown> | undefined;
+  if (!heroFields || typeof heroFields.body !== "string") throw new Error("fixture rich hero body missing");
+  heroFields.body = "Newer draft content stored only in Payload versions";
   const draftLayout = authoringToPayloadLayout(draftSource);
 
   await api.update({
@@ -165,8 +166,8 @@ try {
   }
 
   const versions = await api.findVersions({ collection: "pages", where: { parent: { equals: page.id } }, overrideAccess: false, user, limit: 20 });
-  const publishedMessage = ((publishedAuthoring.content[0]?.props.content as AuthoringData["content"] | undefined)?.find((node) => node.type === "StatusPanelBlock")?.props.message);
-  const draftMessage = ((draftAuthoring.content[0]?.props.content as AuthoringData["content"] | undefined)?.find((node) => node.type === "StatusPanelBlock")?.props.message);
+  const publishedMessage = (publishedAuthoring.content.find((node) => node.type === "RichSectionBlock" && node.props.kind === "hero")?.props.fields as Record<string, unknown> | undefined)?.body;
+  const draftMessage = (draftAuthoring.content.find((node) => node.type === "RichSectionBlock" && node.props.kind === "hero")?.props.fields as Record<string, unknown> | undefined)?.body;
 
   const checks = {
     sourceValidation: sourceValidation.overall,

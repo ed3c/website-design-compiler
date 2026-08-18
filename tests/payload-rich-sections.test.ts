@@ -22,11 +22,26 @@ test("Payload generates one block schema for every canonical rich section",()=>{
     assert.ok(variant&&"options" in variant);
     assert.deepEqual(variant.options,projection.variants);
   }
+  const hero=blocks.find((block)=>block.slug==="section-hero")!;
+  const secondaryAction=hero.fields.find((field)=>"name" in field&&field.name==="secondaryAction");
+  assert.ok(secondaryAction&&secondaryAction.type==="group"&&!secondaryAction.required);
+  assert.ok(secondaryAction.fields.every((field)=>"required" in field&&field.required===false));
 });
 
 test("all rich section authoring data round-trips through Payload blocks without drift",()=>{
   const source=richData();const layout=authoringToPayloadLayout(source);const roundtrip=payloadLayoutToAuthoring(layout,"Payload rich sections","surface-default");
   assert.deepEqual(roundtrip,source);
+});
+
+test("Payload materialized empty optional links stay absent while partial links fail closed",()=>{
+  const source=richData();
+  const layout=authoringToPayloadLayout(source);
+  const hero=layout.find((block)=>block.blockType==="section-hero")!;
+  hero.secondaryAction={label:null,href:null};
+  assert.deepEqual(payloadLayoutToAuthoring(layout,"Payload rich sections","surface-default"),source);
+
+  hero.secondaryAction={label:"Partial",href:null};
+  assert.throws(()=>payloadLayoutToAuthoring(layout,"Payload rich sections","surface-default"),/secondaryAction.href must be non-empty text/);
 });
 
 test("unknown rich Payload section block fails closed",()=>{

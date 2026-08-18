@@ -19,7 +19,7 @@ function pascal(value:string):string{return value.split("-").map((part)=>part.ch
 function payloadField(name:string,contract:ProjectionField):Field{
   if(contract.type==="number")return{name,type:"number",required:contract.required};
   if(contract.type==="items"||contract.type==="media")return{name,type:"json",required:contract.required};
-  if(contract.type==="link")return{name,type:"group",required:contract.required,fields:[{name:"label",type:"text",required:true,localized:true},{name:"href",type:"text",required:true}]};
+  if(contract.type==="link")return{name,type:"group",required:contract.required,fields:[{name:"label",type:"text",required:contract.required,localized:true},{name:"href",type:"text",required:contract.required}]};
   if(contract.type==="textarea"||((contract.maxLength??0)>120))return{name,type:"textarea",required:contract.required,localized:true};
   return{name,type:"text",required:contract.required,localized:true};
 }
@@ -85,7 +85,12 @@ function fromPayloadBlock(block:PayloadBlock):AuthoringComponentData{
     const allowed=new Set(["blockType","componentId","variant","provenance","tokenRef","id","blockName",...projection.fields.map((field)=>field.name)]);
     for(const key of Object.keys(block))if(!allowed.has(key))throw new Error(`${key} is not an approved Payload field for ${kind}`);
     const fields:Record<string,unknown>={};
-    for(const field of projection.fields)if(block[field.name]!==undefined)fields[field.name]=block[field.name];
+    for(const field of projection.fields){
+      const value=block[field.name];
+      if(!field.required&&(value===null||value===""))continue;
+      if(field.type==="link"&&!field.required&&isRecord(value)&&[value.label,value.href].every((entry)=>entry===undefined||entry===null||entry===""))continue;
+      if(value!==undefined)fields[field.name]=value;
+    }
     return{type:"RichSectionBlock",props:{id,kind,variant:block.variant,fields,provenance:block.provenance,tokenRef:block.tokenRef}};
   }
   throw new Error(`Payload block type ${block.blockType} is not governed`);
