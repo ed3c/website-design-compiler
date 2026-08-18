@@ -1,15 +1,17 @@
-import { GovernedSection, type GovernedSectionKind } from "./governed-section";
-import { MediaOrchestrationStage, type ProjectedMediaHook } from "./media-orchestration-stage";
+import type { GovernedSectionKind } from "./governed-section";
+import type { ProjectedMediaHook } from "./media-orchestration-stage";
+import { GeneratedSectionStage } from "./generated-section-stage";
 
-type ProjectedNode={
+type ViewportComposition={layout:string;columns:1|2|3|4;visualOrder:string[];mediaPlacement:"before"|"after"|"background"|"none";sticky:boolean;density:"compact"|"comfortable"|"spacious";maxContentChars:number};
+export type ProjectedNode={
   id:string;
   kind:GovernedSectionKind;
   variant:string;
   semanticIndex:number;
   section:{props:Record<string,unknown>};
-  responsive:{mobile:{layout:string};tablet:{layout:string};desktop:{layout:string}};
+  responsive:{mobile:ViewportComposition;tablet:ViewportComposition;desktop:ViewportComposition;coarsePointer:{hoverRequired:false;carousel:"controls"|"static";sticky:boolean};reducedMotion:{essentialOnly:true;transition:"instant"|"short"}};
   mediaHook:ProjectedMediaHook;
-  motionHook:{engine:string};
+  motionHook:{engine:"motion"|"gsap"|"none";trigger:"enter"|"interaction"|"scroll-progress"|"route-change";durationMs:number;delayMs:number;mobile:"full"|"simplified"|"disabled";reducedMotion:"instant"|"disabled"};
 };
 export type ProjectedPageGraph={
   category:string;
@@ -18,16 +20,6 @@ export type ProjectedPageGraph={
   nodes:ProjectedNode[];
 };
 
-function text(value:unknown):string|undefined{return typeof value==="string"?value:undefined;}
-function items(value:unknown):string[]{if(!Array.isArray(value))return[];return value.map((entry)=>typeof entry==="string"?entry:entry&&typeof entry==="object"&&"value" in entry?String((entry as {value:unknown}).value):"").filter(Boolean);}
-function content(node:ProjectedNode){
-  const props=node.section.props;
-  return{
-    heading:text(props.heading)??text(props.headline)??text(props.title),
-    body:text(props.body)??text(props.quote)??text(props.summary)??text(props.description),
-    items:items(props.items)
-  };
-}
 export function GeneratedPage({graph}: {graph:ProjectedPageGraph}){
   return <main className="wdc-shell" data-generated-page={graph.category} data-page-readiness={graph.readiness} data-graph-signature={graph.signature}>
     <header className="wdc-hero">
@@ -35,12 +27,6 @@ export function GeneratedPage({graph}: {graph:ProjectedPageGraph}){
       <h1>{graph.category.replaceAll("-"," ")}</h1>
       <p>Rendered directly from the governed page graph projection with semantic order, responsive, motion and media contracts attached to each node.</p>
     </header>
-    {graph.nodes.map((node)=>{
-      const copy=content(node);
-      return <div key={node.id} data-page-node={node.id} data-semantic-index={node.semanticIndex} data-mobile-layout={node.responsive.mobile.layout} data-tablet-layout={node.responsive.tablet.layout} data-desktop-layout={node.responsive.desktop.layout} data-media-renderer={node.mediaHook.renderer} data-motion-engine={node.motionHook.engine}>
-        <GovernedSection kind={node.kind} variant={node.variant} heading={copy.heading} body={copy.body} items={copy.items}/>
-        {node.mediaHook.renderer!=="dom"?<MediaOrchestrationStage sectionId={node.id} decision={node.mediaHook}/>:null}
-      </div>;
-    })}
+    {graph.nodes.map((node)=><GeneratedSectionStage key={node.id} node={node}/>)}
   </main>;
 }

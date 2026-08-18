@@ -23,9 +23,34 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--wdc-color-focus
 .wdc-status p { color: var(--wdc-color-text-muted); line-height: 1.5; }
 .wdc-status[data-state="error"] { border-color: var(--wdc-color-focus); }
 
-@media (max-width: 48rem) {
+.wdc-generated-node {
+  display: grid;
+  grid-template-columns: repeat(var(--wdc-desktop-columns), minmax(0, 1fr));
+  gap: var(--wdc-desktop-gap);
+  align-items: center;
+  padding-block: var(--wdc-space-xl);
+  border-top: 1px solid color-mix(in srgb, var(--wdc-color-text-muted) 18%, transparent);
+  contain: layout paint;
+}
+.wdc-generated-node__content,
+.wdc-generated-node__media { min-width: 0; }
+.wdc-generated-node[data-active-media-placement="background"] { position: relative; isolation: isolate; }
+.wdc-generated-node[data-active-media-placement="background"] .wdc-generated-node__media { position: absolute; inset: 0; z-index: -1; opacity: 0.18; overflow: clip; }
+.wdc-generated-node [data-governed-section] { padding: var(--wdc-space-md); border-radius: var(--wdc-radius-lg); }
+.wdc-generated-node [data-governed-section] h2 { margin-block: 0 var(--wdc-space-sm); font-family: var(--wdc-font-display); font-size: clamp(1.55rem, 3vw, 2.65rem); line-height: 1.06; }
+.wdc-generated-node [data-governed-section] p,
+.wdc-generated-node [data-governed-section] li { line-height: 1.65; }
+.wdc-section-kicker { color: var(--wdc-color-accent); font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+
+@media (min-width: 48rem) and (max-width: 63.999rem) {
+  .wdc-generated-node { grid-template-columns: repeat(var(--wdc-tablet-columns), minmax(0, 1fr)); gap: var(--wdc-tablet-gap); }
+}
+
+@media (max-width: 47.999rem) {
   .wdc-shell { padding-top: 3rem; }
   .wdc-grid { grid-template-columns: 1fr; }
+  .wdc-generated-node { grid-template-columns: repeat(var(--wdc-mobile-columns), minmax(0, 1fr)); gap: var(--wdc-mobile-gap); padding-block: var(--wdc-space-lg); }
+  .wdc-generated-node[data-active-layout="stage"] .wdc-generated-node__media { min-height: 13rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
