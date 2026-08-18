@@ -33,6 +33,8 @@ interface PnpmProject extends PnpmDependency { path?: string; }
 interface PackageEvidenceOverride { license: string; source: string; }
 export interface AssetProvenanceEntry { path: string; sha256: string; licenseExpression: string; provenance: { kind: "AUTHORED" | "LICENSED" | "PUBLIC_DOMAIN"; source: string }; attributionRequired: boolean; }
 export interface AssetProvenanceManifest { schema: "website-design-compiler/asset-provenance/v1"; assets: AssetProvenanceEntry[]; }
+interface ProductionRightsEvidenceSource { url: string; sha256: string; verifiedAt: string; }
+interface ProductionRightsEvidenceSubject { id: string; kind: "model" | "generated-output" | "service"; name: string; versionOrIdentity: string; licenseExpression: string; evidence: ProductionRightsEvidenceSource[]; attributionRequired: boolean; distributed: boolean; geographicRestrictions: string[]; usageRestrictions: string[]; }
 interface PackageMetadataScan { index: Map<string, { license: string | null; path: string }>; failuresByName: Map<string, string[]>; globalFailures: string[]; }
 type ExactPackageMetadata = { license: string | null; path: string } | { diagnostic: string };
 
@@ -332,6 +334,54 @@ async function loadAssetEvidence(root: string): Promise<{ entries: Map<string, A
   return { entries };
 }
 
+async function loadProductionRightsEvidence(root: string): Promise<{ subjects: RightsSubject[]; diagnostic?: string }> {
+  const path = resolve(root, "rights-production-evidence.json");
+  let value: unknown;
+  try { value = JSON.parse(await readFile(path, "utf8")) as unknown; }
+  catch (error) {
+    if (errorCode(error) === "ENOENT") return { subjects: [] };
+    return { subjects: [], diagnostic: `diagnostic:production-rights:${errorCode(error) === "UNKNOWN" ? "INVALID_JSON" : errorCode(error)}` };
+  }
+  if (!isRecord(value) || !exactKeys(value, ["schema", "subjects"]) || value.schema !== "website-design-compiler/production-rights-evidence/v1" || !Array.isArray(value.subjects) || value.subjects.length === 0) {
+    return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
+  }
+  const subjects: RightsSubject[] = [];
+  const ids = new Set<string>();
+  for (const candidate of value.subjects) {
+    if (!isRecord(candidate) || !exactKeys(candidate, ["id", "kind", "name", "versionOrIdentity", "licenseExpression", "evidence", "attributionRequired", "distributed", "geographicRestrictions", "usageRestrictions"])) {
+      return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
+    }
+    const subject = candidate as unknown as ProductionRightsEvidenceSubject;
+    const expectedPrefix = `${subject.kind}:`;
+    if (!["model", "generated-output", "service"].includes(subject.kind) || typeof subject.id !== "string" || !subject.id.startsWith(expectedPrefix) || !/^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$/.test(subject.id) || ids.has(subject.id) || typeof subject.name !== "string" || subject.name.trim().length === 0 || typeof subject.versionOrIdentity !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:@/+,-]{0,511}$/.test(subject.versionOrIdentity) || typeof subject.licenseExpression !== "string" || subject.licenseExpression.trim().length === 0 || typeof subject.attributionRequired !== "boolean" || typeof subject.distributed !== "boolean" || !stringArray(subject.geographicRestrictions) || !stringArray(subject.usageRestrictions) || !Array.isArray(subject.evidence) || subject.evidence.length === 0) {
+      return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
+    }
+    const evidence: string[] = ["rights-production-evidence.json"];
+    for (const source of subject.evidence) {
+      if (!isRecord(source) || !exactKeys(source, ["url", "sha256", "verifiedAt"]) || typeof source.url !== "string" || !/^https:\/\/[^\s/?#]+(?:\/[^\s?#]*)?$/.test(source.url) || typeof source.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(source.sha256) || typeof source.verifiedAt !== "string" || Number.isNaN(Date.parse(source.verifiedAt)) || new Date(source.verifiedAt).toISOString() !== source.verifiedAt) {
+        return { subjects: [], diagnostic: "diagnostic:production-rights:INVALID_MANIFEST" };
+      }
+      evidence.push(`${source.url}#sha256=${source.sha256}`, `verified-at:${source.verifiedAt}`);
+    }
+    ids.add(subject.id);
+    const classified = classifyLicense(subject.licenseExpression);
+    subjects.push({
+      id: subject.id,
+      kind: subject.kind,
+      name: subject.name,
+      versionOrIdentity: subject.versionOrIdentity,
+      licenseExpression: subject.licenseExpression,
+      state: classified === "DENY" ? "DENY" : "REVIEW_REQUIRED",
+      evidence,
+      attributionRequired: subject.attributionRequired,
+      distributed: subject.distributed,
+      geographicRestrictions: subject.geographicRestrictions,
+      usageRestrictions: subject.usageRestrictions
+    });
+  }
+  return { subjects };
+}
+
 export async function scanShippedAssets(root: string): Promise<RightsSubject[]> {
   const publicDir = resolve(root, "apps/site/public");
   try { await lstat(publicDir); }
@@ -493,7 +543,15 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
     { id: "model:internal-deterministic-mock", kind: "model", name: "internal deterministic mock", versionOrIdentity: "internal/v1", licenseExpression: "REPO_ORIGINAL", state: "ALLOW", evidence: ["src/media-router.ts", "deterministic worker fixture"], attributionRequired: false, distributed: true },
     { id: "service:none-required", kind: "service", name: "no mandatory third-party hosted service", versionOrIdentity: "v1-core", licenseExpression: "REPO_POLICY", state: "ALLOW", evidence: ["core runtime operates without third-party hosted service credentials"], attributionRequired: false, distributed: false }
   ];
-  const applied = applyWaivers([...packageSubjects, ...await scanShippedAssets(root), ...fixedSubjects], waivers, now);
+  const productionRights = await loadProductionRightsEvidence(root);
+  if (productionRights.diagnostic) packageDiagnostics.add(productionRights.diagnostic);
+  const initialSubjects = [...packageSubjects, ...await scanShippedAssets(root), ...fixedSubjects, ...productionRights.subjects];
+  const seenSubjectIds = new Set<string>();
+  for (const subject of initialSubjects) {
+    if (seenSubjectIds.has(subject.id)) packageDiagnostics.add(`diagnostic:production-rights:DUPLICATE_SUBJECT:${subject.id}`);
+    seenSubjectIds.add(subject.id);
+  }
+  const applied = applyWaivers(initialSubjects, waivers, now);
   const counts = { ALLOW: 0, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 } satisfies Record<RightsState, number>;
   for (const subject of applied.subjects) counts[subject.state] += 1;
   const unresolved = applied.subjects.filter((subject) => subject.distributed && subject.state !== "ALLOW").map((subject) => subject.id);

@@ -333,3 +333,69 @@ test("malformed package evidence fails closed instead of becoming an empty overr
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("production provider rights enter the canonical scan as human-review-required subjects", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-production-rights-"));
+  const binDirectory = join(root, "bin");
+  const previousPath = process.env.PATH;
+  try {
+    await mkdir(join(root, "node_modules/.pnpm"), { recursive: true });
+    await mkdir(binDirectory);
+    const pnpmPath = join(binDirectory, "pnpm");
+    await writeFile(pnpmPath, "#!/bin/sh\nprintf '%s\\n' '[]'\n", "utf8");
+    await chmod(pnpmPath, 0o755);
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+    const identities = [
+      { id: "model:provider-model", kind: "model", versionOrIdentity: `sha256:${"a".repeat(64)}` },
+      { id: "generated-output:provider-model", kind: "generated-output", versionOrIdentity: "provider@date:2026-08-19/model@sha256:output-terms" },
+      { id: "service:provider", kind: "service", versionOrIdentity: "provider@date:2026-08-19" }
+    ] as const;
+    await writeFile(join(root, "rights-production-evidence.json"), `${JSON.stringify({
+      schema: "website-design-compiler/production-rights-evidence/v1",
+      subjects: identities.map((identity) => ({
+        ...identity,
+        name: identity.id,
+        licenseExpression: "Provider commercial terms",
+        evidence: [{ url: "https://provider.example/terms", sha256: "b".repeat(64), verifiedAt: "2026-08-19T00:00:00.000Z" }],
+        attributionRequired: false,
+        distributed: identity.kind !== "service",
+        geographicRestrictions: [],
+        usageRestrictions: []
+      }))
+    }, null, 2)}\n`, "utf8");
+
+    const reviewReceipt = await scanRepositoryRights(root, [], new Date("2026-08-19T01:00:00.000Z"));
+    for (const identity of identities) assert.equal(reviewReceipt.subjects.find((subject) => subject.id === identity.id)?.state, "REVIEW_REQUIRED");
+    assert.equal(reviewReceipt.overall, "FAIL");
+
+    const waivers = identities.map((identity) => ({ subjectId: identity.id, owner: "legal-reviewer", rationale: "provider terms reviewed", scope: `subject:${identity.id}`, expiresAt: "2026-09-19T00:00:00.000Z" }));
+    const admittedReceipt = await scanRepositoryRights(root, waivers, new Date("2026-08-19T01:00:00.000Z"));
+    for (const identity of identities) assert.equal(admittedReceipt.subjects.find((subject) => subject.id === identity.id)?.state, "ALLOW");
+    assert.equal(admittedReceipt.overall, "PASS");
+  } finally {
+    process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("malformed production rights evidence fails the canonical receipt", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-production-rights-invalid-"));
+  const binDirectory = join(root, "bin");
+  const previousPath = process.env.PATH;
+  try {
+    await mkdir(join(root, "node_modules/.pnpm"), { recursive: true });
+    await mkdir(binDirectory);
+    const pnpmPath = join(binDirectory, "pnpm");
+    await writeFile(pnpmPath, "#!/bin/sh\nprintf '%s\\n' '[]'\n", "utf8");
+    await chmod(pnpmPath, 0o755);
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+    await writeFile(join(root, "rights-production-evidence.json"), JSON.stringify({ schema: "website-design-compiler/production-rights-evidence/v1", subjects: [{ kind: "model" }] }), "utf8");
+
+    const receipt = await scanRepositoryRights(root, [], new Date("2026-08-19T01:00:00.000Z"));
+    assert.equal(receipt.overall, "FAIL");
+    assert.match(receipt.diagnostics.join(" "), /diagnostic:production-rights:INVALID_MANIFEST/);
+  } finally {
+    process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true });
+  }
+});
