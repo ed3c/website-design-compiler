@@ -3,10 +3,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { CompilerInput } from "../src/contracts.js";
 import { compileSemanticDesignTokens, projectSemanticTokensToCss } from "../src/semantic-design-tokens.js";
+import { searchVisualDirections } from "../src/visual-direction-search.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const input = JSON.parse(await readFile(resolve("fixtures/showcase/compiler-input.json"), "utf8")) as CompilerInput;
-const tokens = compileSemanticDesignTokens(input);
+const tokens = compileSemanticDesignTokens(input,searchVisualDirections(input));
 await validateAgainstSchema(tokens, "semantic-design-tokens-v2.schema.json");
 const generated = projectSemanticTokensToCss(tokens);
 const checkedIn = await readFile(resolve("apps/site/app/theme.generated.css"), "utf8");

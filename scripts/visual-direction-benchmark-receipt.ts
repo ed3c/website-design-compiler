@@ -21,7 +21,7 @@ for (const benchmark of matrix.categories) {
   };
   const search = searchVisualDirections(input);
   await validateAgainstSchema(search, "visual-direction-search-v2.schema.json");
-  const designSystem = buildDesignSystemPlan(input);
+  const designSystem = buildDesignSystemPlan(input,search);
   await validateAgainstSchema(designSystem, "design-system-plan.schema.json");
   const uniqueSignatures = new Set(search.candidates.map((candidate) => candidate.signature)).size;
   const selectedCount = search.candidates.filter((candidate) => candidate.state === "SELECTED").length;

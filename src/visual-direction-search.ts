@@ -35,7 +35,18 @@ export interface VisualDirectionCandidate {
   dimensions: VisualDirectionDimensions;
   score: VisualDirectionScore;
   signature: string;
+  domainFingerprint: VisualDirectionDomainFingerprint;
+  minimumPairwiseDomainDistance: number;
   rejectionReasons: string[];
+}
+
+export interface VisualDirectionDomainFingerprint {
+  typography: string;
+  composition: string;
+  surface: string;
+  media: string;
+  motion: string;
+  combined: string;
 }
 
 export interface VisualDirectionSearchReceipt {
@@ -46,6 +57,11 @@ export interface VisualDirectionSearchReceipt {
   candidateCount: number;
   selectedCandidateId: string;
   selectedDirection: VisualDirectionDimensions;
+  originality: {
+    minimumPairwiseDomainDistance: 3;
+    referenceFingerprints: VisualDirectionDomainFingerprint[];
+    candidatePairs: Array<{ first: string; second: string; domainDistance: number }>;
+  };
   candidates: VisualDirectionCandidate[];
 }
 
@@ -68,7 +84,7 @@ const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
   }
 ];
 
-function hash(value: unknown): string {
+export function visualDirectionSha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
@@ -122,9 +138,25 @@ function scoreCandidate(input: CompilerInput, direction: VisualDirectionDimensio
   };
 }
 
-export function auditCandidateOriginality(candidate: Pick<VisualDirectionCandidate, "signature" | "score">, referenceSignatures: readonly string[]): string[] {
+export function fingerprintVisualDirection(direction:VisualDirectionDimensions):VisualDirectionDomainFingerprint{
+  const domains={
+    typography:visualDirectionSha256({typography:direction.typography,typeContrast:direction.typeContrast}),
+    composition:visualDirectionSha256({density:direction.density,grid:direction.grid}),
+    surface:visualDirectionSha256({surface:direction.surface,colorStrategy:direction.colorStrategy}),
+    media:visualDirectionSha256({mediaStrategy:direction.mediaStrategy}),
+    motion:visualDirectionSha256({motionIntensity:direction.motionIntensity,signatureInteraction:direction.signatureInteraction})
+  };
+  return{...domains,combined:visualDirectionSha256(domains)};
+}
+
+export function domainFingerprintDistance(first:VisualDirectionDomainFingerprint,second:VisualDirectionDomainFingerprint):number{
+  return (["typography","composition","surface","media","motion"] as const).filter((domain)=>first[domain]!==second[domain]).length;
+}
+
+export function auditCandidateOriginality(candidate: Pick<VisualDirectionCandidate, "signature" | "score"|"domainFingerprint">, referenceSignatures: readonly string[],referenceFingerprints:readonly VisualDirectionDomainFingerprint[]=[]): string[] {
   const reasons: string[] = [];
   if (referenceSignatures.includes(candidate.signature)) reasons.push("candidate signature matches a reference signature");
+  if(referenceFingerprints.some((fingerprint)=>fingerprint.combined===candidate.domainFingerprint.combined))reasons.push("candidate domain fingerprint matches a reference fingerprint");
   if (candidate.score.originalityDistance < 70) reasons.push("originality distance is below the admission threshold");
   return reasons;
 }
@@ -135,15 +167,20 @@ function rotateDirections(seedHash: string): VisualDirectionDimensions[] {
 }
 
 export function searchVisualDirections(input: CompilerInput, seed = "website-design-compiler/v2"): VisualDirectionSearchReceipt {
-  const inputSha256 = hash(input);
-  const seedHash = hash({ seed, inputSha256, project: input.project });
-  const referenceSignatures = (input.references ?? []).map((reference) => hash({ kind: reference.kind, value: reference.value }));
+  const inputSha256 = visualDirectionSha256(input);
+  const seedHash = visualDirectionSha256({ seed, inputSha256, project: input.project });
+  const referenceSignatures = (input.references ?? []).map((reference) => visualDirectionSha256({ kind: reference.kind, value: reference.value }));
+  const referenceFingerprints:VisualDirectionDomainFingerprint[]=[];
   const initial = rotateDirections(seedHash).map((dimensions, index) => {
     const score = scoreCandidate(input, dimensions, seedHash, index);
-    const signature = hash(dimensions);
-    const rejectionReasons = auditCandidateOriginality({ signature, score }, referenceSignatures);
-    return { id: `direction-${index + 1}`, dimensions, score, signature, rejectionReasons };
+    const signature = visualDirectionSha256(dimensions);
+    const domainFingerprint=fingerprintVisualDirection(dimensions);
+    const rejectionReasons = auditCandidateOriginality({ signature, score,domainFingerprint }, referenceSignatures,referenceFingerprints);
+    return { id: `direction-${index + 1}`, dimensions, score, signature,domainFingerprint, rejectionReasons };
   });
+  const candidatePairs=initial.flatMap((first,index)=>initial.slice(index+1).map((second)=>({first:first.id,second:second.id,domainDistance:domainFingerprintDistance(first.domainFingerprint,second.domainFingerprint)})));
+  const distanceByCandidate=new Map(initial.map((candidate)=>[candidate.id,Math.min(...candidatePairs.filter((pair)=>pair.first===candidate.id||pair.second===candidate.id).map((pair)=>pair.domainDistance))]));
+  for(const candidate of initial)if((distanceByCandidate.get(candidate.id)??0)<3)candidate.rejectionReasons.push("candidate is not materially distinct across at least three design domains");
 
   const admissible = initial.filter((candidate) => candidate.rejectionReasons.length === 0).sort((a, b) => b.score.total - a.score.total || a.id.localeCompare(b.id));
   if (admissible.length === 0) throw new Error("visual direction search produced no originality-admissible candidate");
@@ -156,6 +193,7 @@ export function searchVisualDirections(input: CompilerInput, seed = "website-des
     })
     .map<VisualDirectionCandidate>((candidate, index) => ({
       ...candidate,
+      minimumPairwiseDomainDistance:distanceByCandidate.get(candidate.id)??0,
       rank: index + 1,
       state: candidate.id === selectedId ? "SELECTED" : "REJECTED",
       rejectionReasons: candidate.id === selectedId ? [] : candidate.rejectionReasons.length > 0 ? candidate.rejectionReasons : [`lower ranked score than ${selectedId}`]
@@ -170,12 +208,12 @@ export function searchVisualDirections(input: CompilerInput, seed = "website-des
     candidateCount: ranked.length,
     selectedCandidateId: selectedId,
     selectedDirection: { ...selected.dimensions },
+    originality:{minimumPairwiseDomainDistance:3,referenceFingerprints,candidatePairs},
     candidates: ranked
   };
 }
 
-export async function writeVisualDirectionSearch(input: CompilerInput, outputDirectory: string): Promise<string> {
-  const receipt = searchVisualDirections(input);
+export async function writeVisualDirectionSearch(receipt: VisualDirectionSearchReceipt, outputDirectory: string): Promise<string> {
   await validateAgainstSchema(receipt, "visual-direction-search-v2.schema.json");
   const directory = join(outputDirectory, "visual-direction-search");
   await mkdir(directory, { recursive: true });

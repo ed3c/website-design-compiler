@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
-import { auditCandidateOriginality, searchVisualDirections } from "../src/visual-direction-search.js";
+import { auditCandidateOriginality, fingerprintVisualDirection, searchVisualDirections, visualDirectionSha256 } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
   return {
@@ -20,6 +20,15 @@ test("search produces at least three materially different candidate directions a
   assert.equal(new Set(receipt.candidates.map((candidate) => candidate.signature)).size, 3);
   assert.equal(new Set(receipt.candidates.map((candidate) => candidate.dimensions.grid)).size >= 2, true);
   assert.equal(new Set(receipt.candidates.map((candidate) => candidate.dimensions.typography)).size >= 2, true);
+  assert.ok(receipt.originality.candidatePairs.every((pair)=>pair.domainDistance>=receipt.originality.minimumPairwiseDomainDistance));
+  assert.ok(receipt.candidates.every((candidate)=>candidate.minimumPairwiseDomainDistance>=3));
+});
+
+test("same-domain reference fingerprint is rejected even when the opaque signature differs",()=>{
+  const receipt=searchVisualDirections(input("editorial-feature"));
+  const candidate=receipt.candidates[0]!;
+  const reasons=auditCandidateOriginality(candidate,[],[fingerprintVisualDirection(candidate.dimensions)]);
+  assert.ok(reasons.some((reason)=>reason.includes("domain fingerprint")));
 });
 
 test("every candidate carries auditable score dimensions and rejection reasons", () => {
@@ -51,8 +60,15 @@ test("same input and seed produces identical ranking and winner", () => {
 test("winner becomes the single downstream selected visual direction", () => {
   const compilerInput = input("motion-heavy-creative");
   const search = searchVisualDirections(compilerInput);
-  const designSystem = buildDesignSystemPlan(compilerInput);
+  const designSystem = buildDesignSystemPlan(compilerInput,search);
   assert.equal(designSystem.selectedVisualDirection.candidateId, search.selectedCandidateId);
   assert.deepEqual(designSystem.selectedVisualDirection.dimensions, search.selectedDirection);
   assert.equal(designSystem.selectedVisualDirection.source, search.schema);
+  assert.equal(designSystem.selectedVisualDirection.receiptSha256,visualDirectionSha256(search));
+});
+
+test("downstream design system rejects a search receipt from another compiler input",()=>{
+  const first=input("motion-heavy-creative");
+  const wrong=searchVisualDirections(input("editorial"));
+  assert.throws(()=>buildDesignSystemPlan(first,wrong),/exact visual-direction receipt/);
 });

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import type { ArenaMatrix } from "../src/arena.js";
 import type { CompilerInput } from "../src/contracts.js";
 import { compileSemanticDesignTokens, projectSemanticTokensToCss } from "../src/semantic-design-tokens.js";
+import { searchVisualDirections } from "../src/visual-direction-search.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const matrix = JSON.parse(await readFile(resolve("fixtures/arena/benchmark-matrix.json"), "utf8")) as ArenaMatrix;
@@ -17,7 +18,7 @@ for (const benchmark of matrix.categories) {
     brief: { pageType: benchmark.pageType, audience: benchmark.audience, objective: benchmark.objective },
     requestedStages: [...matrix.requiredCompilerStages, "semantic-design-tokens"]
   };
-  const tokens = compileSemanticDesignTokens(input);
+  const tokens = compileSemanticDesignTokens(input,searchVisualDirections(input));
   await validateAgainstSchema(tokens, "semantic-design-tokens-v2.schema.json");
   const css = projectSemanticTokensToCss(tokens);
   const cssSha256 = createHash("sha256").update(css).digest("hex");
