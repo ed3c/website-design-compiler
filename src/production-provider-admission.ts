@@ -10,6 +10,7 @@ export interface ProductionAdmissionPacket {
   expiresAt: string;
   requestSha256: string;
   providerIdentitySha256: string;
+  transportSha256: string;
   modelIdentitySha256: string;
   policySha256: string;
   rightsReceiptSha256: string;
@@ -30,6 +31,7 @@ export interface ProductionAdmissionAuthority {
 export interface ExpectedProductionAdmissionBindings {
   requestSha256: string;
   providerIdentitySha256: string;
+  transportSha256: string;
   modelIdentitySha256: string;
   policySha256: string;
   rightsReceiptSha256: string;
@@ -44,6 +46,7 @@ const packetKeys = [
   "expiresAt",
   "requestSha256",
   "providerIdentitySha256",
+  "transportSha256",
   "modelIdentitySha256",
   "policySha256",
   "rightsReceiptSha256",
@@ -116,6 +119,7 @@ export function validateProductionAdmissionPacket(args: {
   for (const key of [
     "requestSha256",
     "providerIdentitySha256",
+    "transportSha256",
     "modelIdentitySha256",
     "policySha256",
     "rightsReceiptSha256",

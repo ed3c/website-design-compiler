@@ -115,6 +115,7 @@ function admissionFor(
     expiresAt: "2026-08-19T00:00:00.000Z",
     requestSha256: sha256(canonicalMediaValue(admittedRequest)),
     providerIdentitySha256: sha256(canonicalMediaValue(admittedPolicy.identity)),
+    transportSha256: sha256(canonicalMediaValue(admittedPolicy.identity)),
     modelIdentitySha256: sha256(canonicalMediaValue({
       modelId: admittedPolicy.identity.modelId,
       modelRevision: admittedPolicy.identity.modelRevision,
@@ -179,6 +180,7 @@ test("durable production admission satisfies its strict schema and exact digest 
   await validateAgainstSchema(packet, "production-provider-admission.schema.json");
   assert.match(packet.requestSha256, /^[a-f0-9]{64}$/);
   assert.match(packet.providerIdentitySha256, /^[a-f0-9]{64}$/);
+  assert.match(packet.transportSha256, /^[a-f0-9]{64}$/);
   assert.match(packet.modelIdentitySha256, /^[a-f0-9]{64}$/);
   assert.match(packet.policySha256, /^[a-f0-9]{64}$/);
   assert.match(packet.rightsReceiptSha256, /^[a-f0-9]{64}$/);
