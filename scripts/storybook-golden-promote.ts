@@ -26,11 +26,12 @@ function sha256(bytes: Buffer): string {
 
 function assertCandidateRuntimeGitBinding(candidate: StorybookGoldenCandidate): void {
   const { git, runtimeGit } = candidate.source;
+  if (!/^refs\/heads\/.+/.test(git.ref)) throw new Error("Storybook candidate Git must bind a durable branch head");
   if (runtimeGit.ref === git.ref) {
     if (runtimeGit.sha !== git.sha) throw new Error("Storybook candidate and runtime Git on the same ref must bind the same SHA");
     return;
   }
-  if (!/^refs\/heads\/.+/.test(git.ref) || !/^refs\/pull\/[1-9][0-9]*\/merge$/.test(runtimeGit.ref)) {
+  if (!/^refs\/pull\/[1-9][0-9]*\/merge$/.test(runtimeGit.ref)) {
     throw new Error("Storybook candidate Git must bind either its runtime ref or a durable branch head paired with a PR merge runtime ref");
   }
   if (runtimeGit.sha === git.sha) throw new Error("A Storybook PR merge runtime SHA must differ from its durable branch head SHA");

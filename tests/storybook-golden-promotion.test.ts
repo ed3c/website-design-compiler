@@ -290,6 +290,30 @@ test("formal admission rejects an incoherent candidate and runtime Git relations
   }), /same ref must bind the same SHA/);
 });
 
+test("formal admission rejects a synthetic PR merge ref impersonating the durable candidate subject", async () => {
+  const fixture = await candidateFixture();
+  const candidate = structuredClone(fixture.candidate);
+  candidate.source.git = structuredClone(candidate.source.runtimeGit);
+  const document = `${JSON.stringify(candidate, null, 2)}\n`;
+  const candidateSha256 = sha256(document);
+  await assert.rejects(validateReviewedGoldenManifest({
+    schema: "website-design-compiler/storybook-visual-goldens/v3",
+    candidateArtifact: { sha256: candidateSha256, document },
+    review: {
+      schema: "website-design-compiler/storybook-golden-review/v1",
+      candidateSha256,
+      decision: "ADMIT",
+      reviewer: { identity: "tech-lead", context: "separate-visual-review", independence: "SEPARATE_REVIEW_CONTEXT" },
+      reviewedAt: "2026-08-18T12:00:00.000Z",
+      inspectedScreenshots: Object.entries(candidate.screenshots).map(([name, screenshotSha256]) => ({
+        name,
+        sha256: screenshotSha256,
+        observation: `Inspected ${name}`
+      }))
+    }
+  }), /durable branch head/);
+});
+
 test("formal admission returns an explicit failure instead of leaving stale receipt evidence", async () => {
   const admission = await evaluateReviewedGoldenAdmission({
     schema: "website-design-compiler/storybook-visual-goldens/v2",
