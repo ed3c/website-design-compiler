@@ -114,6 +114,33 @@ test("writer classifies missing authoring inputs as ABSENT runtime evidence", as
   }
 });
 
+test("explicit authored content makes every required field provenance-bound and executable", async () => {
+  const compilerInput = input("product-landing");
+  const requiredSlots = compileInformationArchitecture(compilerInput).sections.flatMap((section) => section.requiredContent);
+  const authoredContent = Object.fromEntries(requiredSlots.map((slot) => [slot, `Approved ${slot}`]));
+  const authoredInput = { ...compilerInput, authoredContent };
+  const content = compileContentArchitecture(authoredInput);
+
+  assert.equal(content.overall, "READY");
+  assert.ok(content.sections.flatMap((section) => section.fields).every((field) => field.state === "READY"));
+  assert.ok(content.sections.flatMap((section) => section.fields).every((field) =>
+    field.provenance.includes(`compiler.authoredContent:${field.slot}`)
+  ));
+
+  const outputDirectory = await mkdtemp(join(tmpdir(), "wdc-authored-content-"));
+  try {
+    const result = await writeContentArchitecturePlan(authoredInput, outputDirectory);
+    assert.equal(result.state, "PASS");
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
+  }
+});
+
+test("authored content with no matching IA slot fails fast", () => {
+  const compilerInput = { ...input("product-landing"), authoredContent: { "unowned-copy": "Do not silently ignore me" } };
+  assert.throws(() => compileContentArchitecture(compilerInput), /not owned by this page architecture.*unowned-copy/i);
+});
+
 test("page architect carries the full content contract without dropping provenance or policy", () => {
   const compilerInput = input("product-landing");
   const content = compileContentArchitecture(compilerInput);

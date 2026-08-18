@@ -41,7 +41,7 @@ Required output:
 
 ### Content architecture
 
-Turns each IA content requirement into a provenance-bound authoring field with a source classification, publishability decision, responsive length budget, locale policy, and quality findings. Brief objectives remain planning evidence; they are not publishable headlines, product claims, or action labels. Missing authored content produces `NEEDS_INPUT` in the artifact and `ABSENT` in the runtime stage receipt.
+Turns each IA content requirement into a provenance-bound authoring field with a source classification, publishability decision, responsive length budget, locale policy, and quality findings. Brief objectives remain planning evidence; they are not publishable headlines, product claims, or action labels. Explicit `authoredContent` values are keyed by an IA-owned slot and retain `compiler.authoredContent:<slot>` provenance; unknown slots fail fast. Missing authored content produces `NEEDS_INPUT` in the artifact and `ABSENT` in the runtime stage receipt.
 
 Required output:
 - `content-architecture.json`

@@ -62,6 +62,7 @@ export interface CompilerInput {
     objective: string;
   };
   hardConstraints?: string[];
+  authoredContent?: Record<string, string>;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];

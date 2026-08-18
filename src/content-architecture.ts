@@ -100,19 +100,9 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     };
   }
 
-  if (slot !== "brand-or-project-name" && slot !== "project-name") {
-    return {
-      slot,
-      state: "NEEDS_INPUT",
-      sourceType: "placeholder_required",
-      value: null,
-      publishable: false,
-      provenance: planningProvenanceFor(slot, input, section),
-      lengthBudget: { maxCharacters }
-    };
-  }
-
-  const value = input.project;
+  const authoredValue = input.authoredContent?.[slot];
+  const projectValue = slot === "brand-or-project-name" || slot === "project-name" ? input.project : undefined;
+  const value = authoredValue ?? projectValue;
   if (!value || value.length > maxCharacters) {
     return {
       slot,
@@ -131,7 +121,7 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     sourceType: "user_supplied_claim",
     value,
     publishable: true,
-    provenance: planningProvenanceFor(slot, input, section),
+    provenance: authoredValue ? [`compiler.authoredContent:${slot}`] : planningProvenanceFor(slot, input, section),
     lengthBudget: { maxCharacters }
   };
 }
@@ -148,6 +138,11 @@ function qualityFor(fields: ContentFieldContract[]): SectionContentContract["qua
 export function compileContentArchitecture(input: CompilerInput): ContentArchitecturePlan {
   const ia = compileInformationArchitecture(input);
   const forbidden = new Set(ia.forbiddenInventions);
+  const requiredSlots = new Set(ia.sections.flatMap((section) => section.requiredContent));
+  const unownedSlots = Object.keys(input.authoredContent ?? {}).filter((slot) => !requiredSlots.has(slot)).sort();
+  if (unownedSlots.length > 0) {
+    throw new Error(`authored content is not owned by this page architecture: ${unownedSlots.join(", ")}`);
+  }
   const sections = ia.sections.map<SectionContentContract>((section) => {
     const fields = section.requiredContent.map((slot) => fieldFor(slot, input, section, forbidden));
     return {

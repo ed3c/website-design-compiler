@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { evaluateArena, type ArenaMatrix } from "../src/arena.js";
 import type { CompilerInput, EvidenceState, RuntimeReceipt } from "../src/contracts.js";
+import { compileInformationArchitecture } from "../src/information-architecture.js";
 
 const root = process.cwd();
 const matrixPath = join(root, "fixtures", "arena", "benchmark-matrix.json");
@@ -41,7 +42,7 @@ for (const benchmark of matrix.categories) {
   await mkdir(benchmarkDirectory, { recursive: true });
   const inputPath = join(benchmarkDirectory, "compiler-input.json");
   const compilerOutput = join(benchmarkDirectory, "compiler-output");
-  const input: CompilerInput = {
+  const baseInput: CompilerInput = {
     schema: "website-design-compiler/input/v1",
     project: `arena-${benchmark.id}`,
     brief: {
@@ -58,6 +59,11 @@ for (const benchmark of matrix.categories) {
       reviewers: ["anthropic-frontend-design"]
     },
     requestedStages: [...matrix.requiredCompilerStages]
+  };
+  const requiredSlots = compileInformationArchitecture(baseInput).sections.flatMap((section) => section.requiredContent);
+  const input: CompilerInput = {
+    ...baseInput,
+    authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, `Fixture ${slot}`]))
   };
   await writeFile(inputPath, `${JSON.stringify(input, null, 2)}\n`, "utf8");
   execFileSync("pnpm", ["exec", "tsx", "src/cli.ts", inputPath, compilerOutput], { cwd: root, stdio: "pipe" });

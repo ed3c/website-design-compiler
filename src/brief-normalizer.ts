@@ -12,6 +12,7 @@ export interface NaturalLanguageBriefInput {
   briefText: string;
   references?: CompilerReference[];
   hardConstraints?: string[];
+  authoredContent?: Record<string, string>;
   requestedStages?: string[];
 }
 
@@ -184,6 +185,7 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
           objective: objective.value!
         },
         hardConstraints,
+        ...(input.authoredContent ? { authoredContent: input.authoredContent } : {}),
         ...(input.references ? { references: input.references } : {}),
         requestedStages
       }

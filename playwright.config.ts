@@ -1,19 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const browserPort = process.env.WDC_BROWSER_PORT ?? "3100";
+if (!/^\d{1,5}$/.test(browserPort) || Number(browserPort) < 1 || Number(browserPort) > 65_535) {
+  throw new Error("WDC_BROWSER_PORT must be an integer from 1 through 65535");
+}
+const browserBaseUrl = `http://127.0.0.1:${browserPort}`;
+
 export default defineConfig({
   testDir: "./tests/browser",
   outputDir: "artifacts/browser-qa/test-results",
   reporter: [["json", { outputFile: "artifacts/browser-qa/playwright-report.json" }], ["line"]],
   retries: 0,
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: browserBaseUrl,
     trace: "on",
     screenshot: "off"
   },
   webServer: {
-    command: "pnpm --filter @website-design-compiler/site start",
-    url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
+    command: `pnpm --filter @website-design-compiler/site start --port ${browserPort}`,
+    url: browserBaseUrl,
+    reuseExistingServer: false,
     timeout: 120_000,
     stdout: "ignore",
     stderr: "pipe"

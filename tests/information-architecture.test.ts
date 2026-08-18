@@ -67,8 +67,20 @@ test("section readiness and evidence are bound to the content each section needs
   assert.equal(navigation?.status, "NEEDS_INPUT");
   assert.deepEqual(navigation?.missingContent, ["primary-action-label"]);
   assert.equal(hero?.status, "NEEDS_INPUT");
-  assert.deepEqual(hero?.missingContent, ["headline", "primary-action"]);
+  assert.deepEqual(hero?.missingContent, ["headline", "value-proposition", "primary-action"]);
   assert.equal(footer?.status, "READY");
   assert.deepEqual(footer?.missingContent, []);
   assert.notDeepEqual(navigation?.evidence, hero?.evidence);
+});
+
+test("section readiness reflects explicit authored content rather than planning prose", () => {
+  const baseInput = input("b2b product landing");
+  const requiredSlots = compileInformationArchitecture(baseInput).sections.flatMap((section) => section.requiredContent);
+  const plan = compileInformationArchitecture({
+    ...baseInput,
+    authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, `Approved ${slot}`]))
+  });
+
+  assert.ok(plan.sections.every((section) => section.status === "READY"));
+  assert.ok(plan.sections.every((section) => section.missingContent.length === 0));
 });
