@@ -33,7 +33,9 @@
               "finalUrl": { "type": "string", "format": "uri" },
               "httpStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
               "contentType": { "type": "string", "minLength": 1 },
-              "responseSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              "responseSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "connectedAddress": { "type": "string", "minLength": 1 },
+              "transportMode": { "enum": ["PRODUCTION", "INJECTED"] }
             }
           }
         }

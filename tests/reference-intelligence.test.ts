@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildOriginalityPlan, buildReferenceManifest } from "../src/reference-intelligence.js";
 import { captureRemoteUrl, isPublicIpAddress, observeHtml } from "../src/reference-capture.js";
+import { validateAgainstSchema } from "../src/validate.js";
 import type { CompilerInput } from "../src/contracts.js";
 
 const input: CompilerInput = {
@@ -61,6 +62,7 @@ test("remote capture records deterministic HTML provenance with injected public 
   assert.match(result.provenance.responseSha256 ?? "", /^[a-f0-9]{64}$/);
   assert.ok(result.facts.includes("document title: Remote Evidence"));
   assert.ok(result.facts.includes("h1 headings: Observed"));
+  await validateAgainstSchema({schema:"website-design-compiler/reference-manifest/v1",project:"remote-fixture",entries:[{id:"ref-001",kind:"url",source:"https://reference.example/page",captureState:result.state,observableFacts:result.facts,unknownImplementationDetails:true,provenance:result.provenance,reason:result.reason}]},"reference-manifest.schema.json");
 });
 
 test("remote capture fails closed for private and metadata-style targets before transport", async () => {
