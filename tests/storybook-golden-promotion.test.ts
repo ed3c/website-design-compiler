@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import YAML from "yaml";
 import { candidateEnvironmentFromProcess, writeStorybookGoldenCandidate } from "../scripts/storybook-golden-candidate.js";
-import { promoteStorybookGoldenCandidate, validateReviewedGoldenManifest } from "../scripts/storybook-golden-promote.js";
+import { evaluateReviewedGoldenAdmission, promoteStorybookGoldenCandidate, validateReviewedGoldenManifest } from "../scripts/storybook-golden-promote.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const sha256 = (value: Buffer | string): string => createHash("sha256").update(value).digest("hex");
@@ -215,6 +215,16 @@ test("formal admission rejects legacy v2 manifests without independent review", 
     },
     screenshots: fixture.candidate.screenshots
   }), /Only a reviewed Storybook visual-goldens\/v3 manifest/);
+});
+
+test("formal admission returns an explicit failure instead of leaving stale receipt evidence", async () => {
+  const admission = await evaluateReviewedGoldenAdmission({
+    schema: "website-design-compiler/storybook-visual-goldens/v2",
+    source: {},
+    screenshots: {}
+  });
+  assert.equal(admission.state, "FAIL");
+  if (admission.state === "FAIL") assert.match(admission.error, /must match exactly one schema in oneOf/);
 });
 
 test("formal admission rejects source provenance mutated after independent review", async () => {

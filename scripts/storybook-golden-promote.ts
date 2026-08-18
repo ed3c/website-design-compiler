@@ -78,6 +78,17 @@ export async function validateReviewedGoldenManifest(value: unknown, schemaRoot 
   return { manifest, candidate, review };
 }
 
+export async function evaluateReviewedGoldenAdmission(value: unknown, schemaRoot = process.cwd()): Promise<
+  | { state: "PASS"; manifest: StorybookVisualGoldensV3; candidate: StorybookGoldenCandidate; review: GoldenReview }
+  | { state: "FAIL"; error: string }
+> {
+  try {
+    return { state: "PASS", ...await validateReviewedGoldenManifest(value, schemaRoot) };
+  } catch (error) {
+    return { state: "FAIL", error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function promoteStorybookGoldenCandidate(options: {
   candidatePath: string;
   screenshotsDirectory: string;
