@@ -109,7 +109,26 @@ test("repository-wide scan includes production dependencies from the shipped sit
     assert.ok(ids.has(`package:${dependency}`), `missing site production dependency ${dependency}`);
   }
   assert.equal(receipt.overall, "FAIL");
-  assert.deepEqual(receipt.unresolved, ["package:@img/sharp-libvips-darwin-arm64@1.2.4", "package:caniuse-lite@1.0.30001809", "package:gsap@3.15.0"]);
+  const sharpLibvipsSubjects = new Set([
+    "package:@img/sharp-libvips-darwin-arm64@1.2.4",
+    "package:@img/sharp-libvips-darwin-x64@1.2.4",
+    "package:@img/sharp-libvips-linux-arm@1.2.4",
+    "package:@img/sharp-libvips-linux-arm64@1.2.4",
+    "package:@img/sharp-libvips-linux-ppc64@1.2.4",
+    "package:@img/sharp-libvips-linux-riscv64@1.2.4",
+    "package:@img/sharp-libvips-linux-s390x@1.2.4",
+    "package:@img/sharp-libvips-linux-x64@1.2.4",
+    "package:@img/sharp-libvips-linuxmusl-arm64@1.2.4",
+    "package:@img/sharp-libvips-linuxmusl-x64@1.2.4"
+  ]);
+  const unresolvedNativeSharp = receipt.unresolved.filter((id) => sharpLibvipsSubjects.has(id));
+  assert.ok(unresolvedNativeSharp.length > 0, "the installed sharp runtime must remain subject to rights review");
+  for (const id of unresolvedNativeSharp) {
+    const subject = receipt.subjects.find((candidate) => candidate.id === id);
+    assert.equal(subject?.state, "REVIEW_REQUIRED");
+    assert.equal(subject?.distributed, true);
+  }
+  assert.deepEqual(receipt.unresolved.filter((id) => !sharpLibvipsSubjects.has(id)), ["package:caniuse-lite@1.0.30001809", "package:gsap@3.15.0"]);
 });
 
 test("unmanifested or hash-mismatched public assets fail closed as UNKNOWN", async () => {
