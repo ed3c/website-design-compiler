@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.15.0
@@ -133,7 +133,7 @@ jobs:
         if: always() && steps.runtime-gates.outputs.storybook_build_status == '0' && steps.runtime-gates.outputs.storybook_qa_status == '0'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          name: storybook-golden-screenshots-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
           path: artifacts/storybook/screenshots/*.png
           if-no-files-found: error
           retention-days: 14
@@ -142,9 +142,11 @@ jobs:
         if: always() && steps.storybook-golden-screenshots.outputs.artifact-id != ''
         env:
           STORYBOOK_SCREENSHOT_ARTIFACT_ID: ${{ steps.storybook-golden-screenshots.outputs.artifact-id }}
-          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
           STORYBOOK_BUILD_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_build_status }}
           STORYBOOK_QA_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_qa_status }}
+          WDC_STORYBOOK_CANDIDATE_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WDC_STORYBOOK_CANDIDATE_GIT_REF: ${{ github.head_ref && format('refs/heads/{0}', github.head_ref) || github.ref }}
         run: pnpm storybook:golden-candidate
       - name: Upload review-required Storybook golden candidate manifest
         if: always() && steps.storybook-golden-candidate.outcome == 'success'
@@ -158,6 +160,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: pnpm release:v2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        id: compiler-core-evidence
         if: always()
         with:
           name: compiler-core-receipt-${{ github.sha }}
@@ -199,6 +202,7 @@ jobs:
             artifacts/browser-qa/test-results-runtime/
             artifacts/graphics-3d/
             artifacts/generated-pages/
+            artifacts/design-quality-browser/
             artifacts/media-orchestration/
             artifacts/accessibility-performance/
             artifacts/arena/

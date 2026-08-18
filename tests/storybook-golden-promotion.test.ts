@@ -87,6 +87,8 @@ test("candidate environment requires explicit zero build and browser QA exit out
   const environment = {
     GITHUB_SHA: "a".repeat(40),
     GITHUB_REF: "refs/pull/42/merge",
+    WDC_STORYBOOK_CANDIDATE_GIT_SHA: "b".repeat(40),
+    WDC_STORYBOOK_CANDIDATE_GIT_REF: "refs/heads/codex/review",
     GITHUB_REPOSITORY: "ed3c/website-design-compiler",
     GITHUB_WORKFLOW: "compiler-core",
     GITHUB_RUN_ID: "1234",
@@ -99,9 +101,30 @@ test("candidate environment requires explicit zero build and browser QA exit out
   assert.throws(() => candidateEnvironmentFromProcess(environment), /STORYBOOK_BUILD_EXIT_CODE.*zero exit code/);
 });
 
+test("candidate environment binds the durable branch head instead of the synthetic PR merge ref", () => {
+  const environment = {
+    GITHUB_SHA: "a".repeat(40),
+    GITHUB_REF: "refs/pull/42/merge",
+    WDC_STORYBOOK_CANDIDATE_GIT_SHA: "b".repeat(40),
+    WDC_STORYBOOK_CANDIDATE_GIT_REF: "refs/heads/codex/review",
+    GITHUB_REPOSITORY: "ed3c/website-design-compiler",
+    GITHUB_WORKFLOW: "compiler-core",
+    GITHUB_RUN_ID: "1234",
+    GITHUB_RUN_ATTEMPT: "1",
+    STORYBOOK_SCREENSHOT_ARTIFACT_ID: "9876",
+    STORYBOOK_SCREENSHOT_ARTIFACT_NAME: `storybook-golden-screenshots-${"b".repeat(40)}-1`,
+    STORYBOOK_BUILD_EXIT_CODE: "0",
+    STORYBOOK_QA_EXIT_CODE: "0"
+  };
+
+  const candidate = candidateEnvironmentFromProcess(environment);
+  assert.equal(candidate.gitSha, "b".repeat(40));
+  assert.equal(candidate.gitRef, "refs/heads/codex/review");
+});
+
 test("workflow uploads a candidate manifest only after zero Storybook exits and producer success", async () => {
   const workflow = YAML.parse(await readFile(join(process.cwd(), ".github", "workflows", "compiler-core.yml"), "utf8")) as {
-    jobs: { verify: { steps: Array<{ id?: string; if?: string; env?: Record<string, string> }> } };
+    jobs: { verify: { steps: Array<{ id?: string; if?: string; env?: Record<string, string>; with?: Record<string, string | number> }> } };
   };
   const steps = workflow.jobs.verify.steps;
   const screenshotUpload = steps.find((step) => step.id === "storybook-golden-screenshots");
@@ -109,7 +132,11 @@ test("workflow uploads a candidate manifest only after zero Storybook exits and 
   const candidateUpload = steps.find((step) => step.if?.includes("steps.storybook-golden-candidate.outcome"));
   assert.match(screenshotUpload?.if ?? "", /storybook_build_status == '0'.*storybook_qa_status == '0'/);
   assert.match(candidate?.env?.STORYBOOK_BUILD_EXIT_CODE ?? "", /runtime-gates\.outputs\.storybook_build_status/);
+  assert.match(candidate?.env?.WDC_STORYBOOK_CANDIDATE_GIT_SHA ?? "", /pull_request\.head\.sha.*github\.sha/);
+  assert.match(candidate?.env?.WDC_STORYBOOK_CANDIDATE_GIT_REF ?? "", /github\.head_ref.*github\.ref/);
   assert.equal(candidateUpload?.if, "always() && steps.storybook-golden-candidate.outcome == 'success'");
+  const evidenceUpload = steps.find((step) => step.id === "compiler-core-evidence");
+  assert.match(String(evidenceUpload?.with?.path ?? ""), /artifacts\/design-quality-browser\//);
 });
 
 test("promotion refuses CI self-baselining and requires explicit admission", async () => {

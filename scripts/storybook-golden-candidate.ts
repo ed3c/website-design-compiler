@@ -103,8 +103,8 @@ async function writeAtomically(path: string, contents: string): Promise<void> {
 
 export function candidateEnvironmentFromProcess(environment: EnvironmentValues): CandidateEnvironment {
   return {
-    gitSha: requireString(environment, "GITHUB_SHA"),
-    gitRef: requireString(environment, "GITHUB_REF"),
+    gitSha: requireString(environment, "WDC_STORYBOOK_CANDIDATE_GIT_SHA"),
+    gitRef: requireString(environment, "WDC_STORYBOOK_CANDIDATE_GIT_REF"),
     repository: requireString(environment, "GITHUB_REPOSITORY"),
     workflow: requireString(environment, "GITHUB_WORKFLOW"),
     runId: requirePositiveInteger(environment, "GITHUB_RUN_ID"),
