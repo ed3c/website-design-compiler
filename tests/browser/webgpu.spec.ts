@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { validateAgainstSchema } from "../../src/validate.js";
 
 type RendererReceipt = {
   state: "WEBGPU_PASS" | "WEBGL_FALLBACK" | "STATIC_FALLBACK" | "NOT_EXERCISED";
@@ -99,16 +100,20 @@ test("WebGPU opt-in records real execution or explicit NOT_EXERCISED fallback", 
   await expect(page.locator("[data-graphics3d-static-poster='true']")).toBeVisible();
   await expect(page.getByRole("button").first()).toBeEnabled();
 
-  const outputDirectory = join(process.cwd(), "artifacts", "browser-qa", "webgpu");
+  const outputDirectory = join(process.cwd(), "artifacts", "graphics-3d");
   await mkdir(outputDirectory, { recursive: true });
-  await writeFile(join(outputDirectory, "desktop-chromium.json"), `${JSON.stringify({
+  const receipt={
     schema: "website-design-compiler/webgpu-runtime-receipt/v1",
-    overall: observed ? "WEBGPU_PASS" : "NOT_EXERCISED",
+    overall: observed ? initializationFailureObserved ? "PASS" as const : "FAIL" as const : "NOT_EXERCISED" as const,
+    rendererOutcome:selected.state,
+    git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"},
     selected,
     fallbacks: {
       initializationFailure: initializationFailureObserved ? "PASS" : "NOT_EXERCISED",
       totalGpuFailure: "PASS",
       deviceLoss: observed ? "PASS" : "NOT_EXERCISED"
     }
-  }, null, 2)}\n`, "utf8");
+  };
+  await validateAgainstSchema(receipt,"webgpu-runtime-receipt.schema.json");
+  await writeFile(join(outputDirectory, "webgpu-receipt.json"), `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 });

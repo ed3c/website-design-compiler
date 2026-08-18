@@ -16,7 +16,7 @@ const paths:Record<Capability,string>={
   liveReference:"artifacts/live-reference/live-reference-receipt.json",
   webgpu:"artifacts/graphics-3d/webgpu-receipt.json",
   repositoryRights:"artifacts/rights-clearance/repository-rights-clearance.json",
-  productionProvider:"artifacts/media-generator/production-provider-receipt.json",
+  productionProvider:"artifacts/media-generator/production-provider-status.json",
   premiumQuality:"artifacts/v2/design-quality/design-quality-eval-receipt.json"
 };
 function evidenceState(value:unknown):CapabilityState{return value==="PASS"||value==="FAIL"||value==="ABSENT"||value==="NOT_IMPLEMENTED"||value==="NOT_EXERCISED"||value==="SKIPPED_BY_POLICY"?value:"FAIL";}
@@ -24,7 +24,10 @@ async function readEvidence(path:string):Promise<CapabilityEvidence>{
   try{
     const receipt=JSON.parse(await readFile(join(root,path),"utf8")) as {schema?:unknown;overall?:unknown;git?:{sha?:unknown}};
     return{state:evidenceState(receipt.overall),gitSha:typeof receipt.git?.sha==="string"?receipt.git.sha:null,identity:typeof receipt.schema==="string"?receipt.schema:null};
-  }catch{return{state:"ABSENT",gitSha:null,identity:null};}
+  }catch(error){
+    if(error instanceof Error&&"code" in error&&error.code==="ENOENT")return{state:"ABSENT",gitSha:null,identity:null};
+    throw error;
+  }
 }
 const evidence={} as Record<Capability,CapabilityEvidence>;
 for(const [capability,path] of Object.entries(paths) as Array<[Capability,string]>)evidence[capability]=await readEvidence(path);

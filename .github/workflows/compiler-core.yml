@@ -58,6 +58,8 @@ jobs:
         run: pnpm external-skills:receipt
       - name: Verify deterministic authenticated media worker
         run: pnpm media:fixture
+      - name: Record fail-closed production provider admission status
+        run: pnpm media:production-status
       - name: Verify governed Puck authoring projection
         run: pnpm authoring:receipt
       - name: Verify Payload CMS draft/published persistence and auth boundary
@@ -146,7 +148,7 @@ jobs:
             artifacts/browser-qa/playwright-report.json
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
-            artifacts/browser-qa/webgpu/
+            artifacts/graphics-3d/
             artifacts/generated-pages/
             artifacts/media-orchestration/
             artifacts/accessibility-performance/
