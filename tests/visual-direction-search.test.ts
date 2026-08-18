@@ -103,6 +103,22 @@ function indexedPngWithoutPalette(width: number, height: number): Buffer {
   ]);
 }
 
+function pngWithUnknownCriticalChunk(width: number, height: number): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 0;
+  const rows = Buffer.alloc(height * (width + 1));
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("ABCD", Buffer.from("unsupported critical data")),
+    pngChunk("IDAT", deflateSync(rows)),
+    pngChunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
 async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>, includeSelfSignedProducer = false, includeExternalAdmission = false, evidenceOverride?: Buffer): Promise<T> {
   const root = await mkdtemp(join(tmpdir(), "wdc-visual-evidence-"));
   try {
@@ -239,6 +255,12 @@ test("an externally admitted indexed PNG without its required palette cannot pro
   await withVisualEvidence(null, async (compilerInput, root) => {
     await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /missing its PNG palette/);
   }, true, true, indexedPngWithoutPalette(1280, 800));
+});
+
+test("an externally admitted PNG with an unknown critical chunk cannot promote originality", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /unknown critical PNG chunk ABCD/);
+  }, true, true, pngWithUnknownCriticalChunk(1280, 800));
 });
 
 test("observed fingerprint dimensions are derived from browser measurements", async () => {

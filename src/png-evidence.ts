@@ -1,5 +1,7 @@
 import { inflateSync } from "node:zlib";
 
+const KNOWN_CRITICAL_PNG_CHUNKS = new Set(["IHDR", "PLTE", "IDAT", "IEND"]);
+
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) {
@@ -39,6 +41,9 @@ export function assertPngEvidence(bytes: Uint8Array, expected: { width: number; 
     const dataEnd = offset + 8 + length;
     if (crc32(value.subarray(offset + 4, dataEnd)) !== value.readUInt32BE(dataEnd)) {
       throw new Error(`visual evidence for ${expected.viewport} has an invalid PNG chunk checksum`);
+    }
+    if (/^[A-Z]/.test(type) && !KNOWN_CRITICAL_PNG_CHUNKS.has(type)) {
+      throw new Error(`visual evidence for ${expected.viewport} has an unknown critical PNG chunk ${type}`);
     }
     if (!sawHeader && type !== "IHDR") throw new Error(`visual evidence for ${expected.viewport} does not start with PNG IHDR`);
     if (type === "IHDR") {
