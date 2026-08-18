@@ -82,6 +82,7 @@ jobs:
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
+        id: runtime-gates
         run: |
           set +e
           pnpm storybook:build
@@ -108,9 +109,37 @@ jobs:
           arena_status=$?
           pnpm release:receipt
           release_status=$?
+          echo "storybook_build_status=$storybook_build_status" >> "$GITHUB_OUTPUT"
+          echo "storybook_qa_status=$storybook_qa_status" >> "$GITHUB_OUTPUT"
           if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$site_graphs_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
+      - name: Upload Ubuntu Storybook golden screenshot candidate
+        id: storybook-golden-screenshots
+        if: always() && steps.runtime-gates.outputs.storybook_build_status == '0' && steps.runtime-gates.outputs.storybook_qa_status == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/storybook/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
+      - name: Bind Storybook golden candidate to uploaded screenshot artifact
+        id: storybook-golden-candidate
+        if: always() && steps.storybook-golden-screenshots.outputs.artifact-id != ''
+        env:
+          STORYBOOK_SCREENSHOT_ARTIFACT_ID: ${{ steps.storybook-golden-screenshots.outputs.artifact-id }}
+          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          STORYBOOK_BUILD_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_build_status }}
+          STORYBOOK_QA_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_qa_status }}
+        run: pnpm storybook:golden-candidate
+      - name: Upload review-required Storybook golden candidate manifest
+        if: always() && steps.storybook-golden-candidate.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-golden-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/storybook/golden-candidate.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify canonical v2 release policy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: pnpm release:v2

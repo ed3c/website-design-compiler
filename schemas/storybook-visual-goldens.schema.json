@@ -1,9 +1,119 @@
 {
-  "$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://example.invalid/website-design-compiler/storybook-visual-goldens.schema.json",
-  "type":"object","additionalProperties":false,"required":["schema","source","screenshots"],
-  "properties":{
-    "schema":{"const":"website-design-compiler/storybook-visual-goldens/v2"},
-    "source":{"type":"object","additionalProperties":false,"required":["gitSha","workflowRun","artifactId","runnerImage","browser","fonts","projects"],"properties":{"gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"},"workflowRun":{"type":"integer","minimum":1},"artifactId":{"type":"integer","minimum":1},"runnerImage":{"type":"object","additionalProperties":false,"required":["os","version","release"],"properties":{"os":{"const":"ubuntu-24.04"},"version":{"type":"string","minLength":1},"release":{"type":"string","minLength":1}}},"browser":{"type":"object","additionalProperties":false,"required":["engine","version","playwrightPackage","playwrightChromiumRevision"],"properties":{"engine":{"const":"Chrome Headless Shell"},"version":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$"},"playwrightPackage":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+$"},"playwrightChromiumRevision":{"type":"integer","minimum":1}}},"fonts":{"type":"array","minItems":8,"uniqueItems":true,"items":{"type":"string","pattern":"^[^=]+=[^=]+$"}},"projects":{"type":"array","minItems":2,"maxItems":2,"uniqueItems":true,"items":{"enum":["storybook-desktop","storybook-mobile"]}}}},
-    "screenshots":{"type":"object","minProperties":90,"additionalProperties":{"type":"string","pattern":"^[a-f0-9]{64}$"}}
-  }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/storybook-visual-goldens.schema.json",
+  "$defs": {
+    "screenshots": {
+      "type": "object",
+      "minProperties": 90,
+      "maxProperties": 90,
+      "propertyNames": { "pattern": "^storybook-(desktop|mobile)--[^/]+\\.png$" },
+      "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    },
+    "runnerImage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "version", "release"],
+      "properties": {
+        "os": { "const": "ubuntu-24.04" },
+        "version": { "type": "string", "minLength": 1 },
+        "release": { "type": "string", "minLength": 1 }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "prefixItems": [{ "const": "storybook-desktop" }, { "const": "storybook-mobile" }],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "browserV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "version", "playwrightPackage", "playwrightChromiumRevision"],
+      "properties": {
+        "engine": { "const": "Chrome Headless Shell" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "playwrightPackage": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "playwrightChromiumRevision": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "source", "screenshots"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/storybook-visual-goldens/v2" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gitSha", "workflowRun", "artifactId", "runnerImage", "browser", "fonts", "projects"],
+          "properties": {
+            "gitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+            "workflowRun": { "type": "integer", "minimum": 1 },
+            "artifactId": { "type": "integer", "minimum": 1 },
+            "runnerImage": { "$ref": "#/$defs/runnerImage" },
+            "browser": { "$ref": "#/$defs/browserV2" },
+            "fonts": { "type": "array", "minItems": 8, "uniqueItems": true, "items": { "type": "string", "pattern": "^[^=]+=[^=]+$" } },
+            "projects": { "$ref": "#/$defs/projects" }
+          }
+        },
+        "screenshots": { "$ref": "#/$defs/screenshots" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "candidateArtifact", "review"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/storybook-visual-goldens/v3" },
+        "candidateArtifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256", "document"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "document": { "type": "string", "minLength": 1 }
+          }
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "candidateSha256", "decision", "reviewer", "reviewedAt", "inspectedScreenshots"],
+          "properties": {
+            "schema": { "const": "website-design-compiler/storybook-golden-review/v1" },
+            "candidateSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "decision": { "const": "ADMIT" },
+            "reviewer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["identity", "context", "independence"],
+              "properties": {
+                "identity": { "type": "string", "minLength": 1 },
+                "context": { "type": "string", "minLength": 1 },
+                "independence": { "const": "SEPARATE_REVIEW_CONTEXT" }
+              }
+            },
+            "reviewedAt": { "type": "string", "format": "date-time" },
+            "inspectedScreenshots": {
+              "type": "array",
+              "minItems": 90,
+              "maxItems": 90,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "sha256", "observation"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^storybook-(desktop|mobile)--[^/]+\\.png$" },
+                  "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                  "observation": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
