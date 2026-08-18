@@ -52,6 +52,8 @@ export interface MediaWorker {
 
 export interface MediaGenerationReceipt {
   schema: "website-design-compiler/media-generation-receipt/v1";
+  gate: "DETERMINISTIC_MOCK";
+  productionReleaseEligible: false;
   overall: "PASS" | "FAIL";
   requestId: string;
   model: {
@@ -81,10 +83,10 @@ export interface MediaGenerationReceipt {
   reason?: string;
 }
 
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+export function canonicalMediaValue(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalMediaValue).join(",")}]`;
   if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => `${JSON.stringify(key)}:${canonical(entry)}`).join(",")}}`;
+    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => `${JSON.stringify(key)}:${canonicalMediaValue(entry)}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -94,7 +96,7 @@ export function sha256(value: string | Uint8Array): string {
 }
 
 export function signMediaRequest(request: MediaRequest, secret: string): string {
-  return createHmac("sha256", secret).update(canonical(request)).digest("hex");
+  return createHmac("sha256", secret).update(canonicalMediaValue(request)).digest("hex");
 }
 
 export function verifyMediaRequest(signed: SignedMediaRequest, secret: string): boolean {
@@ -124,7 +126,7 @@ export class DeterministicMockMediaWorker implements MediaWorker {
   adapter = "mock" as const;
 
   async generate(request: MediaRequest): Promise<MediaAsset> {
-    const seed = sha256(canonical({ kind: request.kind, modelId: request.modelId, prompt: request.prompt, parameters: request.parameters }));
+    const seed = sha256(canonicalMediaValue({ kind: request.kind, modelId: request.modelId, prompt: request.prompt, parameters: request.parameters }));
     if (request.kind === "image") {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#f8fafc"/><text x="32" y="64" font-family="system-ui" font-size="18" fill="#0f172a">deterministic-media:${seed.slice(0, 24)}</text></svg>`;
       return { mediaType: "image/svg+xml", extension: "svg", bytes: new TextEncoder().encode(svg) };
@@ -147,8 +149,10 @@ export async function routeMediaGeneration(args: {
   const maxAttempts = Math.max(1, args.maxAttempts ?? 2);
   const base = {
     schema: "website-design-compiler/media-generation-receipt/v1" as const,
+    gate: "DETERMINISTIC_MOCK" as const,
+    productionReleaseEligible: false as const,
     requestId: request.requestId,
-    requestSha256: sha256(canonical(request)),
+    requestSha256: sha256(canonicalMediaValue(request)),
     promptSha256: sha256(request.prompt),
     parameters: request.parameters,
     optimization: request.optimization,
@@ -169,6 +173,7 @@ export async function routeMediaGeneration(args: {
   }
   const modelReceipt = { id: model.id, kind: model.kind, adapter: model.adapter, admission: model.admission, versionOrCommit: model.versionOrCommit, provenanceSubjectId: model.provenanceSubjectId, outputTermsSubjectId: model.outputTermsSubjectId };
   if (model.admission !== "ALLOW") return { receipt: { ...base, overall: "FAIL", model: modelReceipt, reason: `model admission is ${model.admission}` } };
+  if (model.adapter !== "mock") return { receipt: { ...base, overall: "FAIL", model: modelReceipt, reason: "production adapters must use the independent production provider route" } };
 
   const worker = workers[model.adapter];
   if (!worker || worker.adapter !== model.adapter) return { receipt: { ...base, overall: "FAIL", model: modelReceipt, reason: "required isolated media worker is unavailable" } };
