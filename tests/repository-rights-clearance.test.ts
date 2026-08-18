@@ -148,6 +148,31 @@ test("package metadata read or parse failures are UNKNOWN instead of NOT_DISTRIB
   }
 });
 
+test("a production-graph package with an explicit absent release-target path is not distributed", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-rights-optional-target-"));
+  const binDirectory = join(root, "bin");
+  const previousPath = process.env.PATH;
+  try {
+    await mkdir(join(root, "node_modules/.pnpm"), { recursive: true });
+    await mkdir(binDirectory);
+    const missingTarget = join(root, "node_modules/.pnpm/platform-only@1.0.0/node_modules/platform-only");
+    const graph = JSON.stringify([{ dependencies: { "platform-only": { version: "1.0.0", path: missingTarget } } }]);
+    const pnpmPath = join(binDirectory, "pnpm");
+    await writeFile(pnpmPath, `#!/bin/sh\nprintf '%s\\n' '${graph}'\n`, "utf8");
+    await chmod(pnpmPath, 0o755);
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+
+    const receipt = await scanRepositoryRights(root, [], new Date("2026-08-18T00:00:00.000Z"));
+    const subject = receipt.subjects.find((candidate) => candidate.id === "package:platform-only@1.0.0");
+    assert.equal(subject?.state, "NOT_DISTRIBUTED");
+    assert.equal(subject?.distributed, false);
+    assert.equal(receipt.unresolved.includes("package:platform-only@1.0.0"), false);
+  } finally {
+    process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("waiver and public-tree diagnostics independently fail the repository receipt", async () => {
   const root = await mkdtemp(join(tmpdir(), "wdc-rights-receipt-diagnostics-"));
   const binDirectory = join(root, "bin");

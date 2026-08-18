@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { resolve, join, relative } from "node:path";
+import { isAbsolute, resolve, join, relative } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
@@ -25,7 +26,7 @@ export function classifyLicense(expression: string | null): RightsState {
   return PERMISSIVE.includes(normalized) ? "ALLOW" : "UNKNOWN";
 }
 
-interface PnpmDependency { version?: string; dependencies?: Record<string, PnpmDependency>; optionalDependencies?: Record<string, PnpmDependency>; }
+interface PnpmDependency { version?: string; path?: string; dependencies?: Record<string, PnpmDependency>; optionalDependencies?: Record<string, PnpmDependency>; }
 interface PnpmProject extends PnpmDependency { path?: string; }
 interface PackageEvidenceOverride { license: string; source: string; }
 interface AssetEvidence { sha256: string; license: string; source: string; }
@@ -56,11 +57,15 @@ function packageMetadataDiagnostic(root: string, path: string, failure: string):
   return `diagnostic:package-metadata:${failure}:${relative(root, path)}`;
 }
 
-function flattenTree(projects: PnpmProject[]): Map<string, { name: string; version: string }> {
-  const found = new Map<string, { name: string; version: string }>();
+function flattenTree(projects: PnpmProject[]): Map<string, { name: string; version: string; installPath?: string }> {
+  const found = new Map<string, { name: string; version: string; installPath?: string }>();
   const visit = (deps: Record<string, PnpmDependency> | undefined) => {
     for (const [name, dep] of Object.entries(deps ?? {})) {
-      if (dep.version) found.set(`${name}@${dep.version}`, { name, version: dep.version });
+      if (dep.version) {
+        const id = `${name}@${dep.version}`;
+        const previous = found.get(id);
+        if (!previous || (!previous.installPath && dep.path)) found.set(id, { name, version: dep.version, ...(dep.path ? { installPath: dep.path } : {}) });
+      }
       visit(dep.dependencies); visit(dep.optionalDependencies);
     }
   };
@@ -220,11 +225,21 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
   const metadata = await packageMetadataIndex(root);
   const overrides = await loadOverrides(root);
   const packageDiagnostics = new Set<string>();
-  const packageSubjects: RightsSubject[] = [...dependencies.values()].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)).map(({ name, version }) => {
+  const packageSubjects: RightsSubject[] = [...dependencies.values()].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)).map(({ name, version, installPath }) => {
     const id = `${name}@${version}`;
     const installed = metadata.index.get(id);
     const override = overrides[id];
     const metadataFailures = metadata.failuresByName.get(name) ?? metadata.globalFailures;
+    const installPathTraversal = installPath ? relative(root, installPath) : null;
+    const installPathIsInsideRoot = installPathTraversal !== null && installPathTraversal.split(/[\\/]/)[0] !== ".." && !isAbsolute(installPathTraversal);
+    if (!installed && installPath && installPathIsInsideRoot && !existsSync(installPath)) {
+      return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: override?.license ?? null, state: "NOT_DISTRIBUTED" as const, evidence: [`pnpm production graph:${id}`, "release target package path is absent"], attributionRequired: false, distributed: false };
+    }
+    if (!installed && installPath && !installPathIsInsideRoot) {
+      const diagnostic = `diagnostic:package-path:OUTSIDE_ROOT:${id}`;
+      packageDiagnostics.add(diagnostic);
+      return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: null, state: "UNKNOWN" as const, evidence: [`pnpm production graph:${id}`, diagnostic], attributionRequired: false, distributed: true };
+    }
     if (!installed && metadataFailures.length > 0) {
       for (const diagnostic of metadataFailures) packageDiagnostics.add(diagnostic);
       return { id: `package:${id}`, kind: "package" as const, name, versionOrIdentity: version, licenseExpression: null, state: "UNKNOWN" as const, evidence: [`pnpm production graph:${id}`, ...metadataFailures], attributionRequired: false, distributed: true };
