@@ -12,11 +12,15 @@ test("showcase renders governed compiler projection with graphics disabled", asy
   const main = page.locator("main[data-showcase-project='evidence-first-showcase'][data-governed-renderer='nextjs-registry']");
   await expect(main).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Reference evidence becomes a governed");
-  const action = page.getByRole("button", { name: "Open compiler contract" });
+  await expect(page.locator("[data-frontend-component='rich-section']")).toHaveCount(6);
+  await expect(page.locator("[data-governed-section='navigation']")).toBeVisible();
+  await expect(page.locator("[data-governed-section='hero']")).toBeVisible();
+  await expect(page.locator("[data-governed-section='proof-cloud']")).toBeVisible();
+  const action = page.getByRole("link", { name: "Continue" }).first();
   await expect(action).toBeVisible();
   await action.focus();
   await expect(action).toBeFocused();
-  await expect(page.getByText("Governed component plan emitted")).toBeVisible();
+  await expect(page.getByText("Omit proof section until evidence is supplied.")).toBeVisible();
 
   const graphics2d = page.locator("section[data-graphics-state='fallback']");
   await expect(graphics2d).toBeVisible();
