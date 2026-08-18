@@ -313,7 +313,9 @@ function validateArenaReceipt(value: JsonRecord): string[] {
   else {
     const ids: string[] = [];
     value.categories.forEach((category, index) => {
-      if (!isRecord(category) || typeof category.id !== "string" || !PASS_FAIL.has(category.state) || !EVIDENCE_STATES.has(category.compilerOverall) || typeof category.inputSha256 !== "string" || !SHA256.test(category.inputSha256) || !isStringArray(category.missingStages) || !Array.isArray(category.nonPassStages) || typeof category.stageScore !== "number") errors.push(`categories[${index}] is malformed`);
+      const inputSha256Valid = isRecord(category) && typeof category.inputSha256 === "string" &&
+        (SHA256.test(category.inputSha256) || (category.compilerOverall === "ABSENT" && category.inputSha256 === "ABSENT"));
+      if (!isRecord(category) || typeof category.id !== "string" || !PASS_FAIL.has(category.state) || !EVIDENCE_STATES.has(category.compilerOverall) || !inputSha256Valid || !isStringArray(category.missingStages) || !Array.isArray(category.nonPassStages) || typeof category.stageScore !== "number") errors.push(`categories[${index}] is malformed`);
       else {
         ids.push(category.id);
         const expected = category.compilerOverall === "PASS" && category.missingStages.length === 0 && category.nonPassStages.length === 0 ? "PASS" : "FAIL";

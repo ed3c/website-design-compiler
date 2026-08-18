@@ -136,6 +136,26 @@ test("all twelve release child schemas require and accept their formal receipt s
   }
 });
 
+test("a formal Arena FAIL can preserve complete category coverage when compiler receipts are absent", () => {
+  const arena = validReceipts().arena;
+  assert.ok(arena);
+  arena.overall = "FAIL";
+  arena.benchmarkScore = 0;
+  arena.categories = (arena.categories as Array<Record<string, unknown>>).map((category) => ({
+    ...category,
+    state: "FAIL",
+    compilerOverall: "ABSENT",
+    inputSha256: "ABSENT",
+    missingStages: ["reference-intelligence"],
+    stageScore: 0
+  }));
+
+  const binding = bindReleaseEvidence(arena, RELEASE_CHILD_SPECS.arena.schema, git);
+  assert.equal(binding.state, "FAIL");
+  assert.equal(binding.binding, "BOUND");
+  assert.deepEqual(binding.errors, []);
+});
+
 test("receipt binding requires the exact SHA and ref", () => {
   const receipt = validReceipts().runtime;
   assert.equal(bindReleaseEvidence(receipt, RELEASE_CHILD_SPECS.runtime.schema, { ...git, sha: "c".repeat(40) }).binding, "MISMATCH");
