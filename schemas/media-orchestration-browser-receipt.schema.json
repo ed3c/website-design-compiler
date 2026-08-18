@@ -5,7 +5,7 @@
   "additionalProperties": false,
   "required": ["schema", "overall", "git", "categories", "gates"],
   "properties": {
-    "schema": { "const": "website-design-compiler/media-orchestration-browser-receipt/v1" },
+    "schema": { "const": "website-design-compiler/media-orchestration-browser-receipt/v2" },
     "overall": { "enum": ["PASS", "FAIL"] },
     "git": {
       "type": "object", "additionalProperties": false, "required": ["sha", "ref"],
@@ -15,24 +15,47 @@
       "type": "array", "minItems": 6, "maxItems": 6,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["category", "strategy", "requestedRenderers", "runtimeStates"],
+        "required": ["category", "strategy", "requestedRenderers", "runtimeStates", "runtimeMetrics"],
         "properties": {
           "category": { "type": "string" }, "strategy": { "type": "string" },
           "requestedRenderers": { "type": "array", "items": { "enum": ["dom", "image", "video", "pixi", "three"] } },
-          "runtimeStates": { "type": "array", "items": { "enum": ["PENDING", "ACTIVE", "DOM_FALLBACK"] } }
+          "runtimeStates": { "type": "array", "items": { "enum": ["PENDING", "ACTIVE", "DOM_FALLBACK"] } },
+          "runtimeMetrics": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["sectionId", "renderer", "state", "budget", "observed", "withinBudget"],
+              "properties": {
+                "sectionId": { "type": "string", "minLength": 1 }, "renderer": { "enum": ["image", "video", "pixi", "three"] }, "state": { "enum": ["ACTIVE", "DOM_FALLBACK"] }, "withinBudget": { "type": "boolean" },
+                "budget": { "$ref": "#/$defs/budget" }, "observed": { "$ref": "#/$defs/observed" }
+              }
+            }
+          }
         }
       }
     },
     "gates": {
       "type": "object", "additionalProperties": false,
-      "required": ["uniqueStrategies", "deliberateNoMedia", "providerFallback", "pixiRuntime", "threeRuntime", "forcedFailureFallback", "lazyLoading", "budgets", "semanticOwnership"],
+      "required": ["uniqueStrategies", "deliberateNoMedia", "providerFallback", "pixiRuntime", "threeRuntime", "forcedFailureFallback", "lazyLoading", "observedBudgets", "semanticOwnership"],
       "properties": {
         "uniqueStrategies": { "enum": ["PASS", "FAIL"] }, "deliberateNoMedia": { "enum": ["PASS", "FAIL"] },
         "providerFallback": { "enum": ["PASS", "FAIL"] }, "pixiRuntime": { "enum": ["PASS", "FAIL"] },
         "threeRuntime": { "enum": ["PASS", "FAIL"] }, "forcedFailureFallback": { "enum": ["PASS", "FAIL"] },
-        "lazyLoading": { "enum": ["PASS", "FAIL"] }, "budgets": { "enum": ["PASS", "FAIL"] },
+        "lazyLoading": { "enum": ["PASS", "FAIL"] }, "observedBudgets": { "enum": ["PASS", "FAIL"] },
         "semanticOwnership": { "enum": ["PASS", "FAIL"] }
       }
+    }
+  },
+  "$defs": {
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxBytes", "maxDpr", "maxTriangles", "maxDrawCalls"],
+      "properties": { "maxBytes": { "type": "number", "minimum": 0 }, "maxDpr": { "type": "number", "minimum": 0 }, "maxTriangles": { "type": "number", "minimum": 0 }, "maxDrawCalls": { "type": "number", "minimum": 0 } }
+    },
+    "observed": {
+      "type": "object", "additionalProperties": false,
+      "required": ["transferBytes", "textureCount", "textureBytes", "dpr", "triangles", "drawCalls"],
+      "properties": { "transferBytes": { "type": "number", "minimum": 0 }, "textureCount": { "type": "integer", "minimum": 0 }, "textureBytes": { "type": "number", "minimum": 0 }, "dpr": { "type": "number", "minimum": 0 }, "triangles": { "type": "number", "minimum": 0 }, "drawCalls": { "type": "number", "minimum": 0 } }
     }
   }
 }
