@@ -37,7 +37,7 @@ export function evaluateIssue36PremiumRelease(evaluator:unknown,binding:unknown,
   return{overall:Object.values(gates).every((state)=>state==="PASS")&&failures.length===0?"PASS" as const:"FAIL" as const,gates,coverage,thresholds,failures:[...new Set(failures)].sort()};
 }
 
-async function read(root:string,path:string,schema?:string){try{const bytes=await readFile(join(root,path));const value=JSON.parse(bytes.toString("utf8"));if(schema)await validateAgainstSchema(value,schema);return{bytes,value,state:"PASS" as const};}catch{return{bytes:null,value:null,state:"FAIL" as const};}}
+async function read(root:string,path:string,schema?:string){try{const bytes=await readFile(join(root,path));const value=JSON.parse(bytes.toString("utf8"));if(schema)await validateAgainstSchema(value,schema);return{bytes,value,state:"PASS" as const};}catch(error){console.error(`${path}: unavailable or invalid: ${error instanceof Error?error.message:String(error)}`);return{bytes:null,value:null,state:"FAIL" as const};}}
 async function main(){
   const root=process.cwd();const git:GitSubject={ref:execFileSync("git",["symbolic-ref","--quiet","HEAD"],{encoding:"utf8"}).trim(),sha:execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim(),tree:execFileSync("git",["rev-parse","HEAD^{tree}"],{encoding:"utf8"}).trim()};
   const evaluator=await read(root,evaluatorPath,"design-quality-eval-receipt-v3.schema.json");const binding=await read(root,bindingPath,"issue-36-evidence-binding.schema.json");const arena=await read(root,arenaPath);

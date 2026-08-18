@@ -130,7 +130,8 @@ async function main() {
       checks.observation = hash(observationBytes) === evaluation.source.qualityObservationSha256 ? "PASS" : "FAIL";
       const screenshotBytes = await readFile(join(root, evaluation.binding.screenshotPath));
       checks.screenshot = hash(screenshotBytes) === evaluation.binding.screenshotSha256 ? "PASS" : "FAIL";
-    } catch {
+    } catch (error) {
+      console.error(`${key}: runtime evidence unavailable or invalid: ${error instanceof Error ? error.message : String(error)}`);
       // Missing runtime bytes remain an explicit FAIL in checks.
     }
     const state = Object.values(checks).every((value) => value === "PASS") ? "PASS" : "FAIL";
