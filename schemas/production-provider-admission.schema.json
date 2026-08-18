@@ -21,7 +21,10 @@
     "transportSha256": { "$ref": "#/$defs/sha256" },
     "modelIdentitySha256": { "$ref": "#/$defs/sha256" },
     "policySha256": { "$ref": "#/$defs/sha256" },
-    "rightsReceiptSha256": { "$ref": "#/$defs/sha256" },
+    "rightsReceiptSha256": {
+      "$ref": "#/$defs/sha256",
+      "description": "Stable SHA-256 of the three exact production-rights subjects; volatile receipt time and Git metadata are excluded while the runtime separately binds the full canonical receipt bytes."
+    },
     "credentials": { "const": "AVAILABLE" },
     "budget": { "const": "AUTHORIZED" },
     "rateLimitRemaining": { "type": "integer", "minimum": 0 },

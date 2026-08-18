@@ -3,6 +3,7 @@ import { validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt } f
 import { validateProductionAdmissionPacket, type ProductionAdmissionPacket } from "./production-provider-admission.js";
 import {
   buildConfiguredProductionProviderStatus,
+  productionRightsAdmissionSha256,
   productionRightsIdentities,
   routeProductionMediaGeneration,
   validateProductionProviderPolicy,
@@ -162,7 +163,7 @@ export function validateProductionProviderExecutionEvidence(value: unknown, righ
         transportSha256: sha256(canonicalMediaValue(adapter)),
         modelIdentitySha256,
         policySha256: sha256(canonicalMediaValue(policy)),
-        rightsReceiptSha256: String(canonicalRights.canonicalValueSha256)
+        rightsReceiptSha256: productionRightsAdmissionSha256(rightsReceipt as unknown as RepositoryClearanceReceipt, policy)
       },
       authorities: [{ authorityId: authority.authorityId, publicKeyPem: authority.publicKeyPem }],
       now: new Date(value.executedAt)

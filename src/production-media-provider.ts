@@ -327,6 +327,40 @@ export function productionRightsIdentities(identity: ProductionProviderIdentity)
   };
 }
 
+export function productionRightsAdmissionSha256(
+  receipt: RepositoryClearanceReceipt,
+  policy: ProductionProviderPolicy
+): string {
+  const projection = (["modelWeight", "generatedOutput", "hostedService"] as const).map((role) => {
+    const binding = policy.rights[role];
+    const subject = receipt.subjects.find((candidate) => candidate.id === binding.subjectId);
+    return {
+      role,
+      subjectId: binding.subjectId,
+      expectedIdentity: binding.expectedIdentity,
+      subject: subject
+        ? {
+            id: subject.id,
+            kind: subject.kind,
+            name: subject.name,
+            versionOrIdentity: subject.versionOrIdentity,
+            licenseExpression: subject.licenseExpression,
+            state: subject.state,
+            evidence: [...subject.evidence].sort(),
+            attributionRequired: subject.attributionRequired,
+            distributed: subject.distributed,
+            geographicRestrictions: [...(subject.geographicRestrictions ?? [])].sort(),
+            usageRestrictions: [...(subject.usageRestrictions ?? [])].sort()
+          }
+        : null
+    };
+  });
+  return sha256(canonicalMediaValue({
+    schema: "website-design-compiler/production-rights-admission-projection/v1",
+    subjects: projection
+  }));
+}
+
 export function validateProductionProviderPolicy(policy: ProductionProviderPolicy): string[] {
   const errors: string[] = [];
   if (!isSafeOpaqueId(policy.identity.providerId)) errors.push("providerId must be a safe opaque identity");
@@ -409,7 +443,7 @@ export async function routeProductionMediaGeneration(args: {
     kind: args.policy.identity.kind
   }));
   const policySha256 = sha256(canonicalMediaValue(args.policy));
-  const rightsReceiptSha256 = sha256(canonicalMediaValue(args.rightsReceipt));
+  const rightsReceiptSha256 = productionRightsAdmissionSha256(args.rightsReceipt, args.policy);
   const base: ProductionProviderReceipt = {
     schema: "website-design-compiler/production-provider-receipt/v2",
     gate: "PRODUCTION_PROVIDER",

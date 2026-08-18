@@ -3,6 +3,7 @@ import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 import {
   buildUnconfiguredProductionProviderStatus,
+  productionRightsAdmissionSha256,
   ProductionProviderError,
   routeProductionMediaGeneration as routeProvider,
   validateProductionMediaRequest,
@@ -124,7 +125,7 @@ function admissionFor(
       kind: admittedPolicy.identity.kind
     })),
     policySha256: sha256(canonicalMediaValue(admittedPolicy)),
-    rightsReceiptSha256: sha256(canonicalMediaValue(admittedRights)),
+    rightsReceiptSha256: productionRightsAdmissionSha256(admittedRights, admittedPolicy),
     credentials: "AVAILABLE",
     budget: "AUTHORIZED",
     rateLimitRemaining: 2,
@@ -187,6 +188,29 @@ test("durable production admission satisfies its strict schema and exact digest 
   assert.match(packet.policySha256, /^[a-f0-9]{64}$/);
   assert.match(packet.rightsReceiptSha256, /^[a-f0-9]{64}$/);
   assert.match(packet.signatureBase64, /^[A-Za-z0-9+/]+=*$/);
+});
+
+test("production rights admission ignores volatile receipt metadata but binds exact legal subjects", () => {
+  const laterReceipt = {
+    ...rightsReceipt,
+    generatedAt: "2026-08-19T12:34:56.000Z",
+    git: { sha: "f".repeat(40), ref: "refs/heads/main" },
+    subjects: [
+      ...rightsReceipt.subjects,
+      subject("package:unrelated", "package", "1.0.0")
+    ]
+  };
+  assert.equal(
+    productionRightsAdmissionSha256(laterReceipt, policy),
+    productionRightsAdmissionSha256(rightsReceipt, policy)
+  );
+
+  const changedRights = structuredClone(rightsReceipt);
+  changedRights.subjects[1]!.usageRestrictions = ["NO_PAID_ADVERTISING"];
+  assert.notEqual(
+    productionRightsAdmissionSha256(changedRights, policy),
+    productionRightsAdmissionSha256(rightsReceipt, policy)
+  );
 });
 
 test("tampered, expired, or untrusted human admission cannot execute the provider", async () => {

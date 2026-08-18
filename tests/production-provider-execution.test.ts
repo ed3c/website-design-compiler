@@ -13,7 +13,7 @@ import {
   validateProductionProviderExecutionConfig,
   type ProductionProviderExecutionConfig
 } from "../src/production-provider-execution.js";
-import type { ProductionProviderPolicy } from "../src/production-media-provider.js";
+import { productionRightsAdmissionSha256, type ProductionProviderPolicy } from "../src/production-media-provider.js";
 import type { RepositoryClearanceReceipt, RightsSubject } from "../src/repository-rights-clearance.js";
 import { validateAgainstSchema } from "../src/validate.js";
 import { RELEASE_CAPABILITY_SPECS, readBoundReleaseEvidence } from "../src/release-evidence.js";
@@ -99,7 +99,7 @@ function admission(): ProductionAdmissionPacket {
     transportSha256: sha256(canonicalMediaValue(config.adapter)),
     modelIdentitySha256: sha256(canonicalMediaValue({ modelId: policy.identity.modelId, modelRevision: policy.identity.modelRevision, kind: policy.identity.kind })),
     policySha256: sha256(canonicalMediaValue(policy)),
-    rightsReceiptSha256: sha256(canonicalMediaValue(rightsReceipt)),
+    rightsReceiptSha256: productionRightsAdmissionSha256(rightsReceipt, policy),
     credentials: "AVAILABLE",
     budget: "AUTHORIZED",
     rateLimitRemaining: 1,

@@ -162,7 +162,10 @@
         "transportSha256": { "$ref": "#/$defs/sha256" },
         "modelIdentitySha256": { "$ref": "#/$defs/sha256" },
         "policySha256": { "$ref": "#/$defs/sha256" },
-        "rightsReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "rightsReceiptSha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "Stable digest of the exact provider rights subjects; full canonical receipt bytes remain independently bound by canonicalRights."
+        },
         "credentials": { "const": "AVAILABLE" },
         "budget": { "const": "AUTHORIZED" },
         "rateLimitRemaining": { "type": "integer", "minimum": 0 },
