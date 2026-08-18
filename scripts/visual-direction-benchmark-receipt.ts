@@ -12,6 +12,7 @@ const arenaDirectory = resolve("artifacts/arena");
 await mkdir(outputDirectory, { recursive: true });
 await mkdir(arenaDirectory, { recursive: true });
 const categories = [];
+const selectedSignatures:string[]=[];
 for (const benchmark of matrix.categories) {
   const input: CompilerInput = {
     schema: "website-design-compiler/input/v1",
@@ -30,6 +31,7 @@ for (const benchmark of matrix.categories) {
   const deterministic = JSON.stringify(search) === JSON.stringify(searchVisualDirections(input));
   const seededDeterministic = JSON.stringify(searchVisualDirections(input, "arena-v2")) === JSON.stringify(searchVisualDirections(input, "arena-v2"));
   const selected = search.candidates.find((candidate) => candidate.id === search.selectedCandidateId)!;
+  selectedSignatures.push(selected.signature);
   const state = search.candidateCount >= 3 && uniqueSignatures >= 3 && selectedCount === 1 && rejectedHaveReasons && downstreamWinnerMatch && deterministic && seededDeterministic ? "PASS" : "FAIL";
   categories.push({
     id: benchmark.id,
@@ -50,8 +52,8 @@ for (const benchmark of matrix.categories) {
   });
   await writeFile(resolve(outputDirectory, `${benchmark.id}.json`), `${JSON.stringify(search, null, 2)}\n`, "utf8");
 }
-const winnerDiversity = new Set(categories.map((category) => category.selectedCandidateId)).size;
-const overall = categories.length === 6 && categories.every((category) => category.state === "PASS") ? "PASS" : "FAIL";
+const winnerDiversity = new Set(selectedSignatures).size;
+const overall = categories.length === 6 && winnerDiversity===6&&categories.every((category) => category.state === "PASS") ? "PASS" : "FAIL";
 const receipt = {
   schema: "website-design-compiler/visual-direction-benchmark-receipt/v2",
   overall,

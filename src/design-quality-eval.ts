@@ -66,6 +66,8 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
   const renderers=graph.nodes.map((node)=>node.mediaHook.renderer);
   const engines=graph.nodes.map((node)=>node.motionHook.engine);
   const intent=qualityIntent(graph);
+  const validAction=observation?.computed.actionTargets.some((target)=>target.visible&&target.width>=44&&target.height>=44)??false;
+  const motionSettled=observation?.computed.motionStates.every((state)=>state==="CLEANED"||state==="VISIBLE_NO_MOTION")??false;
   const penalties:string[]=[];
   const repeatedKinds=duplicates(kinds);if(repeatedKinds>1)penalties.push("repetitive-section-template");
   const gpuCount=renderers.filter((renderer)=>renderer==="pixi"||renderer==="three").length;if(gpuCount>2)penalties.push("gratuitous-gpu-complexity");
@@ -86,6 +88,9 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
     if(observation.accessibility.seriousCriticalViolationCount>0)penalties.push("serious-critical-accessibility-violation");
     if(!observation.computed.contentBudgetPass)penalties.push("runtime-content-budget-overflow");
     if(observation.computed.overflowX)penalties.push("runtime-horizontal-overflow");
+    if(observation.computed.h1Count!==1)penalties.push("runtime-heading-hierarchy-invalid");
+    if(intent.ctaRequired&&!validAction)penalties.push("required-cta-action-not-observed");
+    if(!motionSettled)penalties.push("motion-runtime-not-settled");
     if(visualCorpus.length===0)penalties.push("visual-originality-corpus-absent");
   }
   if(!tokenMatch)penalties.push("runtime-token-evidence-absent");else if(tokenMatch.state!=="PASS")penalties.push(...tokenMatch.mismatches.map((entry)=>`runtime-token-drift:${entry}`));
@@ -98,7 +103,6 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
   const heightMean=observation?observation.computed.sectionHeights.reduce((sum,value)=>sum+value,0)/Math.max(1,observation.computed.sectionHeights.length):0;
   const heightVariance=observation?observation.computed.sectionHeights.reduce((sum,value)=>sum+(value-heightMean)**2,0)/Math.max(1,observation.computed.sectionHeights.length):0;
   const heightCv=heightMean>0?Math.sqrt(heightVariance)/heightMean:0;
-  const validAction=observation?.computed.actionTargets.some((target)=>target.visible&&target.width>=44&&target.height>=44)??false;
   const ctaClarity=intent.ctaRequired?clamp((validAction?65:10)+Math.min(25,graph.conversionPath.length*8)):clamp(82+Math.min(12,progression*2));
   const observedLayoutVariety=observation?new Set(observation.computed.layouts).size:0;
   const maxVisualSimilarity=Math.max(originalityAudit.maxVisualReferenceSimilarity,originalityAudit.maxVisualCorpusSimilarity);
@@ -115,7 +119,7 @@ export function evaluateDesignQuality(graph:CompletePageGraph,viewport:QualityVi
     originality:observation?clamp(originalityDistance*120-repeatedKinds*8):0
   };
   const values=Object.values(dimensions);const score=clamp(values.reduce((sum,value)=>sum+value,0)/values.length-penalties.length*3);
-  const observationIdentityPass=Boolean(observation&&observation.category===graph.category&&observation.viewport===viewport&&/^[a-f0-9]{64}$/.test(observation.screenshot.sha256)&&observation.accessibility.seriousCriticalViolationCount===0&&!observation.computed.overflowX&&observation.computed.contentBudgetPass);
+  const observationIdentityPass=Boolean(observation&&observation.category===graph.category&&observation.viewport===viewport&&/^[a-f0-9]{64}$/.test(observation.screenshot.sha256)&&observation.accessibility.seriousCriticalViolationCount===0&&!observation.computed.overflowX&&observation.computed.contentBudgetPass&&observation.computed.h1Count===1&&(!intent.ctaRequired||validAction)&&motionSettled);
   const measurementState=!observation?"ABSENT":observationIdentityPass&&tokenMatch?.state==="PASS"?"PASS":"FAIL";
   return{schema:"website-design-compiler/design-quality-eval/v2",category:graph.category,viewport,graphSignature:graph.signature,threshold,score,overall:score>=threshold&&originalityAudit.state==="PASS"&&measurementState==="PASS"?"PASS":"FAIL",dimensions,penalties,originalityAudit,measurement:{state:measurementState,observationSchema:observation?.schema??null,screenshotSha256:observation?.screenshot.sha256??null,tokenMatch},intent};
 }

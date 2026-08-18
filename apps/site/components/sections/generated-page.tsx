@@ -22,11 +22,6 @@ export type ProjectedPageGraph={
 
 export function GeneratedPage({graph}: {graph:ProjectedPageGraph}){
   return <main className="wdc-shell" data-generated-page={graph.category} data-page-readiness={graph.readiness} data-graph-signature={graph.signature}>
-    <header className="wdc-hero">
-      <p className="wdc-eyebrow">Compiler generated benchmark</p>
-      <h1>{graph.category.replaceAll("-"," ")}</h1>
-      <p>Rendered directly from the governed page graph projection with semantic order, responsive, motion and media contracts attached to each node.</p>
-    </header>
     {graph.nodes.map((node)=><GeneratedSectionStage key={node.id} node={node}/>)}
   </main>;
 }

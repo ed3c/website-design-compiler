@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
-import { auditCandidateOriginality, fingerprintVisualDirection, searchVisualDirections, visualDirectionSha256 } from "../src/visual-direction-search.js";
+import { auditCandidateOriginality, fingerprintVisualDirection, isVisualDirectionCompatible, searchVisualDirections, visualDirectionSha256 } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
   return {
@@ -55,6 +55,13 @@ test("same input and seed produces identical ranking and winner", () => {
   const first = searchVisualDirections(input("interactive-3d"), "stable-seed");
   const second = searchVisualDirections(input("interactive-3d"), "stable-seed");
   assert.deepEqual(first, second);
+});
+
+test("six page families select six compatible material directions",()=>{
+  const pageTypes=["b2b product landing","editorial publication","premium consumer brand","motion-heavy creative site","interactive 2d experience","interactive 3d showcase"];
+  const receipts=pageTypes.map((pageType)=>searchVisualDirections(input(pageType)));
+  assert.equal(new Set(receipts.map((receipt)=>visualDirectionSha256(receipt.selectedDirection))).size,6);
+  receipts.forEach((receipt,index)=>assert.equal(isVisualDirectionCompatible(pageTypes[index]!,receipt.selectedDirection),true));
 });
 
 test("winner becomes the single downstream selected visual direction", () => {

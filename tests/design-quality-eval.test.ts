@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
 import { compileCompletePageGraph } from "../src/complete-page-graph.js";
-import { auditGraphOriginality, evaluateDesignQuality, graphSignatureSimilarity } from "../src/design-quality-eval.js";
+import { auditGraphOriginality, evaluateDesignQuality } from "../src/design-quality-eval.js";
 import { distantVisualCorpus,qualityObservation,tokenMatchPass } from "./helpers/design-quality.js";
+import { orderedTokenSimilarity, pageGraphStructureSignature } from "../src/design-quality-calibration.js";
 
 test("all six categories emit separate fail-closed scorecards when browser evidence is absent",()=>{
   const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
@@ -52,9 +53,14 @@ test("exact reference structure is rejected by design-quality originality audit"
 
 test("benchmark corpus structural distance is deterministic and non-identical graphs remain distinguishable",()=>{
   const graphs=compileAllSectionPageFixtures().map(compileCompletePageGraph);
-  const similarity=graphSignatureSimilarity(graphs[0]!.signature,graphs[1]!.signature);
+  const similarity=orderedTokenSimilarity(pageGraphStructureSignature(graphs[0]!).split("|"),pageGraphStructureSignature(graphs[1]!).split("|"));
   assert.ok(similarity>=0&&similarity<1);
-  assert.equal(similarity,graphSignatureSimilarity(graphs[0]!.signature,graphs[1]!.signature));
+  assert.equal(similarity,orderedTokenSimilarity(pageGraphStructureSignature(graphs[0]!).split("|"),pageGraphStructureSignature(graphs[1]!).split("|")));
+});
+
+test("structural similarity is sequence-aware instead of set-only",()=>{
+  assert.equal(orderedTokenSimilarity(["hero:a","features:b","cta:c"],["hero:a","features:b","cta:c"]),1);
+  assert.ok(orderedTokenSimilarity(["hero:a","features:b","cta:c"],["hero:a","cta:c","features:b"])<1);
 });
 
 test("pixel and computed-style evidence plus runtime token match are required for premium scoring",()=>{
@@ -67,4 +73,16 @@ test("pixel and computed-style evidence plus runtime token match are required fo
   const drift=evaluateDesignQuality(graph,"desktop",50,[],[],.82,qualityObservation(graph.category,"desktop"),{state:"FAIL",matched:12,total:13,mismatches:["--wdc-color-accent"]},[],distantVisualCorpus("desktop"));
   assert.equal(drift.measurement.state,"FAIL");
   assert.equal(drift.overall,"FAIL");
+});
+
+test("runtime measurement fails closed for an undersized CTA or unsettled motion",()=>{
+  const graph=compileCompletePageGraph(compileAllSectionPageFixtures()[0]!);
+  const undersized=qualityObservation(graph.category,"mobile");undersized.computed.actionTargets=[{width:43,height:44,visible:true}];
+  const actionCard=evaluateDesignQuality(graph,"mobile",50,[],[],.82,undersized,tokenMatchPass,[],distantVisualCorpus("mobile"));
+  assert.equal(actionCard.measurement.state,"FAIL");
+  assert.ok(actionCard.penalties.includes("required-cta-action-not-observed"));
+  const unsettled=qualityObservation(graph.category,"mobile");unsettled.computed.motionStates[0]="RUNNING";
+  const motionCard=evaluateDesignQuality(graph,"mobile",50,[],[],.82,unsettled,tokenMatchPass,[],distantVisualCorpus("mobile"));
+  assert.equal(motionCard.measurement.state,"FAIL");
+  assert.ok(motionCard.penalties.includes("motion-runtime-not-settled"));
 });

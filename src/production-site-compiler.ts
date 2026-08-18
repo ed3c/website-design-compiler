@@ -11,6 +11,8 @@ import { buildDesignSystemPlan, type DesignSystemPlan } from "./design-system-co
 import { buildPageArchitecturePlan, type PageArchitecturePlan } from "./page-architect.js";
 import { SECTION_CONTRACTS, type SectionFieldContract, type SectionInstance } from "./section-grammar.js";
 import { FIELD_SLOTS, SECTION_TYPE_TO_KIND } from "./section-content-projection.js";
+import { selectSectionVariant } from "./section-presentation.js";
+import type { VisualDirectionDimensions } from "./visual-direction-search.js";
 import { compileCompletePageGraph, validateCompletePageGraph, type CompletePageGraph, type PageGraphSourceBinding } from "./complete-page-graph.js";
 import { compileCompleteSiteGraph, validateCompleteSiteGraph, type CompleteSiteGraph } from "./complete-site-graph.js";
 import { assertLosslessSiteGraphRoundTrip, payloadSiteToPuck, puckSiteToPayload, puckToSiteGraph, siteGraphFingerprint, siteGraphToPuck, type PayloadSiteGraphDocument, type PuckSiteGraphDocument } from "./page-graph-roundtrip.js";
@@ -41,7 +43,7 @@ function toFieldValue(field:SectionFieldContract,value:string|string[],route:str
   return typeof value==="string"?value:null;
 }
 function fieldFor(contract:SectionContentContract,slots:readonly string[]):SectionContentContract["fields"][number]|undefined{return slots.map((slot)=>contract.fields.find((field)=>field.slot===slot)).find(Boolean);}
-function projectSection(sectionId:string,sectionType:string,content:SectionContentContract,route:string,ia:InformationArchitecturePlan,iaSha256:string):SectionInstance{
+function projectSection(sectionId:string,sectionType:string,content:SectionContentContract,route:string,ia:InformationArchitecturePlan,iaSha256:string,direction:VisualDirectionDimensions):SectionInstance{
   const kind=SECTION_TYPE_TO_KIND[sectionType];
   if(!kind)throw new Error(`${sectionId}: no governed section kind for IA type ${sectionType}`);
   const canonical=SECTION_CONTRACTS[kind];
@@ -55,7 +57,7 @@ function projectSection(sectionId:string,sectionType:string,content:SectionConte
       const value=toFieldValue(fieldContract,field.value,route);if(value!==null){props[name]=value;provenance[name]=field.provenance.join("|");}
     }
   }
-  return{id:sectionId,kind,variant:canonical.variants[0]!,props,provenance,tokenRef:"semantic-design-tokens/v2"};
+  return{id:sectionId,kind,variant:selectSectionVariant(kind,sectionType,direction),props,provenance,tokenRef:"semantic-design-tokens/v2"};
 }
 
 export function compileProductionSite(input:NaturalLanguageBriefInput):ProductionSiteCompilation{
@@ -77,9 +79,9 @@ export function compileProductionSite(input:NaturalLanguageBriefInput):Productio
   const pages=informationArchitecture.routes.map((route):CompletePageGraph=>{
     const iaSections=route.sectionIds.map((id)=>informationArchitecture.sections.find((section)=>section.id===id)??(()=>{throw new Error(`${route.route}: unknown IA section ${id}`);})());
     const contentContracts=iaSections.map((section)=>contentById.get(section.id)??(()=>{throw new Error(`${route.route}: content contract absent for ${section.id}`);})());
-    const sections=iaSections.map((section,index)=>projectSection(`${String(index+1).padStart(2,"0")}-${section.id}`,section.type,contentById.get(section.id)!,route.route,informationArchitecture,artifacts.informationArchitecture));
+    const sections=iaSections.map((section,index)=>projectSection(`${String(index+1).padStart(2,"0")}-${section.id}`,section.type,contentById.get(section.id)!,route.route,informationArchitecture,artifacts.informationArchitecture,visualDirectionSearch.selectedDirection));
     const routedContracts=contentContracts.map((contract,index)=>({...structuredClone(contract),sectionId:sections[index]!.id}));
-    const page=compileCompletePageGraph({project:compilerInput.project,category:categoryFor(informationArchitecture.family),route:route.route,sections,source,contentContracts:routedContracts});
+    const page=compileCompletePageGraph({project:compilerInput.project,category:categoryFor(informationArchitecture.family),route:route.route,sections,source,contentContracts:routedContracts,visualDirection:visualDirectionSearch.selectedDirection});
     const errors=validateCompletePageGraph(page);if(errors.length>0)throw new Error(`${route.route}: invalid production page graph: ${errors.join("; ")}`);
     return page;
   });

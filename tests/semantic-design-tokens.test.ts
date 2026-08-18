@@ -39,6 +39,17 @@ test("six page families do not collapse to one concrete token system", () => {
   assert.ok(signatures.size >= 3);
 });
 
+test("interactive 3D owns a contrast-checked spatial dark palette",()=>{
+  const compilerInput=input("interactive-3d");
+  const tokens=compileSemanticDesignTokens(compilerInput,searchVisualDirections(compilerInput));
+  assert.equal(tokens.color.mode,"dark");
+  assert.equal(tokens.media.gradientPolicy,"spatial-dark");
+  assert.ok(tokens.color.contrastEvidence.textOnBackground>=4.5);
+  assert.ok(tokens.color.contrastEvidence.mutedTextOnBackground>=4.5);
+  assert.ok(tokens.color.contrastEvidence.onAccentOnAccent>=4.5);
+  assert.ok(tokens.color.contrastEvidence.focusOnBackground>=3);
+});
+
 test("CSS projection includes every semantic token family and all responsive type scales",()=>{
   const compilerInput=input("premium-consumer");
   const css=projectSemanticTokensToCss(compileSemanticDesignTokens(compilerInput,searchVisualDirections(compilerInput)));

@@ -52,6 +52,14 @@ test("explicit user content evidence compiles six production quality sites to RE
   }
 });
 
+test("selected visual directions materialize as distinct governed variants and responsive composition",()=>{
+  const compilations=qualityInputs.map(compileProductionSite);
+  const heroVariants=Object.fromEntries(compilations.map((compilation)=>{const page=compilation.siteGraph.routes[0]!.page;return[page.category,page.nodes.find((node)=>node.kind==="hero")?.variant];}));
+  assert.deepEqual(heroVariants,{"b2b-product":"split-media",editorial:"text-first","premium-consumer":"split-media","motion-heavy":"interactive","interactive-2d":"interactive","interactive-3d":"interactive"});
+  const presentationSignatures=compilations.map((compilation)=>compilation.siteGraph.routes[0]!.page.nodes.map((node)=>`${node.kind}:${node.variant}:${node.responsive.desktop.layout}:${node.responsive.desktop.columns}:${node.responsive.desktop.density}:${node.responsive.desktop.visualOrder.join("-")}`).join("|"));
+  assert.equal(new Set(presentationSignatures).size,6);
+});
+
 test("content quality findings keep the production site fail-closed",()=>{
   const input=structuredClone(qualityInputs[0]!);
   input.contentEvidence!.sections.features!["feature-items"]=["Repeated proof","Repeated proof"];

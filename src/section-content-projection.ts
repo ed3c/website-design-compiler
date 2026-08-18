@@ -1,4 +1,4 @@
-import { SECTION_CONTRACTS, type SectionFieldContract, type SectionKind } from "./section-grammar.js";
+import { SECTION_CONTRACTS, type SectionFieldContract, type SectionKind } from "./section-grammar";
 
 export const SECTION_TYPE_TO_KIND:Readonly<Record<string,SectionKind>>={
   navigation:"navigation",footer:"footer","hero-product":"hero","hero-editorial":"hero","hero-premium":"hero","hero-creative":"hero","hero-interactive":"hero",

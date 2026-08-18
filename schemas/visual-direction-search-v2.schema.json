@@ -78,7 +78,7 @@
         "density": { "enum": ["airy", "balanced", "dense"] },
         "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
         "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
-        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] },
         "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
         "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
         "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }

@@ -10,7 +10,7 @@ export interface SemanticDesignTokensV2 {
   sourceVisualDirection: string;
   sourceVisualDirectionReceiptSha256:string;
   color: {
-    mode: "light";
+    mode: "light" | "dark";
     background: string;
     surface: string;
     text: string;
@@ -41,17 +41,14 @@ export interface SemanticDesignTokensV2 {
   interaction: { focusRingPx: 3; focusOffsetPx: 2; rawValueBypass: false };
 }
 
-const PALETTES = [
-  { background: "oklch(0.985 0.006 250)", surface: "oklch(0.955 0.012 250)", text: "oklch(0.22 0.025 250)", mutedText: "oklch(0.43 0.025 250)", accent: "oklch(0.42 0.18 255)", focus: "oklch(0.50 0.20 255)" },
-  { background: "oklch(0.98 0.012 80)", surface: "oklch(0.94 0.022 80)", text: "oklch(0.23 0.025 65)", mutedText: "oklch(0.43 0.035 65)", accent: "oklch(0.43 0.16 45)", focus: "oklch(0.48 0.18 45)" },
-  { background: "oklch(0.975 0.008 155)", surface: "oklch(0.94 0.018 155)", text: "oklch(0.21 0.025 155)", mutedText: "oklch(0.42 0.035 155)", accent: "oklch(0.42 0.15 155)", focus: "oklch(0.47 0.17 155)" }
-] as const;
-
-function stableIndex(value: string, modulo: number): number {
-  let hash = 0;
-  for (const char of value) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return hash % modulo;
-}
+type Palette={mode:"light"|"dark";background:string;surface:string;text:string;mutedText:string;accent:string;focus:string};
+const PALETTES:Readonly<Record<VisualDirectionSearchReceipt["selectedDirection"]["colorStrategy"],Palette>>={
+  "neutral-accent":{mode:"light",background:"oklch(0.985 0.006 250)",surface:"oklch(0.955 0.012 250)",text:"oklch(0.22 0.025 250)",mutedText:"oklch(0.43 0.025 250)",accent:"oklch(0.42 0.18 255)",focus:"oklch(0.50 0.20 255)"},
+  "warm-editorial":{mode:"light",background:"oklch(0.98 0.012 80)",surface:"oklch(0.94 0.022 80)",text:"oklch(0.23 0.025 65)",mutedText:"oklch(0.43 0.035 65)",accent:"oklch(0.43 0.16 45)",focus:"oklch(0.48 0.18 45)"},
+  "tonal-brand":{mode:"light",background:"oklch(0.975 0.008 155)",surface:"oklch(0.91 0.035 155)",text:"oklch(0.21 0.025 155)",mutedText:"oklch(0.40 0.035 155)",accent:"oklch(0.38 0.15 155)",focus:"oklch(0.45 0.17 155)"},
+  "high-contrast":{mode:"light",background:"oklch(0.975 0.015 305)",surface:"oklch(0.89 0.055 305)",text:"oklch(0.17 0.035 305)",mutedText:"oklch(0.38 0.045 305)",accent:"oklch(0.34 0.20 310)",focus:"oklch(0.44 0.19 310)"},
+  "spatial-dark":{mode:"dark",background:"oklch(0.16 0.03 260)",surface:"oklch(0.24 0.05 255)",text:"oklch(0.95 0.015 220)",mutedText:"oklch(0.75 0.035 225)",accent:"oklch(0.78 0.16 205)",focus:"oklch(0.82 0.16 90)"}
+};
 
 function parseOklch(value: string): { l: number; c: number; h: number } {
   const match = /^oklch\(([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\)$/.exec(value);
@@ -90,9 +87,14 @@ export function compileSemanticDesignTokens(input: CompilerInput,visual:VisualDi
   const selectedCandidate=visual.candidates.find((candidate)=>candidate.id===visual.selectedCandidateId&&candidate.state==="SELECTED");
   if(!selectedCandidate||JSON.stringify(selectedCandidate.dimensions)!==JSON.stringify(visual.selectedDirection))throw new Error("visual-direction selected candidate identity drift");
   const selected = visual.selectedDirection;
-  const palette = PALETTES[stableIndex(`${input.brief.pageType}:${selected.colorStrategy}`, PALETTES.length)]!;
-  const editorial = selected.density === "airy";
-  const displayFamily = selected.typography === "editorial-serif" ? "Georgia" : selected.typography === "display-contrast" ? "Arial Black" : "Inter";
+  const palette = PALETTES[selected.colorStrategy];
+  const editorial = selected.grid === "editorial";
+  const displayFamily = selected.typography === "editorial-serif" ? "Georgia" : selected.typography === "display-contrast" ? "Arial Black" : selected.typography==="humanist-sans"?"Trebuchet MS":"Inter";
+  const bodyFamily=selected.typography==="editorial-serif"?"Georgia":selected.typography==="humanist-sans"?"Trebuchet MS":"Inter";
+  const scalePx=selected.typeContrast==="dramatic"?{mobile:[12,14,16,22,32,48],tablet:[12,14,17,26,40,62],desktop:[12,15,18,30,48,76]}:selected.typeContrast==="restrained"?{mobile:[12,14,16,19,25,34],tablet:[12,14,16,20,29,40],desktop:[12,14,16,22,32,48]}:{mobile:[12,14,16,20,28,40],tablet:[12,14,16,22,34,52],desktop:[12,14,17,24,40,64]};
+  const spacingPx=selected.density==="airy"?[4,10,18,30,48,80,128]:selected.density==="dense"?[4,6,10,16,24,36,56]:[4,8,12,20,32,52,84];
+  const radiiPx:SemanticDesignTokensV2["radiiPx"]=selected.surface==="flat"?{sm:0,md:0,lg:0,pill:999}:selected.surface==="bordered"?{sm:2,md:4,lg:8,pill:999}:selected.surface==="tonal"?{sm:6,md:12,lg:20,pill:999}:{sm:8,md:16,lg:28,pill:999};
+  const elevation=selected.surface==="layered"?{low:"0 4px 18px rgb(0 0 0 / 0.09)",high:"0 28px 72px rgb(0 0 0 / 0.16)"}:selected.surface==="bordered"?{low:"0 1px 0 rgb(0 0 0 / 0.08)",high:"0 8px 24px rgb(0 0 0 / 0.10)"}:{low:"none",high:"none"};
   const onAccent = palette.background;
   const textOnBackground = contrastRatio(palette.text, palette.background);
   const mutedTextOnBackground = contrastRatio(palette.mutedText, palette.background);
@@ -104,11 +106,11 @@ export function compileSemanticDesignTokens(input: CompilerInput,visual:VisualDi
     project: input.project,
     sourceVisualDirection: visual.selectedCandidateId,
     sourceVisualDirectionReceiptSha256:visualDirectionSha256(visual),
-    color: { mode: "light", ...palette, onAccent, contrastPolicy: "WCAG_AA_TEXT", contrastEvidence: { textOnBackground, mutedTextOnBackground, onAccentOnAccent, focusOnBackground, minimumText: 4.5, minimumFocus: 3 } },
+    color: { ...palette, onAccent, contrastPolicy: "WCAG_AA_TEXT", contrastEvidence: { textOnBackground, mutedTextOnBackground, onAccentOnAccent, focusOnBackground, minimumText: 4.5, minimumFocus: 3 } },
     typography: {
       display: { family: displayFamily, fallback: ["system-ui", "sans-serif"], weight: selected.typeContrast === "dramatic" ? 700 : 600, lineHeight: 1.08, letterSpacingEm: -0.025 },
-      body: { family: "Inter", fallback: ["system-ui", "sans-serif"], weight: 400, lineHeight: editorial ? 1.7 : 1.55, measureCh: editorial ? 68 : 62 },
-      scalePx: { mobile: [12, 14, 16, 20, 28, 40], tablet: [12, 14, 16, 22, 34, 52], desktop: [12, 14, 17, 24, 40, 64] }
+      body: { family: bodyFamily, fallback: ["system-ui", "sans-serif"], weight: 400, lineHeight: editorial ? 1.75 : selected.density==="dense"?1.45:1.58, measureCh: editorial ? 66 : selected.grid==="asymmetric"?58:62 },
+      scalePx
     },
     layout: {
       breakpointsPx: { mobile: 0, tablet: 768, desktop: 1200 },
@@ -116,10 +118,10 @@ export function compileSemanticDesignTokens(input: CompilerInput,visual:VisualDi
       columns: { mobile: 4, tablet: selected.grid === "editorial" ? 8 : 10, desktop: 12 },
       gutterPx: { mobile: 16, tablet: editorial ? 28 : 24, desktop: editorial ? 40 : 32 }
     },
-    spacingPx: editorial ? [4, 8, 16, 28, 44, 72, 112] : [4, 8, 12, 20, 32, 52, 84],
-    radiiPx: selected.surface === "layered" ? { sm: 8, md: 16, lg: 28, pill: 999 } : { sm: 4, md: 8, lg: 16, pill: 999 },
+    spacingPx,
+    radiiPx,
     border: { widthPx: 1, style: "solid", color: palette.surface },
-    elevation: { low: "0 1px 3px rgb(0 0 0 / 0.08)", high: "0 18px 48px rgb(0 0 0 / 0.14)" },
+    elevation,
     motionMs: selected.motionIntensity === "expressive" ? { fast: 100, base: 220, slow: 520 } : selected.motionIntensity === "minimal" ? { fast: 120, base: 180, slow: 280 } : { fast: 110, base: 200, slow: 380 },
     media: { treatment: selected.mediaStrategy, gradientPolicy: selected.colorStrategy, blurMaxPx: 24, noiseOpacityMax: 0.06 },
     interaction: { focusRingPx: 3, focusOffsetPx: 2, rawValueBypass: false }

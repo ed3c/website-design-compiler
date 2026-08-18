@@ -15,6 +15,11 @@ for(const category of categories)test(`${category} emits browser-derived visual 
   expect(response?.ok()).toBeTruthy();
   const root=page.locator(`[data-generated-page='${category}']`);
   await expect(root).toBeVisible();
+  const mediaStages=root.locator("[data-orchestrated-media]");
+  for(let index=0;index<await mediaStages.count();index+=1){
+    const media=mediaStages.nth(index);await media.scrollIntoViewIfNeeded();await expect(media).toHaveAttribute("data-media-runtime-state",/ACTIVE|DOM_FALLBACK/);
+  }
+  await page.evaluate(()=>window.scrollTo(0,0));
   await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
   await expect(root.locator("[data-page-node]").first()).toHaveAttribute("data-motion-runtime","CLEANED");
 
@@ -58,17 +63,17 @@ for(const category of categories)test(`${category} emits browser-derived visual 
     const h1=[...element.querySelectorAll<HTMLElement>("h1")];const h2=[...element.querySelectorAll<HTMLElement>("h2")];
     const fontSize=(entry:HTMLElement)=>Number.parseFloat(getComputedStyle(entry).fontSize);
     const h2Sizes=h2.map(fontSize).sort((a,b)=>a-b);
-    const sections=nodes.map((node)=>{const rect=node.getBoundingClientRect();return{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height,columns:Number(node.dataset.activeColumns),layout:node.dataset.activeLayout??"missing",background:getComputedStyle(node.querySelector<HTMLElement>("[data-governed-section]")??node).backgroundColor};});
+    const sections=nodes.map((node)=>{const rect=node.getBoundingClientRect();const style=getComputedStyle(node);const tracks=style.gridTemplateColumns.trim();const columns=tracks==="none"?1:tracks.split(/\s+/).filter(Boolean).length;const content=node.querySelector<HTMLElement>(".wdc-generated-node__content");const media=node.querySelector<HTMLElement>(".wdc-generated-node__media,.wdc-generated-node__field");const contentRect=content?.getBoundingClientRect();const mediaRect=media?.getBoundingClientRect();const horizontal=Boolean(contentRect&&mediaRect&&Math.abs(contentRect.top-mediaRect.top)<Math.min(contentRect.height,mediaRect.height)*.5);const layout=horizontal?"split":mediaRect&&mediaRect.height>window.innerHeight*.45?"stage":columns>1?"grid":node.querySelectorAll("li").length>=3?"list":"stack";return{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height,columns,layout,background:getComputedStyle(node.querySelector<HTMLElement>("[data-governed-section]")??node).backgroundColor};});
     const gaps=sections.slice(1).map((section,index)=>Math.max(0,section.top-sections[index]!.bottom));
     const gapMean=gaps.reduce((sum,value)=>sum+value,0)/Math.max(1,gaps.length);
     const gapVariance=gaps.reduce((sum,value)=>sum+(value-gapMean)**2,0)/Math.max(1,gaps.length);
     const actions=[...element.querySelectorAll<HTMLElement>("[data-governed-section='cta'] a,[data-governed-section='cta'] button")];
     const actionTargets=actions.map((action)=>{const rect=action.getBoundingClientRect();return{width:rect.width,height:rect.height,visible:rect.width>0&&rect.height>0&&getComputedStyle(action).visibility!=="hidden"};});
     const styles=getComputedStyle(element);
-    const tokenNames=["--wdc-color-background","--wdc-color-surface","--wdc-color-text-primary","--wdc-color-text-muted","--wdc-color-accent","--wdc-color-on-accent","--wdc-color-focus","--wdc-font-display","--wdc-font-body","--wdc-space-sm","--wdc-space-md","--wdc-space-lg","--wdc-motion-fast","--wdc-motion-base","--wdc-container-max","--wdc-gutter"];
+    const tokenNames=["--wdc-color-background","--wdc-color-surface","--wdc-color-text-primary","--wdc-color-text-muted","--wdc-color-accent","--wdc-color-on-accent","--wdc-color-focus","--wdc-font-display","--wdc-font-body","--wdc-font-display-weight","--wdc-font-display-line-height","--wdc-font-body-line-height","--wdc-font-body-measure","--wdc-space-sm","--wdc-space-md","--wdc-space-lg","--wdc-radius-lg","--wdc-border-color","--wdc-elevation-high","--wdc-media-treatment","--wdc-media-gradient-policy","--wdc-motion-fast","--wdc-motion-base","--wdc-container-max","--wdc-gutter"];
     return{
       viewport:{width:window.innerWidth,height:window.innerHeight},h1Count:h1.length,h2Count:h2.length,h1Px:h1[0]?fontSize(h1[0]):0,medianH2Px:h2Sizes[Math.floor(h2Sizes.length/2)]??0,
-      fontFamilies:[...new Set([...h1,...h2].map((entry)=>getComputedStyle(entry).fontFamily))],sectionCount:sections.length,sectionHeights:sections.map((section)=>section.height),renderedColumns:sections.map((section)=>section.columns),layouts:sections.map((section)=>section.layout),
+      fontFamilies:[...new Set([...h1,...h2].map((entry)=>getComputedStyle(entry).fontFamily))],sectionCount:sections.length,sectionHeights:sections.map((section)=>section.height),sectionWidths:sections.map((section)=>section.width),renderedColumns:sections.map((section)=>section.columns),layouts:sections.map((section)=>section.layout),
       distinctSectionBackgrounds:new Set(sections.map((section)=>section.background)).size,spacingGapMean:gapMean,spacingGapStdDev:Math.sqrt(gapVariance),pageWidth:element.getBoundingClientRect().width,pageHeight:element.getBoundingClientRect().height,
       overflowX:document.documentElement.scrollWidth>window.innerWidth+1,ctaSectionCount:element.querySelectorAll("[data-governed-section='cta']").length,actionTargets,
       mediaStages:element.querySelectorAll("[data-orchestrated-media]").length,motionStates:nodes.map((node)=>node.dataset.motionRuntime??"missing"),contentBudgetPass:nodes.every((node)=>node.dataset.contentBudgetState==="PASS"),

@@ -13,7 +13,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["mode", "background", "surface", "text", "mutedText", "accent", "onAccent", "focus", "contrastPolicy", "contrastEvidence"],
       "properties": {
-        "mode": { "const": "light" },
+        "mode": { "enum": ["light", "dark"] },
         "background": { "$ref": "#/$defs/oklch" }, "surface": { "$ref": "#/$defs/oklch" }, "text": { "$ref": "#/$defs/oklch" }, "mutedText": { "$ref": "#/$defs/oklch" }, "accent": { "$ref": "#/$defs/oklch" }, "onAccent": { "$ref": "#/$defs/oklch" }, "focus": { "$ref": "#/$defs/oklch" },
         "contrastPolicy": { "const": "WCAG_AA_TEXT" },
         "contrastEvidence": {
@@ -53,7 +53,7 @@
     "border": { "type": "object", "additionalProperties": false, "required": ["widthPx", "style", "color"], "properties": { "widthPx": { "const": 1 }, "style": { "const": "solid" }, "color": { "$ref": "#/$defs/oklch" } } },
     "elevation": { "type": "object", "additionalProperties": false, "required": ["low", "high"], "properties": { "low": { "type": "string", "minLength": 1 }, "high": { "type": "string", "minLength": 1 } } },
     "motionMs": { "type": "object", "additionalProperties": false, "required": ["fast", "base", "slow"], "properties": { "fast": { "type": "number", "minimum": 0 }, "base": { "type": "number", "minimum": 0 }, "slow": { "type": "number", "minimum": 0 } } },
-    "media": { "type": "object", "additionalProperties": false, "required": ["treatment", "gradientPolicy", "blurMaxPx", "noiseOpacityMax"], "properties": { "treatment": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] }, "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] }, "blurMaxPx": { "type": "number", "minimum": 0 }, "noiseOpacityMax": { "type": "number", "minimum": 0, "maximum": 1 } } },
+    "media": { "type": "object", "additionalProperties": false, "required": ["treatment", "gradientPolicy", "blurMaxPx", "noiseOpacityMax"], "properties": { "treatment": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] }, "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] }, "blurMaxPx": { "type": "number", "minimum": 0 }, "noiseOpacityMax": { "type": "number", "minimum": 0, "maximum": 1 } } },
     "interaction": { "type": "object", "additionalProperties": false, "required": ["focusRingPx", "focusOffsetPx", "rawValueBypass"], "properties": { "focusRingPx": { "const": 3 }, "focusOffsetPx": { "const": 2 }, "rawValueBypass": { "const": false } } }
   },
   "$defs": {

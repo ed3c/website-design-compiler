@@ -10,7 +10,7 @@ export interface VisualDirectionDimensions {
   density: "airy" | "balanced" | "dense";
   grid: "strict" | "asymmetric" | "modular" | "editorial";
   surface: "flat" | "layered" | "bordered" | "tonal";
-  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand";
+  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand" | "spatial-dark";
   mediaStrategy: "text-first" | "product-media" | "editorial-media" | "interactive-stage";
   motionIntensity: "minimal" | "moderate" | "expressive";
   signatureInteraction: "none" | "progressive-reveal" | "spatial-focus" | "direct-manipulation";
@@ -65,24 +65,46 @@ export interface VisualDirectionSearchReceipt {
   candidates: VisualDirectionCandidate[];
 }
 
-const BASE_DIRECTIONS: VisualDirectionDimensions[] = [
-  {
+const FAMILY_ORDER=["b2b-product","editorial","premium-consumer","motion-heavy-creative","interactive-2d","interactive-3d"] as const;
+type VisualFamily=(typeof FAMILY_ORDER)[number];
+const FAMILY_DIRECTIONS:Readonly<Record<VisualFamily,VisualDirectionDimensions>>={
+  "b2b-product":{
     typography: "neo-grotesk", typeContrast: "balanced", density: "balanced", grid: "modular", surface: "bordered",
     colorStrategy: "neutral-accent", mediaStrategy: "product-media", motionIntensity: "minimal", signatureInteraction: "progressive-reveal"
   },
-  {
+  editorial:{
     typography: "editorial-serif", typeContrast: "dramatic", density: "airy", grid: "editorial", surface: "flat",
     colorStrategy: "warm-editorial", mediaStrategy: "editorial-media", motionIntensity: "minimal", signatureInteraction: "none"
   },
-  {
-    typography: "humanist-sans", typeContrast: "balanced", density: "airy", grid: "asymmetric", surface: "layered",
-    colorStrategy: "tonal-brand", mediaStrategy: "interactive-stage", motionIntensity: "moderate", signatureInteraction: "spatial-focus"
+  "premium-consumer":{
+    typography:"display-contrast",typeContrast:"restrained",density:"airy",grid:"strict",surface:"layered",
+    colorStrategy:"tonal-brand",mediaStrategy:"product-media",motionIntensity:"moderate",signatureInteraction:"progressive-reveal"
   },
-  {
-    typography: "display-contrast", typeContrast: "dramatic", density: "dense", grid: "asymmetric", surface: "tonal",
-    colorStrategy: "high-contrast", mediaStrategy: "interactive-stage", motionIntensity: "expressive", signatureInteraction: "direct-manipulation"
+  "motion-heavy-creative":{
+    typography:"display-contrast",typeContrast:"dramatic",density:"dense",grid:"asymmetric",surface:"tonal",
+    colorStrategy:"high-contrast",mediaStrategy:"interactive-stage",motionIntensity:"expressive",signatureInteraction:"progressive-reveal"
+  },
+  "interactive-2d":{
+    typography:"humanist-sans",typeContrast:"balanced",density:"balanced",grid:"modular",surface:"layered",
+    colorStrategy:"high-contrast",mediaStrategy:"interactive-stage",motionIntensity:"expressive",signatureInteraction:"direct-manipulation"
+  },
+  "interactive-3d":{
+    typography: "humanist-sans", typeContrast: "balanced", density: "airy", grid: "asymmetric", surface: "layered",
+    colorStrategy: "spatial-dark", mediaStrategy: "interactive-stage", motionIntensity: "moderate", signatureInteraction: "spatial-focus"
   }
-];
+};
+
+function visualFamily(pageType:string):VisualFamily{
+  const value=pageType.toLowerCase();
+  if(value.includes("editorial")||value.includes("magazine")||value.includes("publication"))return"editorial";
+  if(value.includes("premium")||value.includes("luxury")||value.includes("consumer"))return"premium-consumer";
+  if(value.includes("motion")||value.includes("creative")||value.includes("immersive"))return"motion-heavy-creative";
+  if(value.includes("2d")||value.includes("pixi")||value.includes("canvas"))return"interactive-2d";
+  if(value.includes("3d")||value.includes("webgl")||value.includes("webgpu")||value.includes("three"))return"interactive-3d";
+  return"b2b-product";
+}
+
+export function isVisualDirectionCompatible(pageType:string,direction:VisualDirectionDimensions):boolean{return visualDirectionSha256(direction)===visualDirectionSha256(FAMILY_DIRECTIONS[visualFamily(pageType)]);}
 
 export function visualDirectionSha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -94,12 +116,7 @@ function boundedScore(hex: string, offset: number, min: number, max: number): nu
 }
 
 function pageFitBonus(pageType: string, direction: VisualDirectionDimensions): number {
-  const value = pageType.toLowerCase();
-  if (value.includes("editorial") && direction.grid === "editorial") return 8;
-  if ((value.includes("3d") || value.includes("2d") || value.includes("creative")) && direction.mediaStrategy === "interactive-stage") return 8;
-  if ((value.includes("product") || value.includes("b2b")) && direction.typography === "neo-grotesk") return 7;
-  if ((value.includes("premium") || value.includes("consumer")) && direction.density === "airy") return 7;
-  return 2;
+  return isVisualDirectionCompatible(pageType,direction)?18:0;
 }
 
 function riskFor(direction: VisualDirectionDimensions): { accessibility: number; complexity: number; performance: number; responsive: number } {
@@ -161,9 +178,11 @@ export function auditCandidateOriginality(candidate: Pick<VisualDirectionCandida
   return reasons;
 }
 
-function rotateDirections(seedHash: string): VisualDirectionDimensions[] {
-  const start = Number.parseInt(seedHash.slice(0, 2), 16) % BASE_DIRECTIONS.length;
-  return [0, 1, 2].map((offset) => BASE_DIRECTIONS[(start + offset) % BASE_DIRECTIONS.length]!).map((direction) => ({ ...direction }));
+function candidateDirections(pageType:string,seedHash: string): VisualDirectionDimensions[] {
+  const family=visualFamily(pageType);const index=FAMILY_ORDER.indexOf(family);
+  const pool=[FAMILY_DIRECTIONS[family],FAMILY_DIRECTIONS[FAMILY_ORDER[(index+2)%FAMILY_ORDER.length]!],FAMILY_DIRECTIONS[FAMILY_ORDER[(index+4)%FAMILY_ORDER.length]!]];
+  const start=Number.parseInt(seedHash.slice(0,2),16)%pool.length;
+  return[0,1,2].map((offset)=>({...pool[(start+offset)%pool.length]!}));
 }
 
 export function searchVisualDirections(input: CompilerInput, seed = "website-design-compiler/v2"): VisualDirectionSearchReceipt {
@@ -171,11 +190,12 @@ export function searchVisualDirections(input: CompilerInput, seed = "website-des
   const seedHash = visualDirectionSha256({ seed, inputSha256, project: input.project });
   const referenceSignatures = (input.references ?? []).map((reference) => visualDirectionSha256({ kind: reference.kind, value: reference.value }));
   const referenceFingerprints:VisualDirectionDomainFingerprint[]=[];
-  const initial = rotateDirections(seedHash).map((dimensions, index) => {
+  const initial = candidateDirections(input.brief.pageType,seedHash).map((dimensions, index) => {
     const score = scoreCandidate(input, dimensions, seedHash, index);
     const signature = visualDirectionSha256(dimensions);
     const domainFingerprint=fingerprintVisualDirection(dimensions);
     const rejectionReasons = auditCandidateOriginality({ signature, score,domainFingerprint }, referenceSignatures,referenceFingerprints);
+    if(!isVisualDirectionCompatible(input.brief.pageType,dimensions))rejectionReasons.push(`candidate is incompatible with ${visualFamily(input.brief.pageType)} semantic requirements`);
     return { id: `direction-${index + 1}`, dimensions, score, signature,domainFingerprint, rejectionReasons };
   });
   const candidatePairs=initial.flatMap((first,index)=>initial.slice(index+1).map((second)=>({first:first.id,second:second.id,domainDistance:domainFingerprintDistance(first.domainFingerprint,second.domainFingerprint)})));

@@ -2,37 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { compileInformationArchitecture, type IaSection } from "./information-architecture.js";
-import { REQUIRED_CONTENT_SLOTS, sectionFieldForContentSlot } from "./section-content-projection.js";
+import { maxCharactersForContentSlot, qualityForContentFields, validContentValue, validateSectionContentContract, type ContentFieldContract, type ContentValue, type SectionContentContract } from "./content-contract.js";
 import { validateAgainstSchema } from "./validate.js";
-
-export type ContentSourceType = "observed_fact" | "user_supplied_claim" | "derived_copy" | "placeholder_required" | "forbidden_invention";
-export type ContentFieldState = "READY" | "NEEDS_INPUT" | "FORBIDDEN";
-export type ContentValue = string | string[];
-
-export interface ContentFieldContract {
-  slot: string;
-  state: ContentFieldState;
-  sourceType: ContentSourceType;
-  value: ContentValue | null;
-  publishable: boolean;
-  provenance: string[];
-  lengthBudget: { maxCharacters: number };
-}
-
-export interface SectionContentContract {
-  sectionId: string;
-  sectionType: string;
-  messageGoal: string;
-  audienceQuestion: string;
-  ctaRole: "PRIMARY" | "SECONDARY" | "NONE";
-  fallback: string;
-  localePolicy: { sourceLocale: "en"; localizationReady: true };
-  fields: ContentFieldContract[];
-  quality: {
-    forbiddenPhraseHits: string[];
-    repeatedPublishableValues: string[];
-  };
-}
+export { validateSectionContentContract } from "./content-contract.js";
+export type { ContentFieldContract, ContentFieldState, ContentSourceType, ContentValue, SectionContentContract } from "./content-contract.js";
 
 export interface ContentArchitecturePlan {
   schema: "website-design-compiler/content-architecture/v2";
@@ -60,32 +33,6 @@ const FORBIDDEN_SLOTS = new Set([
   "customer-names",
   "performance-claims"
 ]);
-
-const EMPTY_MARKETING_PHRASES = [
-  "game-changing",
-  "best-in-class",
-  "world-class",
-  "revolutionary",
-  "cutting-edge",
-  "seamless"
-];
-
-const LIST_SLOTS = new Set(["feature-items", "proof-items", "related-items", "story-beats"]);
-
-function maxCharactersFor(slot: string,sectionType:string): number {
-  const governedMaximum=sectionFieldForContentSlot(sectionType,slot)?.maxLength;
-  if(governedMaximum!==undefined)return governedMaximum;
-  if (slot.includes("headline")) return 120;
-  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return 36;
-  if (slot.includes("name")) return 64;
-  if (slot.includes("description") || slot.includes("proposition") || slot === "task") return 220;
-  return 280;
-}
-
-function validContentValue(slot:string,value:unknown,maxCharacters:number):value is ContentValue{
-  if(LIST_SLOTS.has(slot))return Array.isArray(value)&&value.length>0&&value.length<=12&&value.every((entry)=>typeof entry==="string"&&entry.trim().length>0&&entry.length<=maxCharacters);
-  return typeof value==="string"&&value.trim().length>0&&value.length<=maxCharacters;
-}
 
 function safeSuppliedValue(slot: string, input: CompilerInput,section:IaSection,maxCharacters:number): ContentValue | null {
   const suppliedFields=input.contentEvidence?.source==="USER_SUPPLIED"?input.contentEvidence.sections[section.id]:undefined;
@@ -121,7 +68,7 @@ function ctaRole(section: IaSection): "PRIMARY" | "SECONDARY" | "NONE" {
 }
 
 function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>): ContentFieldContract {
-  const maxCharacters = maxCharactersFor(slot,section.type);
+  const maxCharacters = maxCharactersForContentSlot(slot,section.type);
   if (forbidden.has(slot) || FORBIDDEN_SLOTS.has(slot)) {
     return {
       slot,
@@ -170,34 +117,6 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   };
 }
 
-function qualityFor(fields: ContentFieldContract[]): SectionContentContract["quality"] {
-  const publishable = fields.filter((field) => field.publishable && field.value).flatMap((field) => Array.isArray(field.value)?field.value:[field.value!]);
-  const forbiddenPhraseHits = EMPTY_MARKETING_PHRASES.filter((phrase) => publishable.some((value) => value.toLowerCase().includes(phrase)));
-  const counts = new Map<string, number>();
-  for (const value of publishable) counts.set(value, (counts.get(value) ?? 0) + 1);
-  const repeatedPublishableValues = [...counts.entries()].filter(([, count]) => count > 1).map(([value]) => value);
-  return { forbiddenPhraseHits, repeatedPublishableValues };
-}
-
-export function validateSectionContentContract(contract:SectionContentContract):string[]{
-  const errors:string[]=[];
-  const expectedSlots=REQUIRED_CONTENT_SLOTS[contract.sectionType];
-  const actualSlots=contract.fields.map((field)=>field.slot);
-  if(!expectedSlots)errors.push(`unknown section type ${contract.sectionType}`);
-  else if(JSON.stringify([...actualSlots].sort())!==JSON.stringify([...expectedSlots].sort()))errors.push("field slot projection drift");
-  if(new Set(actualSlots).size!==actualSlots.length)errors.push("duplicate content field slot");
-  for(const field of contract.fields){
-    const expectedMaximum=maxCharactersFor(field.slot,contract.sectionType);
-    if(field.lengthBudget.maxCharacters!==expectedMaximum)errors.push(`${field.slot}: length budget drift`);
-    const validValue=validContentValue(field.slot,field.value,expectedMaximum);
-    if(field.state==="READY"&&(!validValue||!field.publishable||field.provenance.length===0))errors.push(`${field.slot}: invalid READY field`);
-    if(field.state!=="READY"&&(field.value!==null||field.publishable))errors.push(`${field.slot}: non-READY field is publishable`);
-  }
-  const expectedQuality=qualityFor(contract.fields);
-  if(JSON.stringify(contract.quality)!==JSON.stringify(expectedQuality))errors.push("quality projection drift");
-  return errors;
-}
-
 export function compileContentArchitecture(input: CompilerInput): ContentArchitecturePlan {
   const ia = compileInformationArchitecture(input);
   if(input.contentEvidence){
@@ -221,7 +140,7 @@ export function compileContentArchitecture(input: CompilerInput): ContentArchite
       fallback: section.fallback,
       localePolicy: { sourceLocale: "en", localizationReady: true },
       fields,
-      quality: qualityFor(fields)
+      quality: qualityForContentFields(fields)
     };
   });
 

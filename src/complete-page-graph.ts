@@ -1,10 +1,11 @@
 import { SECTION_CONTRACTS, validateSectionInstance, type SectionInstance, type SectionKind } from "./section-grammar";
 import type { SectionPageSource } from "./section-page-source.js";
-import { validateSectionContentContract, type SectionContentContract } from "./content-architecture.js";
+import { validateSectionContentContract, type SectionContentContract } from "./content-contract";
 import { compileResponsiveSectionPolicy, type ResponsiveSectionPolicy } from "./responsive-composition";
 import { compileMotionChoreography, type ChoreographyEffect } from "./motion-choreography";
 import { compileMediaOrchestration, type MediaDecision } from "./media-orchestration";
-import { FIELD_SLOTS, SECTION_TYPE_TO_KIND, sectionFieldNameForContentSlot } from "./section-content-projection.js";
+import { FIELD_SLOTS, SECTION_TYPE_TO_KIND, sectionFieldNameForContentSlot } from "./section-content-projection";
+import type { VisualDirectionDimensions } from "./visual-direction-search.js";
 
 export type PageGraphReadiness="READY"|"NEEDS_INPUT";
 export interface PageGraphSourceBinding{
@@ -16,6 +17,7 @@ export interface PageGraphCompilationInput extends SectionPageSource{
   route?:string;
   source?:PageGraphSourceBinding;
   contentContracts?:SectionContentContract[];
+  visualDirection?:VisualDirectionDimensions;
 }
 export interface CompletePageNode {
   id:string;
@@ -83,7 +85,7 @@ export function compileCompletePageGraph(page:PageGraphCompilationInput):Complet
     variant:section.variant,
     section,
     tokenRef:"semantic-design-tokens/v2",
-    responsive:compileResponsiveSectionPolicy(section.kind),
+    responsive:compileResponsiveSectionPolicy(section.kind,page.visualDirection),
     motionHook:motion.effects[index]!,
     mediaHook:media.decisions[index]!,
     contentContract:structuredClone(contentBySection.get(section.id)??null),
