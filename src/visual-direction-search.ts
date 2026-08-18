@@ -423,7 +423,9 @@ function scoreCandidate(
   const positiveScore = (
     briefFit * 0.27 + differentiation * 0.18 + readability * 0.18 + risk.responsive * 0.14 + (originalityDistance ?? 0) * 0.15
   ) / positiveWeight;
-  const total = Math.round(positiveScore + categoryFit * 0.5 - risk.accessibility * 0.03 - risk.complexity * 0.025 - risk.performance * 0.025);
+  const total = Math.max(0, Math.min(100, Math.round(
+    positiveScore + categoryFit * 0.5 - risk.accessibility * 0.03 - risk.complexity * 0.025 - risk.performance * 0.025
+  )));
   return {
     briefFit,
     differentiation,

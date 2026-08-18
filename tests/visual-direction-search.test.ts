@@ -40,8 +40,25 @@ test("every candidate carries auditable score dimensions and rejection reasons",
     assert.ok(candidate.score.responsiveRobustness >= 0);
     assert.equal(candidate.score.originalityDistance, null);
     assert.equal(Number.isInteger(candidate.score.total), true);
+    assert.ok(candidate.score.total >= 0 && candidate.score.total <= 100);
     if (candidate.state === "REJECTED") assert.ok(candidate.rejectionReasons.length > 0);
   }
+});
+
+test("category fit cannot push a showcase candidate beyond the receipt score contract", async () => {
+  const compilerInput: CompilerInput = {
+    schema: "website-design-compiler/input/v1",
+    project: "evidence-first-showcase",
+    brief: {
+      pageType: "product-landing",
+      audience: "design engineering teams evaluating governed agentic website delivery",
+      objective: "show a complete evidence-first path from neutral reference grammar through governed UI, optional motion and graphics, and release receipts"
+    },
+    requestedStages: ["visual-direction-search"]
+  };
+  const receipt = searchVisualDirections(compilerInput);
+  await validateAgainstSchema(receipt, "visual-direction-search-v2.schema.json");
+  assert.ok(receipt.candidates.every((candidate) => candidate.score.total <= 100));
 });
 
 test("originality audit rejects a candidate that is too close to an observed reference", () => {
