@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/design-quality-eval-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "git", "releaseProfile", "categoryCount", "viewportCoverage", "exactHeadBound", "allEvidenceBound", "allStructuralPass", "allOriginalityPass", "premium"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/design-quality-eval-receipt/v2" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "ref"],
+      "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } }
+    },
+    "releaseProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "id", "sha256", "premiumQualityThreshold", "originalitySimilarityThreshold", "requiredViewports", "requireExactEvidenceBinding"],
+      "properties": {
+        "schema": { "type": "string" },
+        "id": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "premiumQualityThreshold": { "type": "number" },
+        "originalitySimilarityThreshold": { "type": "number" },
+        "requiredViewports": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "requireExactEvidenceBinding": { "type": "boolean" }
+      }
+    },
+    "categoryCount": { "type": "integer", "minimum": 0 },
+    "viewportCoverage": { "type": "object" },
+    "exactHeadBound": { "type": "boolean" },
+    "allEvidenceBound": { "type": "boolean" },
+    "allStructuralPass": { "type": "boolean" },
+    "allOriginalityPass": { "type": "boolean" },
+    "premium": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "evaluations"],
+      "properties": {
+        "state": { "enum": ["PASS", "FAIL"] },
+        "evaluations": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

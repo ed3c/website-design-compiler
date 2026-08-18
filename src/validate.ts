@@ -15,13 +15,13 @@ export class ContractValidationError extends Error {
   }
 }
 
-async function loadSchema(schemaFile: string): Promise<object> {
-  const schemaPath = resolve(process.cwd(), "schemas", schemaFile);
+async function loadSchema(schemaFile: string, root: string): Promise<object> {
+  const schemaPath = resolve(root, "schemas", schemaFile);
   return JSON.parse(await readFile(schemaPath, "utf8")) as object;
 }
 
-export async function validateAgainstSchema<T>(value: unknown, schemaFile: string): Promise<T> {
-  const schema = await loadSchema(schemaFile);
+export async function validateAgainstSchema<T>(value: unknown, schemaFile: string, root = process.cwd()): Promise<T> {
+  const schema = await loadSchema(schemaFile, root);
   const ajv = new Ajv2020({ allErrors: true, strict: true, useDefaults: true });
   addFormats(ajv);
   const validate = ajv.compile(schema);

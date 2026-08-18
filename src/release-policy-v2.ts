@@ -2,7 +2,16 @@ export const CAPABILITIES=["core","liveReference","webgpu","repositoryRights","p
 export type Capability=(typeof CAPABILITIES)[number];
 export type ReleaseProfile="CORE"|"NETWORKED_REFERENCE"|"ADVANCED_GPU"|"COMMERCIAL_PRODUCTION"|"FULL_V2";
 export type CapabilityState="PASS"|"FAIL"|"ABSENT"|"NOT_IMPLEMENTED"|"NOT_EXERCISED"|"SKIPPED_BY_POLICY";
-export interface CapabilityEvidence{state:CapabilityState;gitSha:string|null;identity:string|null;}
+export interface CapabilityReceiptContract{path:string;schemaFile:string;identity:string;}
+export const CAPABILITY_RECEIPT_CONTRACTS:Record<Capability,CapabilityReceiptContract>={
+  core:{path:"artifacts/release/release-gate-receipt.json",schemaFile:"release-gate-receipt-v2.schema.json",identity:"website-design-compiler/release-gate-receipt/v2"},
+  liveReference:{path:"artifacts/live-reference/live-reference-receipt.json",schemaFile:"live-reference-receipt.schema.json",identity:"website-design-compiler/live-reference-receipt/v2"},
+  webgpu:{path:"artifacts/graphics-3d/webgpu-receipt.json",schemaFile:"webgpu-runtime-receipt.schema.json",identity:"website-design-compiler/webgpu-runtime-receipt/v1"},
+  repositoryRights:{path:"artifacts/rights-clearance/repository-rights-clearance.json",schemaFile:"repository-rights-clearance.schema.json",identity:"website-design-compiler/repository-rights-clearance/v2"},
+  productionProvider:{path:"artifacts/media-generator/production-provider-status.json",schemaFile:"production-provider-status.schema.json",identity:"website-design-compiler/production-provider-status/v2"},
+  premiumQuality:{path:"artifacts/v2/design-quality/design-quality-eval-receipt.json",schemaFile:"design-quality-eval-receipt.schema.json",identity:"website-design-compiler/design-quality-eval-receipt/v2"}
+};
+export interface CapabilityEvidence{state:CapabilityState;gitSha:string|null;identity:string|null;artifactPath:string;artifactSha256:string|null;}
 export interface ReleasePolicy{
   schema:"website-design-compiler/release-policy/v2";
   profiles:Record<ReleaseProfile,{required:Capability[]}>;
@@ -14,7 +23,7 @@ export interface ReleasePolicyEvaluation{
   overall:"PASS"|"FAIL";
   canonicalMain:"PASS"|"NOT_EXERCISED";
   git:{sha:string;ref:string;event:string};
-  capabilities:Record<Capability,{required:boolean;state:CapabilityState|"NOT_REQUIRED";binding:"BOUND"|"MISMATCH"|"ABSENT"|"NOT_REQUIRED";identity:string|null}>;
+  capabilities:Record<Capability,{required:boolean;state:CapabilityState|"NOT_REQUIRED";binding:"BOUND"|"MISMATCH"|"ABSENT"|"NOT_REQUIRED";identity:string|null;artifactPath:string;artifactSha256:string|null}>;
   failures:string[];
   premiumQuality:ReleasePolicy["premiumQuality"];
 }
@@ -48,15 +57,19 @@ export function evaluateReleasePolicy(policy:ReleasePolicy,profile:ReleaseProfil
   const capabilities={} as ReleasePolicyEvaluation["capabilities"];
   for(const capability of CAPABILITIES){
     if(!required.has(capability)){
-      capabilities[capability]={required:false,state:"NOT_REQUIRED",binding:"NOT_REQUIRED",identity:evidence[capability].identity};
+      capabilities[capability]={required:false,state:"NOT_REQUIRED",binding:"NOT_REQUIRED",identity:evidence[capability].identity,artifactPath:evidence[capability].artifactPath,artifactSha256:evidence[capability].artifactSha256};
       continue;
     }
     const subject=evidence[capability];
+    const contract=CAPABILITY_RECEIPT_CONTRACTS[capability];
     const binding=subject.gitSha===null?"ABSENT":subject.gitSha===git.sha?"BOUND":"MISMATCH";
-    capabilities[capability]={required:true,state:subject.state,binding,identity:subject.identity};
+    capabilities[capability]={required:true,state:subject.state,binding,identity:subject.identity,artifactPath:subject.artifactPath,artifactSha256:subject.artifactSha256};
     if(subject.state!=="PASS")failures.push(`${capability}:${subject.state}`);
     if(binding!=="BOUND")failures.push(`${capability}:git-${binding}`);
-    if(!subject.identity)failures.push(`${capability}:identity-ABSENT`);
+    if(subject.identity!==contract.identity)failures.push(`${capability}:identity-${subject.identity===null?"ABSENT":"MISMATCH"}`);
+    if(subject.artifactPath!==contract.path)failures.push(`${capability}:path-MISMATCH`);
+    if(subject.artifactSha256===null)failures.push(`${capability}:digest-ABSENT`);
+    else if(!/^[a-f0-9]{64}$/.test(subject.artifactSha256))failures.push(`${capability}:digest-MALFORMED`);
   }
   const canonicalMain=git.ref==="refs/heads/main"&&git.event==="push"?"PASS":"NOT_EXERCISED";
   if(canonicalMain!=="PASS")failures.push(`canonical-main:${canonicalMain}`);
