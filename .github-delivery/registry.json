@@ -1,0 +1,14 @@
+{
+  "schema": "github-delivery-registry/v1",
+  "repo_root": "..",
+  "lines": [
+    {
+      "id": "website-design-compiler",
+      "github_repo": "ed3c/website-design-compiler",
+      "github_repository_id": "R_kgDOT5yxHQ",
+      "artifact_path": ".",
+      "receipt_path": ".github-delivery/receipts/website-design-compiler.json",
+      "publication_path": ".github-delivery/publications/website-design-compiler.json"
+    }
+  ]
+}

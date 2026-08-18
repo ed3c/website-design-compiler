@@ -1,0 +1,677 @@
+{
+  "fetched_at": "2026-08-18T22:22:15Z",
+  "github_repo": "ed3c/website-design-compiler",
+  "github_repository_id": "R_kgDOT5yxHQ",
+  "line": "website-design-compiler",
+  "percentiles": {
+    "blocked_seconds": {
+      "p50": 0,
+      "p85": 0
+    },
+    "cycle_seconds": {
+      "p50": null,
+      "p85": null
+    },
+    "lead_seconds": {
+      "p50": null,
+      "p85": null
+    },
+    "queue_seconds": {
+      "p50": null,
+      "p85": null
+    },
+    "review_seconds": {
+      "p50": null,
+      "p85": null
+    }
+  },
+  "project_url": "https://github.com/users/ed3c/projects/6",
+  "quality": {
+    "first_pass_rate": null,
+    "redaction_leakage_rate": null,
+    "reopen_rate": 0.0
+  },
+  "schema": "github-delivery-metrics/v1",
+  "slices": [
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 1,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Implement executable TypeScript compiler core and pipeline contracts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 2,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add browser visual QA runtime with Playwright evidence receipts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 3,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Implement license and asset provenance scanner with fail-closed policy"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 4,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add art-direction router and design contract compiler"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 6,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Implement reference intelligence capture and originality audit pipeline"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 7,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Build production UI runtime and private component registry"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 8,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Implement motion director with Motion and GSAP policy gates"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 9,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add PixiJS 2D graphics director and GPU fallback contracts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 10,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add React Three Fiber 3D director and img2threejs procedural object integration"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 11,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Build Puck visual authoring studio with governed component schema"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 12,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Integrate Payload CMS with compiler schemas and visual authoring data"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 13,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Build generative media router and commercial model allowlist"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 14,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add accessibility, performance, and graceful-degradation release gates"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 15,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Build Website Design Skill Arena with benchmark matrix and visual goldens"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 16,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Validate skills-shared runtime bindings and prevent shared-skill shadowing"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 17,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add CI release pipeline with exact-head runtime, license, and visual receipts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 18,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add external design-skill registry, version pinning, and conflict router"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 19,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Add Storybook component workshop and interaction regression suite"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 20,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Deliver end-to-end compiler showcase from reference brief to release receipt"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 22,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Exercise live third-party reference capture with deterministic network evidence"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 23,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Add production WebGPU/TSL renderer path with deterministic fallback receipts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 24,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Build repository-wide rights clearance and SBOM/provenance release gate"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 26,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Integrate v2 capability receipts into canonical production release policy"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 27,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Compile information architecture from briefs into evidence-backed page structures"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 28,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Compile content architecture and claim-safe section copy contracts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 29,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Add visual direction search and ranked design candidate selection"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 30,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Compile semantic design tokens into concrete responsive visual systems"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 31,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Build governed section grammar and rich component registry"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 32,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Compile responsive composition and breakpoint-specific section layouts"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 33,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Compile motion choreography from section semantics and user intent"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 34,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Orchestrate media, 2D and 3D assets from section intent and design direction"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 35,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Generate complete multi-section page graphs from IA, content, tokens and section grammar"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 36,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Add design-quality evaluator for generated pages beyond functional PASS"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 37,
+      "issue_state": "CLOSED",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "v2: Add natural-language brief ingestion and deterministic compiler input normalization"
+    },
+    {
+      "accepted_pr": null,
+      "blocked_seconds": 0,
+      "currently_blocked": false,
+      "cycle_seconds": null,
+      "issue_number": 43,
+      "issue_state": "OPEN",
+      "lead_seconds": null,
+      "queue_seconds": null,
+      "reference_causality": {
+        "attribution": "known-or-absent",
+        "unknown_current_body_refs": []
+      },
+      "reopened": false,
+      "review_seconds": null,
+      "started_pr": null,
+      "title": "Land fail-closed evidence convergence without closing production admission"
+    }
+  ],
+  "summary": {
+    "accepted_slices": 0,
+    "blocked_slices": 0,
+    "closed_without_merge": 34,
+    "throughput_28d": 0,
+    "throughput_7d": 0,
+    "total_slices": 35,
+    "unknown_reference_attributions": 0,
+    "wip": 0
+  }
+}
