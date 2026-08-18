@@ -8,6 +8,7 @@
     "schema": { "const": "website-design-compiler/brief-input/v2" },
     "project": { "type": "string", "minLength": 1 },
     "briefText": { "type": "string", "minLength": 1 },
+    "contentEvidence": { "$ref": "#/$defs/contentEvidence" },
     "references": {
       "type": "array",
       "items": {
@@ -29,6 +30,32 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "contentEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "source", "sections"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/content-evidence/v1" },
+        "source": { "const": "USER_SUPPLIED" },
+        "sections": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "$ref": "#/$defs/contentValue" }
+          }
+        }
+      }
+    },
+    "contentValue": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" },
+        { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 1, "maxLength": 280, "pattern": "\\S" } }
+      ]
     }
   }
 }

@@ -11,6 +11,7 @@ import { validateAgainstSchema } from "../src/validate.js";
 import { visualDirectionSha256 } from "../src/visual-direction-search.js";
 
 const inputs=JSON.parse(await readFile(new URL("../fixtures/v2/brief-benchmarks.json",import.meta.url),"utf8")) as NaturalLanguageBriefInput[];
+const qualityInputs=JSON.parse(await readFile(new URL("../fixtures/v2/quality-site-benchmarks.json",import.meta.url),"utf8")) as NaturalLanguageBriefInput[];
 
 test("six briefs compile through the real upstream chain into multi-route site graphs",()=>{
   const compilations=inputs.map(compileProductionSite);
@@ -37,6 +38,29 @@ test("page graphs exact-bind every upstream artifact identity",()=>{
   };
   assert.deepEqual(compilation.siteGraph.source.artifacts,expected);
   assert.ok(compilation.siteGraph.routes.every((entry)=>JSON.stringify(entry.page.source.artifacts)===JSON.stringify(expected)));
+});
+
+test("explicit user content evidence compiles six production quality sites to READY",()=>{
+  const compilations=qualityInputs.map(compileProductionSite);
+  assert.equal(compilations.length,6);
+  assert.deepEqual([...new Set(compilations.map((compilation)=>compilation.siteGraph.routes[0]!.page.category))].sort(),["b2b-product","editorial","interactive-2d","interactive-3d","motion-heavy","premium-consumer"]);
+  for(const compilation of compilations){
+    assert.equal(compilation.contentArchitecture.overall,"READY");
+    assert.equal(compilation.siteGraph.readiness,"READY");
+    assert.deepEqual(compilation.siteGraph.missingEvidence,[]);
+    assert.ok(compilation.siteGraph.routes.every((entry)=>entry.page.nodes.every((node)=>node.contentContract?.fields.filter((field)=>field.state!=="FORBIDDEN").every((field)=>field.state==="READY"&&field.publishable&&field.provenance.length>0))));
+  }
+});
+
+test("content quality findings keep the production site fail-closed",()=>{
+  const input=structuredClone(qualityInputs[0]!);
+  input.contentEvidence!.sections.features!["feature-items"]=["Repeated proof","Repeated proof"];
+  const compilation=compileProductionSite(input);
+  assert.equal(compilation.contentArchitecture.overall,"NEEDS_INPUT");
+  assert.equal(compilation.pageArchitecture.sectionIntents.find((section)=>section.id==="features")?.status,"NEEDS_INPUT");
+  assert.equal(compilation.pageArchitecture.sectionIntents.find((section)=>section.id==="features")?.contentContract.state,"NEEDS_INPUT");
+  assert.equal(compilation.siteGraph.readiness,"NEEDS_INPUT");
+  assert.ok(compilation.siteGraph.missingEvidence.some((entry)=>entry.endsWith(".content.quality")));
 });
 
 test("site projections are self-contained and reject route or content drift",()=>{

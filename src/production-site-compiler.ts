@@ -9,7 +9,8 @@ import { searchVisualDirections, visualDirectionSha256, type VisualDirectionSear
 import { compileSemanticDesignTokens, projectSemanticTokensToCss, type SemanticDesignTokensV2 } from "./semantic-design-tokens.js";
 import { buildDesignSystemPlan, type DesignSystemPlan } from "./design-system-compiler.js";
 import { buildPageArchitecturePlan, type PageArchitecturePlan } from "./page-architect.js";
-import { SECTION_CONTRACTS, type SectionFieldContract, type SectionInstance, type SectionKind } from "./section-grammar.js";
+import { SECTION_CONTRACTS, type SectionFieldContract, type SectionInstance } from "./section-grammar.js";
+import { FIELD_SLOTS, SECTION_TYPE_TO_KIND } from "./section-content-projection.js";
 import { compileCompletePageGraph, validateCompletePageGraph, type CompletePageGraph, type PageGraphSourceBinding } from "./complete-page-graph.js";
 import { compileCompleteSiteGraph, validateCompleteSiteGraph, type CompleteSiteGraph } from "./complete-site-graph.js";
 import { assertLosslessSiteGraphRoundTrip, payloadSiteToPuck, puckSiteToPayload, puckToSiteGraph, siteGraphFingerprint, siteGraphToPuck, type PayloadSiteGraphDocument, type PuckSiteGraphDocument } from "./page-graph-roundtrip.js";
@@ -31,30 +32,15 @@ export interface ProductionSiteCompilation{
   payloadSiteGraph:PayloadSiteGraphDocument;
 }
 
-const SECTION_TYPE_TO_KIND:Record<string,SectionKind>={
-  navigation:"navigation",footer:"footer","hero-product":"hero","hero-editorial":"hero","hero-premium":"hero","hero-creative":"hero","hero-interactive":"hero",
-  "feature-grid":"feature-grid",proof:"proof-cloud","cta-band":"cta","editorial-prose":"editorial-prose","related-content":"faq","product-showcase":"product-showcase",
-  "narrative-sequence":"bento-grid","interactive-stage":"media-stage","graphics-2d-stage":"graphics-2d-stage","graphics-3d-stage":"graphics-3d-stage"
-};
-const FIELD_SLOTS:Partial<Record<SectionKind,Record<string,string[]>>>={
-  navigation:{brand:["brand-or-project-name"],action:["primary-action-label"]},
-  hero:{headline:["headline"],body:["value-proposition","product-description","task","dek"],primaryAction:["primary-action"]},
-  "feature-grid":{heading:["headline"],items:["feature-items"]},"bento-grid":{heading:["headline"],items:["story-beats"]},
-  "proof-cloud":{items:["proof-items"]},cta:{headline:["headline"],action:["cta-label"]},footer:{brand:["project-name"]},
-  "editorial-prose":{heading:["headline"],body:["body-content"]},faq:{heading:["headline"],items:["related-items"]},
-  "product-showcase":{heading:["headline"],body:["product-description"]},"media-stage":{description:["interaction-purpose"]},
-  "graphics-2d-stage":{description:["scene-purpose"]},"graphics-3d-stage":{description:["scene-purpose"]}
-};
-
 function categoryFor(family:string):string{return family==="motion-heavy-creative"?"motion-heavy":family;}
-function toFieldValue(field:SectionFieldContract,value:string,route:string):unknown{
-  if(field.type==="link")return{label:value,href:route==="/"?"#primary-action":route};
-  if(field.type==="items")return[value];
-  if(field.type==="number")return Number(value);
+function toFieldValue(field:SectionFieldContract,value:string|string[],route:string):unknown{
+  if(field.type==="link")return typeof value==="string"?{label:value,href:route==="/"?"#primary-action":route}:null;
+  if(field.type==="items")return Array.isArray(value)?value:[value];
+  if(field.type==="number")return typeof value==="string"?Number(value):null;
   if(field.type==="media")return null;
-  return value;
+  return typeof value==="string"?value:null;
 }
-function fieldFor(contract:SectionContentContract,slots:string[]):SectionContentContract["fields"][number]|undefined{return slots.map((slot)=>contract.fields.find((field)=>field.slot===slot)).find(Boolean);}
+function fieldFor(contract:SectionContentContract,slots:readonly string[]):SectionContentContract["fields"][number]|undefined{return slots.map((slot)=>contract.fields.find((field)=>field.slot===slot)).find(Boolean);}
 function projectSection(sectionId:string,sectionType:string,content:SectionContentContract,route:string,ia:InformationArchitecturePlan,iaSha256:string):SectionInstance{
   const kind=SECTION_TYPE_TO_KIND[sectionType];
   if(!kind)throw new Error(`${sectionId}: no governed section kind for IA type ${sectionType}`);

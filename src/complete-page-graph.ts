@@ -1,9 +1,10 @@
 import { SECTION_CONTRACTS, validateSectionInstance, type SectionInstance, type SectionKind } from "./section-grammar";
 import type { SectionPageSource } from "./section-page-source.js";
-import type { SectionContentContract } from "./content-architecture.js";
+import { validateSectionContentContract, type SectionContentContract } from "./content-architecture.js";
 import { compileResponsiveSectionPolicy, type ResponsiveSectionPolicy } from "./responsive-composition";
 import { compileMotionChoreography, type ChoreographyEffect } from "./motion-choreography";
 import { compileMediaOrchestration, type MediaDecision } from "./media-orchestration";
+import { FIELD_SLOTS, SECTION_TYPE_TO_KIND, sectionFieldNameForContentSlot } from "./section-content-projection.js";
 
 export type PageGraphReadiness="READY"|"NEEDS_INPUT";
 export interface PageGraphSourceBinding{
@@ -59,7 +60,12 @@ function requiredEvidenceMissing(section:SectionInstance):string[]{
   return missing;
 }
 function sourceFor(page:PageGraphCompilationInput):PageGraphSourceBinding{return page.source??{mode:"FIXTURE",artifacts:{sectionPageFixture:stableIdentity({category:page.category,sections:page.sections})}};}
-function contentEvidenceMissing(sectionId:string,contract:SectionContentContract|null):string[]{return contract?contract.fields.filter((field)=>field.state!=="READY"||!field.publishable||!field.value||field.provenance.length===0).map((field)=>`${sectionId}.content.${field.slot}`):[];}
+function contentEvidenceMissing(sectionId:string,contract:SectionContentContract|null):string[]{
+  if(!contract)return[];
+  const fields=contract.fields.filter((field)=>field.state!=="READY"||!field.publishable||!field.value||field.provenance.length===0).map((field)=>`${sectionId}.content.${field.slot}`);
+  return contract.quality.forbiddenPhraseHits.length>0||contract.quality.repeatedPublishableValues.length>0?[...fields,`${sectionId}.content.quality`]:fields;
+}
+function expectedMissingEvidence(nodes:readonly CompletePageNode[]):string[]{return[...new Set(nodes.flatMap((node)=>[...requiredEvidenceMissing(node.section),...contentEvidenceMissing(node.id,node.contentContract)]))].sort();}
 function conversionPath(sections:SectionInstance[]):string[]{
   const preferred=new Set<SectionKind>(["hero","feature-grid","proof-cloud","comparison","pricing","product-showcase","cta"]);
   return sections.filter((section)=>preferred.has(section.kind)).map((section)=>section.id);
@@ -112,12 +118,26 @@ export function validateCompletePageGraph(graph:CompletePageGraph):string[]{
   if(graph.nodes.some((node)=>node.responsive.semanticOrder!=="DOM_STABLE"))errors.push("responsive policy does not preserve semantic DOM order");
   if(graph.nodes.some((node)=>node.motionHook.sectionId!==node.id))errors.push("motion hook identity drift");
   if(graph.nodes.some((node)=>node.mediaHook.sectionId!==node.id))errors.push("media hook identity drift");
+  const expectedMissing=expectedMissingEvidence(graph.nodes);
+  if(JSON.stringify(graph.missingEvidence)!==JSON.stringify(expectedMissing))errors.push("missing evidence projection drift");
+  const expectedReadiness:PageGraphReadiness=expectedMissing.length===0?"READY":"NEEDS_INPUT";
+  if(graph.readiness!==expectedReadiness)errors.push(`readiness drift: expected ${expectedReadiness}`);
   for(const node of graph.nodes){
     const structuralErrors=validateSectionInstance(node.section).filter((error)=>{
       const missing=error.match(/^missing (?:required field|provenance for) (.+)$/)?.[1];
       return !missing||!graph.missingEvidence.includes(`${node.id}.${missing}`);
     });
     errors.push(...structuralErrors.map((error)=>`${node.id}: ${error}`));
+    if(node.contentContract){
+      errors.push(...validateSectionContentContract(node.contentContract).map((error)=>`${node.id}.content: ${error}`));
+      if(node.contentContract.sectionId!==node.id)errors.push(`${node.id}.content: section identity drift`);
+      if(SECTION_TYPE_TO_KIND[node.contentContract.sectionType]!==node.kind)errors.push(`${node.id}.content: section type/kind drift`);
+      for(const [prop,slots] of Object.entries(FIELD_SLOTS[node.kind]??{})){
+        if(node.section.props[prop]===undefined)continue;
+        const sourceField=node.contentContract.fields.find((field)=>slots.includes(field.slot)&&sectionFieldNameForContentSlot(node.contentContract!.sectionType,field.slot)===prop);
+        if(!sourceField||sourceField.state!=="READY"||!sourceField.publishable||sourceField.provenance.join("|")!==node.section.provenance[prop])errors.push(`${node.id}.content: ${prop} lacks exact READY field backing`);
+      }
+    }
     if(graph.source.mode==="PRODUCTION"&&!node.contentContract)errors.push(`${node.id}: production node lacks content contract`);
   }
   if(graph.readiness==="READY"&&graph.missingEvidence.length>0)errors.push("READY graph contains missing evidence");

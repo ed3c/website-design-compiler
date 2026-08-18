@@ -11,8 +11,6 @@ import { validateAgainstSchema } from "../src/validate.js";
 interface GeneratedPageEvidence{category:string;project:string;path:string;sha256:string}
 interface QualityEvidence{category:string;project:string;viewport:QualityViewport;path:string;sha256:string;screenshotSha256:string}
 interface GeneratedPageReceipt{schema:string;overall:string;git:{sha:string;ref:string};evidence:GeneratedPageEvidence[];qualityEvidence:QualityEvidence[]}
-interface TokenReceiptEntry{id:string;state:string}
-interface TokenReceipt{schema:string;overall:string;categories:TokenReceiptEntry[]}
 const sha256=(value:Buffer|string)=>createHash("sha256").update(value).digest("hex");
 type SemanticTokens={color:{background:string;surface:string;text:string;mutedText:string;accent:string;onAccent:string;focus:string};typography:{display:{family:string};body:{family:string}};layout:{containerMaxPx:{mobile:number;desktop:number};gutterPx:{mobile:number;desktop:number}};motionMs:{fast:number;base:number}};
 function normalized(value:string):string{return value.toLowerCase().replace(/[\s"']/g,"");}
@@ -21,13 +19,6 @@ function runtimeTokenMatch(tokens:SemanticTokens,observation:DesignQualityBrowse
   const expected:Record<string,string>={"--wdc-color-background":tokens.color.background,"--wdc-color-surface":tokens.color.surface,"--wdc-color-text-primary":tokens.color.text,"--wdc-color-text-muted":tokens.color.mutedText,"--wdc-color-accent":tokens.color.accent,"--wdc-color-on-accent":tokens.color.onAccent,"--wdc-color-focus":tokens.color.focus,"--wdc-font-display":tokens.typography.display.family,"--wdc-font-body":tokens.typography.body.family,"--wdc-motion-fast":`${tokens.motionMs.fast}ms`,"--wdc-motion-base":`${tokens.motionMs.base}ms`,"--wdc-container-max":`${tokens.layout.containerMaxPx[viewport]}px`,"--wdc-gutter":`${tokens.layout.gutterPx[viewport]}px`};
   const mismatches=Object.entries(expected).filter(([name,value])=>name.startsWith("--wdc-font-")?!normalized(actual[name]??"").startsWith(normalized(value)):normalized(actual[name]??"")!==normalized(value)).map(([name,value])=>`${name}:${actual[name]??"ABSENT"}!=${value}`);
   return{state:mismatches.length===0?"PASS":"FAIL",matched:Object.keys(expected).length-mismatches.length,total:Object.keys(expected).length,mismatches};
-}
-function tokenEntryFor(category:string,receipt:TokenReceipt):TokenReceiptEntry{
-  const matches=receipt.categories.filter((entry)=>entry.id===category||entry.id.startsWith(`${category}-`));
-  if(matches.length!==1)throw new Error(`${category}: expected exactly one semantic-token receipt identity, got ${matches.map((entry)=>entry.id).join(",")||"none"}`);
-  const entry=matches[0]!;
-  if(entry.state!=="PASS")throw new Error(`${category}: semantic-token receipt ${entry.id} is ${entry.state}`);
-  return entry;
 }
 const outputDirectory=join(process.cwd(),"artifacts","v2","design-quality");
 await mkdir(outputDirectory,{recursive:true});
@@ -39,12 +30,13 @@ const profileErrors=validateDesignQualityReleaseProfile(profile);
 if(profileErrors.length>0)throw new Error(`invalid design-quality release profile: ${profileErrors.join("; ")}`);
 const generatedReceipt=JSON.parse(await readFile(join(process.cwd(),"artifacts","generated-pages","generated-page-browser-receipt.json"),"utf8")) as GeneratedPageReceipt;
 if(generatedReceipt.schema!=="website-design-compiler/generated-page-browser-receipt/v3")throw new Error(`generated page receipt schema is ${generatedReceipt.schema}`);
-const tokenReceipt=JSON.parse(await readFile(join(process.cwd(),"artifacts","v2","semantic-design-tokens","receipt.json"),"utf8")) as TokenReceipt;
-if(tokenReceipt.overall!=="PASS")throw new Error(`semantic-token benchmark receipt is ${tokenReceipt.overall}`);
-const projection=JSON.parse(await readFile(join(process.cwd(),"apps","site","generated","benchmark-page-graphs.json"),"utf8")) as {schema:string;source:string;graphs:Record<string,CompletePageGraph>};
+const productionProjectionPath=join(process.cwd(),"apps","site","generated","benchmark-page-graphs.json");
+const productionProjectionBytes=await readFile(productionProjectionPath);
+const productionProjectionSha256=sha256(productionProjectionBytes);
+const projection=JSON.parse(productionProjectionBytes.toString("utf8")) as {schema:string;source:string;graphs:Record<string,CompletePageGraph>;designTokens:Record<string,SemanticTokens>};
 if(projection.schema!=="website-design-compiler/site-page-graph-projection/v2"||projection.source!=="production-site-compiler")throw new Error("design-quality evaluation requires the production site graph projection");
 const graphs=Object.values(projection.graphs);
-if(graphs.some((graph)=>graph.source.mode!=="PRODUCTION"))throw new Error("design-quality evaluation refuses fixture page graphs");
+if(graphs.some((graph)=>graph.source.mode!=="PRODUCTION"||graph.readiness!=="READY"||graph.missingEvidence.length>0))throw new Error("design-quality evaluation requires READY production page graphs with no missing evidence");
 const corpus:OriginalitySubject[]=graphs.map((graph)=>({id:graph.category,signature:graph.signature}));
 const observations=new Map<string,{observation:DesignQualityBrowserObservation;fileSha256:string}>();
 for(const evidence of generatedReceipt.qualityEvidence){
@@ -58,7 +50,6 @@ for(const evidence of generatedReceipt.qualityEvidence){
 }
 const evaluations=[];
 for(const graph of graphs){
-  const tokenEntry=tokenEntryFor(graph.category,tokenReceipt);
   const originalityCorpus=corpus.filter((entry)=>entry.id!==graph.category);
   for(const viewport of profile.requiredViewports as readonly QualityViewport[]){
     const project=viewport==="mobile"?"mobile-chromium":"desktop-chromium";
@@ -66,11 +57,10 @@ for(const graph of graphs){
     const observed=observations.get(`${graph.category}:${viewport}`);
     if(!qualityEvidence||!observed)throw new Error(`${graph.category}/${viewport}: browser quality observation absent`);
     const graphSha256=sha256(JSON.stringify(graph));
-    const tokenPath=join(process.cwd(),"artifacts","v2","semantic-design-tokens",`${tokenEntry.id}.json`);
-    const tokenBytes=await readFile(tokenPath);
-    const tokens=JSON.parse(tokenBytes.toString("utf8")) as SemanticTokens;
-    const designTokensSha256=sha256(tokenBytes);
-    if(sha256(JSON.stringify(tokens))!==graph.source.artifacts.semanticDesignTokens)throw new Error(`${graph.category}: semantic-token artifact drifted from the production page graph source binding`);
+    const tokens=projection.designTokens[graph.category];
+    if(!tokens)throw new Error(`${graph.category}: production semantic tokens absent from site projection`);
+    const designTokensSha256=sha256(JSON.stringify(tokens));
+    if(designTokensSha256!==graph.source.artifacts.semanticDesignTokens)throw new Error(`${graph.category}: semantic-token artifact drifted from the production page graph source binding`);
     const tokenMatch=runtimeTokenMatch(tokens,observed.observation);
     const visualCorpus:VisualOriginalitySubject[]=[...observations.values()].map((entry)=>entry.observation).filter((entry)=>entry.viewport===viewport&&entry.category!==graph.category).map((observation)=>({id:observation.category,observation}));
     const card=evaluateDesignQuality(graph,viewport,profile.premiumQualityThreshold,[],originalityCorpus,profile.originalitySimilarityThreshold,observed.observation,tokenMatch,[],visualCorpus);
@@ -79,7 +69,7 @@ for(const graph of graphs){
     const expected:ExpectedDesignQualityEvidence={category:graph.category,viewport,pageGraphSha256:graphSha256,designTokensSha256,screenshotSha256,gitSha,graphSignature:graph.signature};
     const binding:DesignQualityEvidenceBinding={schema:"website-design-compiler/design-quality-evidence/v2",category:graph.category,viewport,pageGraphSha256:graphSha256,designTokensSha256,screenshotSha256,gitSha,graphSignature:graph.signature,screenshotPath};
     const decision=decidePremiumQuality(card,binding,expected,profile.premiumQualityThreshold);
-    evaluations.push({card,binding,decision,source:{generatedPageReceipt:generatedReceipt.schema,generatedPageReceiptGitSha:generatedReceipt.git.sha,qualityObservationPath:qualityEvidence.path,qualityObservationSha256:observed.fileSha256,semanticTokenReceipt:tokenReceipt.schema,tokenArtifactId:tokenEntry.id,tokenPath:`artifacts/v2/semantic-design-tokens/${tokenEntry.id}.json`,structuralOriginalityCorpus:originalityCorpus.map((entry)=>entry.id),visualOriginalityCorpus:visualCorpus.map((entry)=>entry.id)}});
+    evaluations.push({card,binding,decision,source:{generatedPageReceipt:generatedReceipt.schema,generatedPageReceiptGitSha:generatedReceipt.git.sha,qualityObservationPath:qualityEvidence.path,qualityObservationSha256:observed.fileSha256,productionProjection:projection.schema,productionProjectionPath:"apps/site/generated/benchmark-page-graphs.json",productionProjectionSha256,semanticTokensSourceSha256:designTokensSha256,structuralOriginalityCorpus:originalityCorpus.map((entry)=>entry.id),visualOriginalityCorpus:visualCorpus.map((entry)=>entry.id)}});
   }
 }
 const categories=new Set(evaluations.map((entry)=>entry.card.category));

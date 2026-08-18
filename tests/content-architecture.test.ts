@@ -98,6 +98,81 @@ test("page architect directly carries content contract readiness and fields", ()
   assert.deepEqual(proof?.contentContract.quality,contentQuality(plan,"proof"));
 });
 
+test("user-supplied section content makes required slots ready with exact provenance",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"b".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:`Objective: ${compilerInput.brief.objective}`}}};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{navigation:{"primary-action-label":"Inspect evidence"},hero:{headline:"Evidence before pixels","value-proposition":"Compile governed sites from traceable inputs","primary-action":"Review the compiler"},features:{headline:"Auditable capabilities","feature-items":["Exact runtime receipts","Bounded media fallbacks"]},proof:{"proof-items":["Artifacts bind to an exact commit","Unknown rights fail closed"]},conversion:{"cta-headline":"Inspect the full evidence chain","cta-label":"Inspect evidence"}}};
+  const content=compileContentArchitecture(compilerInput);
+  assert.equal(content.overall,"READY");
+  assert.deepEqual(content.sections.find((section)=>section.sectionId==="features")?.fields.find((field)=>field.slot==="feature-items")?.value,["Exact runtime receipts","Bounded media fallbacks"]);
+  assert.ok(content.sections.flatMap((section)=>section.fields).filter((field)=>field.publishable).every((field)=>field.provenance.some((entry)=>entry.includes(compilerInput.briefSourceEvidence!.inputSha256))||field.slot==="brand-or-project-name"||field.slot==="project-name"));
+});
+
+test("unknown content evidence sections and slots fail fast with a diagnostic",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"c".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:"Objective: inspect"}}};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{features:{unknown:"not admitted"}}};
+  assert.throws(()=>compileContentArchitecture(compilerInput),/unknown slot features\.unknown/);
+});
+
+test("content evidence fails closed when a scalar slot receives a list",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"d".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:"Objective: inspect"}}};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{hero:{headline:["This must be a scalar"]}}};
+  const content=compileContentArchitecture(compilerInput);
+  const headline=content.sections.find((section)=>section.sectionId==="hero")?.fields.find((field)=>field.slot==="headline");
+  assert.equal(headline?.state,"NEEDS_INPUT");
+  assert.equal(headline?.publishable,false);
+  assert.equal(content.overall,"NEEDS_INPUT");
+});
+
+test("content budgets use governed section field limits at exact boundaries",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"e".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:"Objective: inspect"}}};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{hero:{headline:"h".repeat(96)},features:{headline:"f".repeat(72)},conversion:{"cta-headline":"c".repeat(80)}}};
+  const content=compileContentArchitecture(compilerInput);
+  const field=(sectionId:string,slot:string)=>content.sections.find((section)=>section.sectionId===sectionId)?.fields.find((entry)=>entry.slot===slot);
+  assert.deepEqual(field("hero","headline")?.lengthBudget,{maxCharacters:96});
+  assert.equal(field("hero","headline")?.state,"READY");
+  assert.deepEqual(field("features","headline")?.lengthBudget,{maxCharacters:72});
+  assert.equal(field("features","headline")?.state,"READY");
+  assert.deepEqual(field("conversion","cta-headline")?.lengthBudget,{maxCharacters:80});
+  assert.equal(field("conversion","cta-headline")?.state,"READY");
+});
+
+test("content budgets fail closed one character above governed section limits",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"f".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:"Objective: inspect"}}};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{hero:{headline:"h".repeat(97)},features:{headline:"f".repeat(73)},conversion:{"cta-headline":"c".repeat(81)}}};
+  const content=compileContentArchitecture(compilerInput);
+  const field=(sectionId:string,slot:string)=>content.sections.find((section)=>section.sectionId===sectionId)?.fields.find((entry)=>entry.slot===slot);
+  assert.equal(field("hero","headline")?.state,"NEEDS_INPUT");
+  assert.equal(field("features","headline")?.state,"NEEDS_INPUT");
+  assert.equal(field("conversion","cta-headline")?.state,"NEEDS_INPUT");
+});
+
+test("a repeated item in one supplied list is a content quality failure",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.briefSourceEvidence={inputSha256:"a".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:"Objective: inspect"}}};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{features:{"feature-items":["Repeated proof","Repeated proof"]}}};
+  const content=compileContentArchitecture(compilerInput);
+  assert.deepEqual(content.sections.find((section)=>section.sectionId==="features")?.quality.repeatedPublishableValues,["Repeated proof"]);
+  assert.equal(content.overall,"NEEDS_INPUT");
+});
+
+test("derived project and objective values obey the same governed budgets",()=>{
+  const compilerInput=input("product-landing");
+  compilerInput.project="p".repeat(49);
+  compilerInput.brief.objective="o".repeat(97);
+  compilerInput.briefSourceEvidence={inputSha256:"9".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:`Objective: ${compilerInput.brief.objective}`}}};
+  const content=compileContentArchitecture(compilerInput);
+  const navigationBrand=content.sections.find((section)=>section.sectionId==="navigation")?.fields.find((field)=>field.slot==="brand-or-project-name");
+  const heroHeadline=content.sections.find((section)=>section.sectionId==="hero")?.fields.find((field)=>field.slot==="headline");
+  assert.equal(navigationBrand?.state,"NEEDS_INPUT");
+  assert.equal(heroHeadline?.state,"NEEDS_INPUT");
+  assert.equal(content.overall,"NEEDS_INPUT");
+});
+
 function contentQuality(plan:ReturnType<typeof buildPageArchitecturePlan>,sectionId:string){
   return plan.sectionIntents.find((section)=>section.id===sectionId)!.contentContract.quality;
 }

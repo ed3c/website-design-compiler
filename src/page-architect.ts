@@ -74,20 +74,21 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
     sectionIntents: ia.sections.map((section) => {
       const contentSection = contentBySection.get(section.id);
       const fields = structuredClone(contentSection?.fields ?? []);
-      const contentState = fields.some((field) => field.state === "NEEDS_INPUT") ? "NEEDS_INPUT" : "READY";
+      const quality=structuredClone(contentSection?.quality ?? { forbiddenPhraseHits: [], repeatedPublishableValues: [] });
+      const contentState = fields.some((field) => field.state === "NEEDS_INPUT")||quality.forbiddenPhraseHits.length>0||quality.repeatedPublishableValues.length>0 ? "NEEDS_INPUT" : "READY";
       return {
         id: section.id,
         type: section.type,
         purpose: section.purpose,
         priority: section.priority,
-        status: section.status,
+        status: contentState,
         requiredContent: section.requiredContent,
         fallback: section.fallback,
         contentContract: {
           state: contentState,
           localePolicy: structuredClone(contentSection?.localePolicy ?? { sourceLocale: "en", localizationReady: true }),
           fields,
-          quality: structuredClone(contentSection?.quality ?? { forbiddenPhraseHits: [], repeatedPublishableValues: [] })
+          quality
         }
       };
     }),

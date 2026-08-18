@@ -39,12 +39,20 @@ export interface CompilerBriefSourceEvidence {
   };
 }
 
+export type CompilerContentValue = string | string[];
+export interface CompilerContentEvidence {
+  schema: "website-design-compiler/content-evidence/v1";
+  source: "USER_SUPPLIED";
+  sections: Record<string, Record<string, CompilerContentValue>>;
+}
+
 export interface CompilerInput {
   schema: "website-design-compiler/input/v1";
   project: string;
   brief: { pageType: string; audience: string; objective: string; };
   hardConstraints?: string[];
   briefSourceEvidence?: CompilerBriefSourceEvidence;
+  contentEvidence?: CompilerContentEvidence;
   references?: CompilerReference[];
   artDirection?: { primary: ArtDirectorAuthority[]; reviewers?: ArtDirectorAuthority[]; };
   requestedStages: string[];

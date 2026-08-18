@@ -77,7 +77,7 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
       nav,
       section("editorial-hero", "hero-editorial", "Establish topic, editorial promise and reading context.", "PRIMARY", ["headline", "dek"], "Use brief objective as the dek if supported.", evidence),
       section("article-body", "editorial-prose", "Deliver the main evidence-backed narrative.", "PRIMARY", ["body-content"], "Mark content as NEEDS_INPUT when no source material is supplied.", evidence, "NEEDS_INPUT"),
-      section("related-content", "related-content", "Offer optional continuation without fabricating articles.", "SECONDARY", ["related-items"], "Omit when no related items are provided.", evidence, "NEEDS_INPUT"),
+      section("related-content", "related-content", "Offer optional continuation without fabricating articles.", "SECONDARY", ["headline", "related-items"], "Omit when no related items are provided.", evidence, "NEEDS_INPUT"),
       footer
     ];
   }
@@ -85,10 +85,10 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
   if (family === "premium-consumer") {
     return [
       nav,
-      section("brand-hero", "hero-premium", "Create a high-confidence first impression around the product or brand promise.", "PRIMARY", ["headline", "primary-action"], "Use a text-first hero when premium media is unavailable.", evidence),
-      section("product-showcase", "product-showcase", "Show product form, use or differentiated experience.", "PRIMARY", ["product-description"], "Use semantic copy and a static media placeholder when no approved asset exists.", evidence),
+      section("brand-hero", "hero-premium", "Create a high-confidence first impression around the product or brand promise.", "PRIMARY", ["headline", "value-proposition", "primary-action"], "Use a text-first hero when premium media is unavailable.", evidence),
+      section("product-showcase", "product-showcase", "Show product form, use or differentiated experience.", "PRIMARY", ["headline", "product-description"], "Use semantic copy and a static media placeholder when no approved asset exists.", evidence),
       section("brand-proof", "proof", "Provide supported reasons to trust the product.", "SECONDARY", ["proof-items"], "Omit social proof until evidence is supplied.", evidence, "NEEDS_INPUT"),
-      section("conversion", "cta-band", "Provide the primary conversion action.", "PRIMARY", ["cta-label"], "Use the brief objective as action context without inventing commercial terms.", evidence),
+      section("conversion", "cta-band", "Provide the primary conversion action.", "PRIMARY", ["cta-headline", "cta-label"], "Use the brief objective as action context without inventing commercial terms.", evidence),
       footer
     ];
   }
@@ -96,10 +96,10 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
   if (family === "motion-heavy-creative") {
     return [
       nav,
-      section("creative-hero", "hero-creative", "Establish the concept and a signature interaction opportunity.", "PRIMARY", ["headline", "primary-action"], "Fall back to static semantic hero when motion is disabled.", evidence),
+      section("creative-hero", "hero-creative", "Establish the concept and a signature interaction opportunity.", "PRIMARY", ["headline", "value-proposition", "primary-action"], "Fall back to static semantic hero when motion is disabled.", evidence),
       section("narrative-sequence", "narrative-sequence", "Build a paced story across distinct semantic beats.", "PRIMARY", ["story-beats"], "Render beats as ordinary sections without scroll choreography.", evidence, "NEEDS_INPUT"),
       section("interactive-showcase", "interactive-stage", "Provide a justified interactive demonstration.", "SECONDARY", ["interaction-purpose"], "Use static poster and explanatory DOM copy.", evidence),
-      section("conversion", "cta-band", "Return from exploration to the primary action.", "PRIMARY", ["cta-label"], "Render a simple CTA band.", evidence),
+      section("conversion", "cta-band", "Return from exploration to the primary action.", "PRIMARY", ["cta-headline", "cta-label"], "Render a simple CTA band.", evidence),
       footer
     ];
   }
@@ -107,10 +107,10 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
   if (family === "interactive-2d") {
     return [
       nav,
-      section("experience-hero", "hero-interactive", "Frame the 2D experience and primary task.", "PRIMARY", ["headline", "task"], "Use semantic copy when canvas is unavailable.", evidence),
+      section("experience-hero", "hero-interactive", "Frame the 2D experience and primary task.", "PRIMARY", ["headline", "task", "primary-action"], "Use semantic copy when canvas is unavailable.", evidence),
       section("pixi-stage", "graphics-2d-stage", "Host the optional 2D interaction without owning essential semantics.", "PRIMARY", ["scene-purpose"], "Use a static poster plus DOM description.", evidence),
-      section("how-it-works", "feature-grid", "Explain interaction mechanics and outcomes.", "SECONDARY", ["feature-items"], "Render a simple ordered list.", evidence, "NEEDS_INPUT"),
-      section("conversion", "cta-band", "Provide the next primary action.", "PRIMARY", ["cta-label"], "Render semantic button/link only.", evidence),
+      section("how-it-works", "feature-grid", "Explain interaction mechanics and outcomes.", "SECONDARY", ["headline", "feature-items"], "Render a simple ordered list.", evidence, "NEEDS_INPUT"),
+      section("conversion", "cta-band", "Provide the next primary action.", "PRIMARY", ["cta-headline", "cta-label"], "Render semantic button/link only.", evidence),
       footer
     ];
   }
@@ -118,10 +118,10 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
   if (family === "interactive-3d") {
     return [
       nav,
-      section("experience-hero", "hero-interactive", "Frame the 3D experience and primary task.", "PRIMARY", ["headline", "task"], "Use semantic copy when WebGL/WebGPU is unavailable.", evidence),
+      section("experience-hero", "hero-interactive", "Frame the 3D experience and primary task.", "PRIMARY", ["headline", "task", "primary-action"], "Use semantic copy when WebGL/WebGPU is unavailable.", evidence),
       section("three-stage", "graphics-3d-stage", "Host the optional 3D scene with bounded camera and interaction ownership.", "PRIMARY", ["scene-purpose"], "Use a static poster plus DOM description.", evidence),
-      section("capabilities", "feature-grid", "Explain the product or scene capabilities outside the GPU layer.", "SECONDARY", ["feature-items"], "Render a semantic list.", evidence, "NEEDS_INPUT"),
-      section("conversion", "cta-band", "Provide the next primary action.", "PRIMARY", ["cta-label"], "Render semantic button/link only.", evidence),
+      section("capabilities", "feature-grid", "Explain the product or scene capabilities outside the GPU layer.", "SECONDARY", ["headline", "feature-items"], "Render a semantic list.", evidence, "NEEDS_INPUT"),
+      section("conversion", "cta-band", "Provide the next primary action.", "PRIMARY", ["cta-headline", "cta-label"], "Render semantic button/link only.", evidence),
       footer
     ];
   }
@@ -129,9 +129,9 @@ function sectionsForFamily(family: string, input: CompilerInput): IaSection[] {
   return [
     nav,
     section("hero", "hero-product", "State the product promise and primary action.", "PRIMARY", ["headline", "value-proposition", "primary-action"], "Use concise text-only hero if media is unavailable.", evidence),
-    section("features", "feature-grid", "Explain the product capabilities needed to evaluate fit.", "PRIMARY", ["feature-items"], "Render an ordered semantic feature list.", evidence, "NEEDS_INPUT"),
+    section("features", "feature-grid", "Explain the product capabilities needed to evaluate fit.", "PRIMARY", ["headline", "feature-items"], "Render an ordered semantic feature list.", evidence, "NEEDS_INPUT"),
     section("proof", "proof", "Support trust with supplied evidence rather than invented social proof.", "SECONDARY", ["proof-items"], "Omit proof section until evidence is supplied.", evidence, "NEEDS_INPUT"),
-    section("conversion", "cta-band", "Provide the primary conversion action after evaluation.", "PRIMARY", ["cta-label"], "Use the brief objective as contextual copy only.", evidence),
+    section("conversion", "cta-band", "Provide the primary conversion action after evaluation.", "PRIMARY", ["cta-headline", "cta-label"], "Use the brief objective as contextual copy only.", evidence),
     footer
   ];
 }

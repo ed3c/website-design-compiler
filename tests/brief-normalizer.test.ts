@@ -82,3 +82,11 @@ test("contradictory hard constraints produce actionable validation errors", () =
   assert.ok(receipt.needsInput.includes("hardConstraints"));
   assert.ok(receipt.validationErrors.some((error) => error.includes("autoplay video")));
 });
+
+test("explicit structured content evidence survives normalization without compiler invention",()=>{
+  const contentEvidence={schema:"website-design-compiler/content-evidence/v1" as const,source:"USER_SUPPLIED" as const,sections:{hero:{headline:"A supplied headline","primary-action":"Inspect evidence"},features:{"feature-items":["Exact receipts","Fail-closed rights"]}}};
+  const receipt=normalizeBrief({schema:"website-design-compiler/brief-input/v2",project:"brief-content",briefText:"Page type: b2b product landing\nAudience: design teams\nObjective: inspect a governed compiler",contentEvidence});
+  assert.equal(receipt.state,"READY");
+  assert.deepEqual(receipt.compilerInput?.contentEvidence,contentEvidence);
+  assert.notEqual(receipt.compilerInput?.contentEvidence,contentEvidence);
+});

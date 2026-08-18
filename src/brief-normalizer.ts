@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CompilerInput, CompilerReference } from "./contracts.js";
+import type { CompilerContentEvidence, CompilerInput, CompilerReference } from "./contracts.js";
 
 export const BRIEF_NORMALIZER_VERSION = "2.0.0";
 export const BRIEF_NORMALIZER_CONFIG = "deterministic-regex-v1";
@@ -11,6 +11,7 @@ export interface NaturalLanguageBriefInput {
   project: string;
   briefText: string;
   references?: CompilerReference[];
+  contentEvidence?: CompilerContentEvidence;
   hardConstraints?: string[];
   requestedStages?: string[];
 }
@@ -191,6 +192,7 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
           }
         },
         ...(input.references ? { references: input.references } : {}),
+        ...(input.contentEvidence ? { contentEvidence: structuredClone(input.contentEvidence) } : {}),
         requestedStages
       }
     : null;

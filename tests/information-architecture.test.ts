@@ -66,3 +66,10 @@ test("mobile information priority is explicit", () => {
   const plan = compileInformationArchitecture(input("interactive 3d showcase"));
   assert.deepEqual(plan.navigation.mobilePriority, ["primary-action", "primary-content", "supporting-content"]);
 });
+
+test("editorial reading intent does not fabricate a hero conversion requirement",()=>{
+  const plan=compileInformationArchitecture(input("editorial publication"));
+  const hero=plan.sections.find((section)=>section.id==="editorial-hero");
+  assert.deepEqual(hero?.requiredContent,["headline","dek"]);
+  assert.ok(!hero?.requiredContent.includes("primary-action"));
+});
