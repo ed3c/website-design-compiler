@@ -6,7 +6,7 @@ import { resolve, join, relative } from "node:path";
 const execFileAsync = promisify(execFile);
 
 export type RightsState = "ALLOW" | "REVIEW_REQUIRED" | "DENY" | "UNKNOWN" | "NOT_DISTRIBUTED";
-export interface RightsSubject { id: string; kind: "package" | "asset" | "font" | "model" | "service"; name: string; versionOrIdentity: string; licenseExpression: string | null; state: RightsState; evidence: string[]; attributionRequired: boolean; distributed: boolean; }
+export interface RightsSubject { id: string; kind: "package" | "asset" | "font" | "model" | "generated-output" | "service"; name: string; versionOrIdentity: string; licenseExpression: string | null; state: RightsState; evidence: string[]; attributionRequired: boolean; distributed: boolean; geographicRestrictions?: string[]; usageRestrictions?: string[]; }
 export interface Waiver { subjectId: string; owner: string; rationale: string; scope: string; expiresAt: string; }
 export interface RepositoryClearanceReceipt { schema: "website-design-compiler/repository-rights-clearance/v2"; overall: "PASS" | "FAIL"; generatedAt: string; subjects: RightsSubject[]; counts: Record<RightsState, number>; unresolved: string[]; expiredWaivers: string[]; noticeSubjects: string[]; legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"; }
 
