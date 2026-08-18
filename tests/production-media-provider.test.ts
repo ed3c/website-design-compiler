@@ -244,7 +244,7 @@ test("non-ALLOW repository rights fail closed before provider execution", async 
     ...rightsReceipt,
     overall: "FAIL",
     subjects: rightsReceipt.subjects.map((entry) => entry.id === policy.rights.generatedOutput.subjectId
-      ? { ...entry, state: "REVIEW_REQUIRED" as const }
+      ? { ...entry, state: "REVIEW_REQUIRED" as const, distributed: true }
       : entry),
     counts: { ALLOW: 2, REVIEW_REQUIRED: 1, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 },
     unresolved: [policy.rights.generatedOutput.subjectId]
@@ -259,6 +259,31 @@ test("non-ALLOW repository rights fail closed before provider execution", async 
   assert.equal(result.receipt.overall, "NOT_EXERCISED");
   assert.equal(result.receipt.admissionState, "DENIED");
   assert.match(result.receipt.reason, /generated-output:fixture-model.*REVIEW_REQUIRED/);
+});
+
+test("semantically inconsistent rights PASS is denied before provider execution", async () => {
+  let calls = 0;
+  const transport: ProductionProviderTransport = {
+    identity: policy.identity,
+    async generate() {
+      calls += 1;
+      throw new Error("must not execute");
+    }
+  };
+  const forgedPass: RepositoryClearanceReceipt = {
+    ...rightsReceipt,
+    diagnostics: ["diagnostic:package-evidence:INVALID_JSON"]
+  };
+
+  const result = await routeProductionMediaGeneration({
+    signed: signed(), secret, policy, rightsReceipt: forgedPass, transport,
+    executionAdmission: admissionFor(policy, forgedPass)
+  });
+
+  assert.equal(calls, 0);
+  assert.equal(result.receipt.overall, "FAIL");
+  assert.equal(result.receipt.admissionState, "DENIED");
+  assert.match(result.receipt.reason, /repository rights receipt.*invalid/i);
 });
 
 test("production rights must explicitly record geographic and usage restriction fields", async () => {

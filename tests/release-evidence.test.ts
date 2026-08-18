@@ -118,7 +118,7 @@ function validReceipts(): Record<string, Record<string, unknown>> {
     rights: {
       schema: "website-design-compiler/repository-rights-clearance/v2", overall: "PASS", git, generatedAt: "2026-08-18T00:00:00.000Z",
       subjects: [{ id: "model:fixture", kind: "model", name: "fixture", versionOrIdentity: "v1", licenseExpression: "REPO_ORIGINAL", state: "ALLOW", evidence: ["src/media-router.ts"], attributionRequired: false, distributed: true }],
-      counts: { ALLOW: 1, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 }, unresolved: [], expiredWaivers: [], noticeSubjects: [],
+      counts: { ALLOW: 1, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 }, unresolved: [], expiredWaivers: [], diagnostics: [], noticeSubjects: [],
       legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"
     }
   };
@@ -134,6 +134,13 @@ test("all twelve release child schemas require and accept their formal receipt s
     const hollow = { schema: spec.schema, overall: "PASS", git };
     assert.equal(bindReleaseEvidence(hollow, spec.schema, git).state, "FAIL", `${key} hollow receipt`);
   }
+});
+
+test("release binding rejects a rights PASS that carries diagnostics", () => {
+  const rights = validReceipts().rights;
+  assert.ok(rights);
+  rights.diagnostics = ["diagnostic:forged-pass"];
+  assert.equal(bindReleaseEvidence(rights, RELEASE_CHILD_SPECS.rights.schema, git).state, "FAIL");
 });
 
 test("CMS release evidence requires production provenance and negative controls", () => {

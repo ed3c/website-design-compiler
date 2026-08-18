@@ -6,7 +6,7 @@ import { executeProductionProviderConfiguration, validateProductionProviderExecu
 import type { SignedMediaRequest } from "../src/media-router.js";
 import type { ProductionProviderPolicy, ProductionProviderReceipt } from "../src/production-media-provider.js";
 import type { ProductionAdmissionPacket } from "../src/production-provider-admission.js";
-import type { RepositoryClearanceReceipt } from "../src/repository-rights-clearance.js";
+import { validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt } from "../src/repository-rights-clearance.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const git={sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"};
@@ -49,6 +49,8 @@ if (configPath) {
     ]);
     await validateAgainstSchema(admissionPacket, "production-provider-admission.schema.json");
     await validateAgainstSchema(rightsReceipt, "repository-rights-clearance.schema.json");
+    const rightsErrors = validateRepositoryClearanceReceipt(rightsReceipt);
+    if(rightsErrors.length>0)throw new Error(`repository rights receipt is invalid: ${rightsErrors.join("; ")}`);
     if(rightsReceipt.git.sha!==git.sha||rightsReceipt.git.ref!==git.ref)throw new Error("repository rights receipt is not bound to the provider execution subject");
     const result = await executeProductionProviderConfiguration({
       config, signed, policy, rightsReceipt, admissionPacket, admissionPublicKeyPem,

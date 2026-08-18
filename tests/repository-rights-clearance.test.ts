@@ -3,7 +3,7 @@ import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { applyWaivers, classifyLicense, scanRepositoryRights, scanShippedAssets, type RightsSubject } from "../src/repository-rights-clearance.js";
+import { applyWaivers, classifyLicense, scanRepositoryRights, scanShippedAssets, validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt, type RightsSubject } from "../src/repository-rights-clearance.js";
 
 test("rights classifier covers allow review deny and unknown", () => {
   assert.equal(classifyLicense("MIT"), "ALLOW");
@@ -12,6 +12,23 @@ test("rights classifier covers allow review deny and unknown", () => {
   assert.equal(classifyLicense("Standard 'no charge' license: https://gsap.com/standard-license."), "REVIEW_REQUIRED");
   assert.equal(classifyLicense("PolyForm-Noncommercial-1.0.0"), "DENY");
   assert.equal(classifyLicense(null), "UNKNOWN");
+});
+
+test("semantic receipt validation rejects a coherent-looking PASS with diagnostics", () => {
+  const receipt: RepositoryClearanceReceipt = {
+    schema: "website-design-compiler/repository-rights-clearance/v2",
+    overall: "PASS",
+    generatedAt: "2026-08-18T00:00:00.000Z",
+    subjects: [{ id: "model:fixture", kind: "model", name: "fixture", versionOrIdentity: "v1", licenseExpression: "REPO_ORIGINAL", state: "ALLOW", evidence: ["fixture"], attributionRequired: false, distributed: true }],
+    counts: { ALLOW: 1, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 },
+    unresolved: [],
+    expiredWaivers: [],
+    diagnostics: ["diagnostic:forged-pass"],
+    noticeSubjects: [],
+    legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"
+  };
+
+  assert.match(validateRepositoryClearanceReceipt(receipt).join(" "), /overall.*FAIL|diagnostics/);
 });
 
 test("active review waiver is explicit while expired waiver fails to change state", () => {

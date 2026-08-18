@@ -15,6 +15,8 @@ export interface RepositoryClearanceReceipt { schema: "website-design-compiler/r
 const PERMISSIVE = ["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "Unlicense", "CC0-1.0", "BlueOak-1.0.0", "Python-2.0", "WTFPL"];
 const REVIEW_MARKERS = ["MPL", "EPL", "LGPL", "GPL", "AGPL", "CDDL", "OSL", "Artistic", "CC-BY", "gsap.com/standard-license"];
 const DENY_MARKERS = ["NON-COMMERCIAL", "NONCOMMERCIAL", "NC-", "Commons-Clause", "PolyForm-Noncommercial"];
+const RIGHTS_STATES = ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"] as const;
+const SUBJECT_KINDS = ["package", "asset", "font", "model", "generated-output", "service"] as const;
 
 export function classifyLicense(expression: string | null): RightsState {
   if (!expression || expression.trim() === "" || expression === "NOASSERTION") return "UNKNOWN";
@@ -38,6 +40,69 @@ function errorCode(error: unknown): string {
   return error instanceof Error && "code" in error && typeof error.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
     ? error.code
     : "UNKNOWN";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringArray(value: unknown, allowEmpty = true): value is string[] {
+  return Array.isArray(value) && (allowEmpty || value.length > 0) && value.every((entry) => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function sameStringMembers(actual: string[], expected: string[]): boolean {
+  return actual.length === expected.length && [...actual].sort().every((entry, index) => entry === [...expected].sort()[index]);
+}
+
+export function validateRepositoryClearanceReceipt(value: unknown): string[] {
+  const errors: string[] = [];
+  if (!isRecord(value)) return ["rights receipt must be an object"];
+  if (value.schema !== "website-design-compiler/repository-rights-clearance/v2") errors.push("schema is invalid");
+  if (value.overall !== "PASS" && value.overall !== "FAIL") errors.push("overall must be PASS or FAIL");
+  if (typeof value.generatedAt !== "string" || Number.isNaN(Date.parse(value.generatedAt)) || new Date(value.generatedAt).toISOString() !== value.generatedAt) errors.push("generatedAt must be an exact ISO timestamp");
+  if (value.legalDisclaimer !== "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE") errors.push("legalDisclaimer is invalid");
+
+  const counts = Object.fromEntries(RIGHTS_STATES.map((state) => [state, 0])) as Record<RightsState, number>;
+  const unresolved: string[] = [];
+  const notices: string[] = [];
+  const subjectIds = new Set<string>();
+  if (!Array.isArray(value.subjects) || value.subjects.length === 0) errors.push("subjects must be a non-empty array");
+  for (const [index, candidate] of (Array.isArray(value.subjects) ? value.subjects : []).entries()) {
+    if (!isRecord(candidate)) { errors.push(`subjects[${index}] must be an object`); continue; }
+    const id = typeof candidate.id === "string" && candidate.id.trim().length > 0 ? candidate.id : null;
+    const state = RIGHTS_STATES.includes(candidate.state as RightsState) ? candidate.state as RightsState : null;
+    if (!id || typeof candidate.name !== "string" || candidate.name.trim().length === 0 || typeof candidate.versionOrIdentity !== "string" || candidate.versionOrIdentity.trim().length === 0 || !SUBJECT_KINDS.includes(candidate.kind as RightsSubject["kind"]) || !state || (candidate.licenseExpression !== null && typeof candidate.licenseExpression !== "string") || !stringArray(candidate.evidence, false) || typeof candidate.attributionRequired !== "boolean" || typeof candidate.distributed !== "boolean") {
+      errors.push(`subjects[${index}] is malformed`);
+      continue;
+    }
+    if (subjectIds.has(id)) errors.push(`subjects contains duplicate id ${id}`);
+    subjectIds.add(id);
+    if (candidate.geographicRestrictions !== undefined && !stringArray(candidate.geographicRestrictions)) errors.push(`subjects[${index}].geographicRestrictions is malformed`);
+    if (candidate.usageRestrictions !== undefined && !stringArray(candidate.usageRestrictions)) errors.push(`subjects[${index}].usageRestrictions is malformed`);
+    if (state === "NOT_DISTRIBUTED" && candidate.distributed) errors.push(`subjects[${index}] cannot distribute a NOT_DISTRIBUTED subject`);
+    counts[state] += 1;
+    if (candidate.distributed && state !== "ALLOW") unresolved.push(id);
+    if (candidate.distributed && candidate.attributionRequired) notices.push(id);
+  }
+
+  if (!isRecord(value.counts) || !exactKeys(value.counts, RIGHTS_STATES)) errors.push("counts must contain exactly the rights states");
+  else for (const state of RIGHTS_STATES) if (!Number.isInteger(value.counts[state]) || value.counts[state] !== counts[state]) errors.push(`counts.${state} is inconsistent; expected ${counts[state]}`);
+
+  const listFields = ["unresolved", "expiredWaivers", "diagnostics", "noticeSubjects"] as const;
+  for (const field of listFields) if (!stringArray(value[field])) errors.push(`${field} must be a string array`);
+  const declaredUnresolved = stringArray(value.unresolved) ? value.unresolved : [];
+  const expiredWaivers = stringArray(value.expiredWaivers) ? value.expiredWaivers : [];
+  const diagnostics = stringArray(value.diagnostics) ? value.diagnostics : [];
+  const declaredNotices = stringArray(value.noticeSubjects) ? value.noticeSubjects : [];
+  for (const [field, entries] of [["unresolved", declaredUnresolved], ["expiredWaivers", expiredWaivers], ["diagnostics", diagnostics], ["noticeSubjects", declaredNotices]] as const) {
+    if (new Set(entries).size !== entries.length) errors.push(`${field} must not contain duplicates`);
+  }
+  if (!sameStringMembers(declaredUnresolved, unresolved)) errors.push("unresolved is inconsistent with distributed subjects");
+  if (!sameStringMembers(declaredNotices, notices)) errors.push("noticeSubjects is inconsistent with attributable subjects");
+  for (const id of expiredWaivers) if (!subjectIds.has(id)) errors.push(`expired waiver subject ${id} is absent`);
+  const expectedOverall = unresolved.length === 0 && expiredWaivers.length === 0 && diagnostics.length === 0 && errors.length === 0 ? "PASS" : "FAIL";
+  if (value.overall !== expectedOverall) errors.push(`overall is inconsistent with rights semantics; expected ${expectedOverall}`);
+  return errors;
 }
 
 export async function loadWaivers(path: string): Promise<Waiver[]> {

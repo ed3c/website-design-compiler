@@ -1,6 +1,6 @@
 import type { MediaAdapter, MediaAsset, MediaKind, SignedMediaRequest } from "./media-router.js";
 import { canonicalMediaValue, sha256, verifyMediaRequest } from "./media-router.js";
-import type { RepositoryClearanceReceipt } from "./repository-rights-clearance.js";
+import { validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt } from "./repository-rights-clearance.js";
 import { MediaAssetContentError, validateProductionMediaAssetContent } from "./media-asset-validation.js";
 import {
   productionAdmissionPacketSha256,
@@ -478,6 +478,18 @@ export async function routeProductionMediaGeneration(args: {
         overall: "FAIL",
         admissionState: "DENIED",
         reason: `invalid production provider policy: ${policyErrors.join("; ")}`
+      }
+    };
+  }
+
+  const rightsErrors = validateRepositoryClearanceReceipt(args.rightsReceipt);
+  if (rightsErrors.length > 0) {
+    return {
+      receipt: {
+        ...base,
+        overall: "FAIL",
+        admissionState: "DENIED",
+        reason: `repository rights receipt is invalid: ${rightsErrors.join("; ")}`
       }
     };
   }

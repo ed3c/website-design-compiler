@@ -17,6 +17,7 @@ import { buildMotionDirectorPlan } from "./motion-director.js";
 import { GENERATED_PAGE_CANONICAL_VIEWPORTS, validateTrustedGeneratedPageBrowserAdmission } from "./generated-page-browser-admission.js";
 import { assertPngEvidence } from "./png-evidence.js";
 import { buildReferenceManifest } from "./reference-intelligence.js";
+import { validateRepositoryClearanceReceipt } from "./repository-rights-clearance.js";
 import { compileAllSectionPageFixtures } from "./section-page-fixtures.js";
 import {
   CAPABILITY_RECEIPT_CONTRACTS,
@@ -42,7 +43,6 @@ const EVIDENCE_STATES = new Set<unknown>(["PASS", "FAIL", "ABSENT", "NOT_IMPLEME
 const PASS_FAIL = new Set<unknown>(["PASS", "FAIL"]);
 const GIT_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
-const RIGHTS_STATES = ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"] as const;
 const REQUIRED_RUNTIME_STAGES = ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"];
 const JSON_SCHEMA_FILES: Record<string, string> = {
   "website-design-compiler/reference-manifest/v1": "reference-manifest.schema.json",
@@ -470,33 +470,7 @@ function validateCmsReceipt(value: JsonRecord): string[] {
 }
 
 function validateRightsReceipt(value: JsonRecord): string[] {
-  const errors: string[] = [];
-  if (typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))) errors.push("generatedAt must be an ISO timestamp");
-  if (!Array.isArray(value.subjects) || value.subjects.length === 0) errors.push("subjects must be a non-empty array");
-  const actualCounts = Object.fromEntries(RIGHTS_STATES.map((state) => [state, 0])) as Record<string, number>;
-  const unresolved: string[] = [];
-  const notices: string[] = [];
-  if (Array.isArray(value.subjects)) value.subjects.forEach((subject, index) => {
-    if (!isRecord(subject) || typeof subject.id !== "string" || typeof subject.kind !== "string" || typeof subject.name !== "string" || typeof subject.versionOrIdentity !== "string" || !RIGHTS_STATES.includes(subject.state as typeof RIGHTS_STATES[number]) || !isStringArray(subject.evidence, true) || typeof subject.attributionRequired !== "boolean" || typeof subject.distributed !== "boolean") {
-      errors.push(`subjects[${index}] is malformed`);
-      return;
-    }
-    const state = String(subject.state);
-    actualCounts[state] = (actualCounts[state] ?? 0) + 1;
-    if (subject.distributed && subject.state !== "ALLOW") unresolved.push(subject.id);
-    if (subject.distributed && subject.attributionRequired) notices.push(subject.id);
-  });
-  const counts = requireRecord(value.counts, "counts", errors);
-  if (counts) for (const state of RIGHTS_STATES) if (counts[state] !== actualCounts[state]) errors.push(`counts.${state} is inconsistent; expected ${actualCounts[state]}`);
-  for (const key of ["unresolved", "expiredWaivers", "noticeSubjects"] as const) requireStringArray(value[key], key, errors);
-  if (Array.isArray(value.unresolved) && !sameMembers(value.unresolved, unresolved)) errors.push("unresolved is inconsistent with distributed subjects");
-  if (Array.isArray(value.noticeSubjects) && !sameMembers(value.noticeSubjects, notices)) errors.push("noticeSubjects is inconsistent with attributable subjects");
-  if (value.legalDisclaimer !== "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE") errors.push("legalDisclaimer is invalid");
-  if (Array.isArray(value.expiredWaivers)) {
-    const expected = unresolved.length === 0 && value.expiredWaivers.length === 0 ? "PASS" : "FAIL";
-    if (value.overall !== expected) errors.push(`overall is inconsistent with rights gates; expected ${expected}`);
-  }
-  return errors;
+  return validateRepositoryClearanceReceipt(value);
 }
 
 function validateCoreReceipt(value: JsonRecord): string[] {
