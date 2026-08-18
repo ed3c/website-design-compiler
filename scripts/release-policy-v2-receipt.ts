@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { verifyCoreReleaseEvidence } from "../src/release-evidence.js";
+import { RELEASE_CAPABILITY_SPECS, readBoundReleaseEvidence, verifyCoreReleaseEvidence } from "../src/release-evidence.js";
 import { CAPABILITY_RECEIPT_SCHEMAS, evaluateReleasePolicy, type Capability, type CapabilityEvidence, type CapabilityState, type ReleasePolicy, type ReleaseProfile } from "../src/release-policy-v2.js";
 
 const root=process.cwd();
@@ -14,33 +14,24 @@ const git={sha:process.env.GITHUB_SHA??"",ref:process.env.GITHUB_REF??"UNBOUND",
 
 const paths:Record<Capability,string>={
   core:"artifacts/release/release-gate-receipt.json",
-  liveReference:"artifacts/live-reference/live-reference-receipt.json",
-  webgpu:"artifacts/graphics-3d/webgpu-receipt.json",
-  repositoryRights:"artifacts/rights-clearance/repository-rights-clearance.json",
-  productionProvider:"artifacts/media-generator/production-provider-status.json",
-  premiumQuality:"artifacts/v2/design-quality/design-quality-eval-receipt.json"
+  liveReference:RELEASE_CAPABILITY_SPECS.liveReference.path,
+  webgpu:RELEASE_CAPABILITY_SPECS.webgpu.path,
+  repositoryRights:RELEASE_CAPABILITY_SPECS.repositoryRights.path,
+  productionProvider:RELEASE_CAPABILITY_SPECS.productionProvider.path,
+  premiumQuality:RELEASE_CAPABILITY_SPECS.premiumQuality.path
 };
 const evidenceValidationErrors:Partial<Record<Capability,string[]>>={};
-function evidenceState(value:unknown):CapabilityState{return value==="PASS"||value==="FAIL"||value==="ABSENT"||value==="NOT_IMPLEMENTED"||value==="NOT_EXERCISED"||value==="SKIPPED_BY_POLICY"?value:"FAIL";}
 async function readEvidence(capability:Capability,path:string):Promise<CapabilityEvidence>{
   if(capability==="core"){
     const verified=await verifyCoreReleaseEvidence(root,{sha:git.sha,ref:git.ref});
     if(verified.errors.length>0)evidenceValidationErrors.core=verified.errors;
     return{state:verified.state,gitSha:verified.git?.sha??null,identity:verified.schema===CAPABILITY_RECEIPT_SCHEMAS.core?CAPABILITY_RECEIPT_SCHEMAS.core:null};
   }
-  try{
-    const receipt=JSON.parse(await readFile(join(root,path),"utf8")) as {schema?:unknown;overall?:unknown;git?:{sha?:unknown};evidenceBindings?:Record<string,{binding?:unknown;errors?:unknown;sha256?:unknown}>};
-    const schemaValid=receipt.schema===CAPABILITY_RECEIPT_SCHEMAS[capability];
-    const coreBindingsValid=capability!=="core"||(
-      receipt.evidenceBindings!==undefined&&
-      Object.keys(receipt.evidenceBindings).length===12&&
-      Object.values(receipt.evidenceBindings).every((binding)=>binding.binding==="BOUND"&&Array.isArray(binding.errors)&&binding.errors.length===0&&typeof binding.sha256==="string")
-    );
-    return{state:schemaValid&&coreBindingsValid?evidenceState(receipt.overall):"FAIL",gitSha:typeof receipt.git?.sha==="string"?receipt.git.sha:null,identity:schemaValid?CAPABILITY_RECEIPT_SCHEMAS[capability]:null};
-  }catch(error){
-    if(error instanceof Error&&"code" in error&&error.code==="ENOENT")return{state:"ABSENT",gitSha:null,identity:null};
-    throw error;
-  }
+  const spec=RELEASE_CAPABILITY_SPECS[capability as Exclude<Capability,"core">];
+  const verified=await readBoundReleaseEvidence(root,path,spec.schema,{sha:git.sha,ref:git.ref});
+  if(verified.errors.length>0)evidenceValidationErrors[capability]=verified.errors;
+  const absent=verified.sha256===null&&verified.binding==="ABSENT";
+  return{state:absent?"ABSENT":verified.state as CapabilityState,gitSha:verified.git?.sha??null,identity:verified.schema===CAPABILITY_RECEIPT_SCHEMAS[capability]?CAPABILITY_RECEIPT_SCHEMAS[capability]:null};
 }
 const evidence={} as Record<Capability,CapabilityEvidence>;
 for(const [capability,path] of Object.entries(paths) as Array<[Capability,string]>)evidence[capability]=await readEvidence(capability,path);

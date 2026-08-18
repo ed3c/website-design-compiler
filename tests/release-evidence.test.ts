@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import {
   RELEASE_CHILD_SPECS,
+  RELEASE_CAPABILITY_SPECS,
   bindReleaseEvidence,
   readBoundReleaseEvidence,
   verifyCoreReleaseEvidence
@@ -21,7 +22,15 @@ function validReceipts(): Record<string, Record<string, unknown>> {
       schema: "website-design-compiler/runtime-receipt/v1", overall: "PASS", git,
       project: "fixture", generatedAt: "2026-08-18T00:00:00.000Z", inputSha256: hash,
       runtime: { node: "v22", platform: "darwin", arch: "arm64" },
-      stages: [{ stage: "release-receipt", state: "PASS", reason: "executed", artifacts: ["runtime-receipt.json"] }]
+      stages: [
+        { stage: "reference-intelligence", state: "PASS", reason: "executed", artifacts: ["reference-intelligence/reference-manifest.json"] },
+        { stage: "art-direction", state: "PASS", reason: "executed", artifacts: ["art-direction/design-read.json"] },
+        { stage: "frontend-builder", state: "PASS", reason: "executed", artifacts: ["frontend-builder/frontend-plan.json"] },
+        { stage: "motion-director", state: "PASS", reason: "executed", artifacts: ["motion-director/motion-plan.json"] },
+        { stage: "graphics-2d", state: "PASS", reason: "executed", artifacts: ["graphics-2d/graphics-2d-plan.json"] },
+        { stage: "graphics-3d", state: "PASS", reason: "executed", artifacts: ["graphics-3d/graphics-3d-plan.json"] },
+        { stage: "release-receipt", state: "PASS", reason: "executed", artifacts: ["runtime-receipt.json"] }
+      ]
     },
     browser: {
       schema: "website-design-compiler/browser-qa-runtime-receipt/v1", overall: "PASS", git,
@@ -150,6 +159,17 @@ async function writeCoreFixture(root: string): Promise<Record<string, unknown>> 
     await mkdir(dirname(path), { recursive: true });
     const bytes = `${JSON.stringify(receipts[key], null, 2)}\n`;
     await writeFile(path, bytes, "utf8");
+    if (key === "runtime") {
+      const runtime = receipts.runtime!;
+      for (const stage of runtime.stages as Array<{ artifacts: string[] }>) {
+        for (const artifact of stage.artifacts) {
+          const artifactPath = join(dirname(path), artifact);
+          if (artifactPath === path) continue;
+          await mkdir(dirname(artifactPath), { recursive: true });
+          await writeFile(artifactPath, `${JSON.stringify({ fixture: artifact })}\n`, "utf8");
+        }
+      }
+    }
     evidenceBindings[key] = { ...bindReleaseEvidence(receipts[key], spec.schema, git), path: spec.path, sha256: createHash("sha256").update(bytes).digest("hex") };
     gates[spec.gate] = "PASS";
     evidence[spec.gate] = spec.path;
@@ -199,4 +219,53 @@ test("core verification rejects a forged binding around a structurally hollow ch
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("runtime evidence cannot pass when a claimed stage artifact is absent", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-runtime-artifacts-"));
+  try {
+    await writeCoreFixture(root);
+    await rm(join(root, "artifacts/runtime/minimal/frontend-builder/frontend-plan.json"));
+    const result = await verifyCoreReleaseEvidence(root, git);
+    assert.equal(result.state, "FAIL");
+    assert.match(result.errors.join("; "), /missing or unreadable/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("optional capability shells use the same strict validators as core evidence", () => {
+  for (const [capability, spec] of Object.entries(RELEASE_CAPABILITY_SPECS)) {
+    const shell = { schema: spec.schema, overall: "PASS", git };
+    const result = bindReleaseEvidence(shell, spec.schema, git);
+    assert.equal(result.state, "FAIL", capability);
+    assert.ok(result.errors.length > 0, capability);
+  }
+});
+
+test("formal optional capability evidence remains admissible through the centralized validators", () => {
+  const liveTarget = (id: string) => ({
+    targetUrl: `https://${id}.example.test/reference`, finalUrl: `https://${id}.example.test/reference`, state: "PASS", availability: "AVAILABLE",
+    httpStatus: 200, contentType: "text/html", responseBytes: 128, responseSha256: hash, artifactIdentity: `sha256:${hash}`,
+    capturedAt: "2026-08-18T00:00:01.000Z", dnsResolutions: [{ attempt: 1, hostname: `${id}.example.test`, addresses: ["203.0.113.10"], observedAt: "2026-08-18T00:00:00.000Z" }],
+    redirectChain: [], connectedAddress: "203.0.113.10", attemptCount: 1, observations: ["captured"], implementationDetails: "UNKNOWN", drift: "BASELINE"
+  });
+  const live = {
+    schema: RELEASE_CAPABILITY_SPECS.liveReference.schema, overall: "PASS", git, executionMode: "LIVE", transportMode: "PRODUCTION",
+    approval: { id: "human-admit-1", approvedAt: "2026-08-18T00:00:00.000Z", targetCount: 2 },
+    policy: { minimumDistinctHttpsTargets: 2, timeoutMs: 1000, maxAttempts: 2, retryBackoffMs: 10, maxRedirects: 2, maxBytes: 1024 },
+    targets: [liveTarget("first"), liveTarget("second")], promotionBlockedReason: null
+  };
+  const webgpu = {
+    schema: RELEASE_CAPABILITY_SPECS.webgpu.schema, overall: "PASS", git, rendererOutcome: "WEBGPU_PASS",
+    selected: { state: "WEBGPU_PASS", renderer: "webgpu", reason: "browser execution", capabilities: { webgpu: true, webgl: true }, runtime: { state: "WEBGPU_PASS", identity: { adapter: "navigator.gpu", renderer: "three.WebGPURenderer", rendererVersion: "0.184.0", tslModule: "three/tsl@0.184.0", adapterInfo: { vendor: "fixture", architecture: "fixture", device: "fixture", description: "fixture" }, features: [], limits: {} }, budget: { dpr: 1, drawCalls: 1, triangles: 1, textureBytes: 1, framesRendered: 1, frameLoop: "demand" } } },
+    fallbacks: { initializationFailure: "PASS", totalGpuFailure: "PASS", deviceLoss: "PASS" }
+  };
+  const productionProvider = {
+    schema: RELEASE_CAPABILITY_SPECS.productionProvider.schema, gate: "PRODUCTION_PROVIDER", overall: "NOT_EXERCISED", admissionState: "NEEDS_HUMAN_ADMIT", productionReleaseEligible: false,
+    providerIdentity: "ABSENT", modelIdentity: "ABSENT", rightsClearance: "ABSENT", runtimeCredentials: "ABSENT", budgetAuthorization: "ABSENT", deterministicMockGate: "SEPARATE", reason: "human admission is absent", git
+  };
+  assert.equal(bindReleaseEvidence(live, RELEASE_CAPABILITY_SPECS.liveReference.schema, git).state, "PASS");
+  assert.equal(bindReleaseEvidence(webgpu, RELEASE_CAPABILITY_SPECS.webgpu.schema, git).state, "PASS");
+  assert.equal(bindReleaseEvidence(productionProvider, RELEASE_CAPABILITY_SPECS.productionProvider.schema, git).state, "NOT_EXERCISED");
 });

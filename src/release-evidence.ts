@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
 
 export type ReleaseInputState = "PASS" | "FAIL" | "NOT_IMPLEMENTED" | "NOT_EXERCISED" | "ABSENT" | "SKIPPED_BY_POLICY";
 
@@ -19,6 +22,13 @@ const PASS_FAIL = new Set<unknown>(["PASS", "FAIL"]);
 const GIT_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const RIGHTS_STATES = ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"] as const;
+const REQUIRED_RUNTIME_STAGES = ["reference-intelligence", "art-direction", "frontend-builder", "motion-director", "graphics-2d", "graphics-3d", "release-receipt"];
+const JSON_SCHEMA_FILES: Record<string, string> = {
+  "website-design-compiler/live-reference-receipt/v2": "live-reference-receipt.schema.json",
+  "website-design-compiler/webgpu-runtime-receipt/v1": "webgpu-runtime-receipt.schema.json",
+  "website-design-compiler/production-provider-status/v1": "production-provider-status.schema.json"
+};
+const jsonSchemaValidators = new Map<string, ValidateFunction>();
 
 export const RELEASE_CHILD_SPECS = {
   runtime: { gate: "runtime", path: "artifacts/runtime/minimal/runtime-receipt.json", schema: "website-design-compiler/runtime-receipt/v1" },
@@ -36,6 +46,14 @@ export const RELEASE_CHILD_SPECS = {
 } as const;
 
 export type ReleaseChildName = keyof typeof RELEASE_CHILD_SPECS;
+
+export const RELEASE_CAPABILITY_SPECS = {
+  liveReference: { path: "artifacts/live-reference/live-reference-receipt.json", schema: "website-design-compiler/live-reference-receipt/v2" },
+  webgpu: { path: "artifacts/graphics-3d/webgpu-receipt.json", schema: "website-design-compiler/webgpu-runtime-receipt/v1" },
+  repositoryRights: { path: RELEASE_CHILD_SPECS.rights.path, schema: RELEASE_CHILD_SPECS.rights.schema },
+  productionProvider: { path: "artifacts/media-generator/production-provider-status.json", schema: "website-design-compiler/production-provider-status/v1" },
+  premiumQuality: { path: "artifacts/v2/design-quality/design-quality-eval-receipt.json", schema: "website-design-compiler/design-quality-eval-receipt/v2" }
+} as const;
 
 export interface ReleaseEvidenceFileBinding extends ReleaseEvidenceBinding {
   path: string;
@@ -84,6 +102,19 @@ function sameMembers(actual: readonly string[], expected: readonly string[]): bo
   return actual.length === expected.length && new Set(actual).size === actual.length && actual.every((entry) => expected.includes(entry));
 }
 
+function validatePublishedSchema(value: unknown, schema: string): string[] {
+  const schemaFile = JSON_SCHEMA_FILES[schema];
+  if (!schemaFile) return [];
+  let validator = jsonSchemaValidators.get(schema);
+  if (!validator) {
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    validator = ajv.compile(JSON.parse(readFileSync(resolve(process.cwd(), "schemas", schemaFile), "utf8")) as object);
+    jsonSchemaValidators.set(schema, validator);
+  }
+  return validator(value) ? [] : (validator.errors ?? []).map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`);
+}
+
 function validateRuntimeReceipt(value: JsonRecord): string[] {
   const errors: string[] = [];
   if (typeof value.project !== "string" || value.project.length === 0) errors.push("project must be non-empty text");
@@ -110,8 +141,10 @@ function validateRuntimeReceipt(value: JsonRecord): string[] {
     if (!EVIDENCE_STATES.has(stage.state)) errors.push(`stages[${index}].state is invalid`);
     else states.push(stage.state);
     if (typeof stage.reason !== "string" || stage.reason.length === 0) errors.push(`stages[${index}].reason must be non-empty text`);
-    if (!Array.isArray(stage.artifacts) || !stage.artifacts.every((entry) => typeof entry === "string")) errors.push(`stages[${index}].artifacts must be text paths`);
+    if (!Array.isArray(stage.artifacts) || !stage.artifacts.every((entry) => typeof entry === "string" && entry.length > 0)) errors.push(`stages[${index}].artifacts must be non-empty text paths`);
+    else if (stage.state === "PASS" && stage.artifacts.length === 0) errors.push(`stages[${index}].artifacts cannot be empty for PASS`);
   });
+  if (!sameMembers([...names], REQUIRED_RUNTIME_STAGES)) errors.push("stages must cover the exact governed minimal runtime pipeline");
   const derived = states.includes("FAIL") ? "FAIL"
     : states.includes("NOT_IMPLEMENTED") ? "NOT_IMPLEMENTED"
       : states.includes("ABSENT") ? "ABSENT"
@@ -432,6 +465,85 @@ function validateCoreReceipt(value: JsonRecord): string[] {
   return errors;
 }
 
+function validateLiveReferenceReceipt(value: JsonRecord): string[] {
+  const errors: string[] = [];
+  if (!["PASS", "FAIL", "NOT_EXERCISED"].includes(String(value.overall))) errors.push("overall must be PASS, FAIL, or NOT_EXERCISED");
+  if (value.executionMode !== "LIVE") errors.push("executionMode must be LIVE");
+  if (!["PRODUCTION", "INJECTED"].includes(String(value.transportMode))) errors.push("transportMode is invalid");
+  const approval = requireRecord(value.approval, "approval", errors);
+  if (approval && (!Number.isInteger(approval.targetCount) || Number(approval.targetCount) < 2 || typeof approval.id !== "string" || !Number.isFinite(Date.parse(String(approval.approvedAt))))) errors.push("approval is malformed");
+  const policy = requireRecord(value.policy, "policy", errors);
+  if (policy && (policy.minimumDistinctHttpsTargets !== 2 || !["timeoutMs", "maxAttempts", "retryBackoffMs", "maxRedirects", "maxBytes"].every((key) => Number.isInteger(policy[key]) && Number(policy[key]) >= 0))) errors.push("policy is malformed");
+  if (!Array.isArray(value.targets)) errors.push("targets must be an array");
+  if (value.overall === "PASS") {
+    if (value.transportMode !== "PRODUCTION" || value.promotionBlockedReason !== null) errors.push("PASS requires production transport with no blocked reason");
+    if (!Array.isArray(value.targets) || value.targets.length < 2) errors.push("PASS requires at least two live targets");
+    else value.targets.forEach((target, index) => {
+      if (!isRecord(target) || target.state !== "PASS" || target.availability !== "AVAILABLE" || typeof target.targetUrl !== "string" || !target.targetUrl.startsWith("https://") || typeof target.finalUrl !== "string" || !target.finalUrl.startsWith("https://") || typeof target.responseSha256 !== "string" || !SHA256.test(target.responseSha256) || target.artifactIdentity !== `sha256:${target.responseSha256}` || typeof target.connectedAddress !== "string" || target.connectedAddress.length === 0 || !Number.isInteger(target.httpStatus) || Number(target.httpStatus) < 100 || Number(target.httpStatus) > 599 || typeof target.contentType !== "string" || !["text/html", "application/xhtml+xml"].includes(target.contentType) || !Number.isInteger(target.responseBytes) || Number(target.responseBytes) < 1 || !Number.isFinite(Date.parse(String(target.capturedAt))) || !Array.isArray(target.dnsResolutions) || target.dnsResolutions.length === 0 || !Array.isArray(target.redirectChain) || !Number.isInteger(target.attemptCount) || Number(target.attemptCount) < 1 || !Array.isArray(target.observations) || target.implementationDetails !== "UNKNOWN" || !["BASELINE", "UNCHANGED", "CHANGED"].includes(String(target.drift))) errors.push(`targets[${index}] is not PASS-bound live evidence`);
+    });
+  }
+  if (value.transportMode === "INJECTED" && value.overall === "PASS") errors.push("injected transport cannot promote live reference PASS");
+  return errors;
+}
+
+function validateWebgpuReceipt(value: JsonRecord): string[] {
+  const errors: string[] = [];
+  if (!["PASS", "FAIL", "NOT_EXERCISED"].includes(String(value.overall))) errors.push("overall must be PASS, FAIL, or NOT_EXERCISED");
+  const selected = requireRecord(value.selected, "selected", errors);
+  const fallbacks = requireRecord(value.fallbacks, "fallbacks", errors);
+  if (fallbacks && (fallbacks.totalGpuFailure !== "PASS" || !["PASS", "NOT_EXERCISED"].includes(String(fallbacks.initializationFailure)) || !["PASS", "NOT_EXERCISED"].includes(String(fallbacks.deviceLoss)))) errors.push("fallback evidence is malformed");
+  if (value.overall === "PASS") {
+    const runtime = selected && isRecord(selected.runtime) ? selected.runtime : null;
+    const identity = runtime && isRecord(runtime.identity) ? runtime.identity : null;
+    const budget = runtime && isRecord(runtime.budget) ? runtime.budget : null;
+    const capabilities = selected && isRecord(selected.capabilities) ? selected.capabilities : null;
+    if (!selected || value.rendererOutcome !== "WEBGPU_PASS" || selected.state !== "WEBGPU_PASS" || selected.renderer !== "webgpu" || capabilities?.webgpu !== true || typeof capabilities.webgl !== "boolean" || !runtime || runtime.state !== "WEBGPU_PASS" || identity?.adapter !== "navigator.gpu" || identity?.renderer !== "three.WebGPURenderer" || typeof identity.rendererVersion !== "string" || typeof identity.tslModule !== "string" || !isRecord(identity.adapterInfo) || !Array.isArray(identity.features) || !isRecord(identity.limits) || !budget || budget.frameLoop !== "demand" || !["dpr", "drawCalls", "triangles", "textureBytes", "framesRendered"].every((key) => typeof budget[key] === "number")) errors.push("PASS requires an exercised WebGPU runtime with identity and budget evidence");
+  }
+  return errors;
+}
+
+function validateProductionProviderStatus(value: JsonRecord): string[] {
+  const errors: string[] = [];
+  const expected = {
+    gate: "PRODUCTION_PROVIDER", overall: "NOT_EXERCISED", admissionState: "NEEDS_HUMAN_ADMIT", productionReleaseEligible: false,
+    providerIdentity: "ABSENT", modelIdentity: "ABSENT", rightsClearance: "ABSENT", runtimeCredentials: "ABSENT", budgetAuthorization: "ABSENT", deterministicMockGate: "SEPARATE"
+  } as const;
+  for (const [key, expectedValue] of Object.entries(expected)) if (value[key] !== expectedValue) errors.push(`${key} is inconsistent with an unconfigured production provider`);
+  requireString(value.reason, "reason", errors);
+  return errors;
+}
+
+function validatePremiumQualityReceipt(value: JsonRecord): string[] {
+  const errors: string[] = [];
+  if (!PASS_FAIL.has(value.overall)) errors.push("overall must be PASS or FAIL");
+  const viewportCoverage = requireRecord(value.viewportCoverage, "viewportCoverage", errors);
+  const premium = requireRecord(value.premium, "premium", errors);
+  if (!Number.isInteger(value.categoryCount) || Number(value.categoryCount) < 0) errors.push("categoryCount must be an integer");
+  for (const key of ["exactHeadBound", "allEvidenceBound", "allStructuralPass", "allOriginalityPass"] as const) if (typeof value[key] !== "boolean") errors.push(`${key} must be boolean`);
+  if (premium && (!PASS_FAIL.has(premium.state) || !Array.isArray(premium.evaluations))) errors.push("premium evidence is malformed");
+  const releaseProfile = requireRecord(value.releaseProfile, "releaseProfile", errors);
+  if (releaseProfile && (typeof releaseProfile.sha256 !== "string" || !SHA256.test(releaseProfile.sha256) || !Array.isArray(releaseProfile.requiredViewports) || !sameMembers(releaseProfile.requiredViewports.map(String), ["mobile", "desktop"]) || typeof releaseProfile.premiumQualityThreshold !== "number" || typeof releaseProfile.originalitySimilarityThreshold !== "number" || releaseProfile.requireExactEvidenceBinding !== true)) errors.push("releaseProfile is malformed");
+  const git = isRecord(value.git) ? value.git : null;
+  const observedPairs: string[] = [];
+  if (premium && Array.isArray(premium.evaluations)) premium.evaluations.forEach((evaluation, index) => {
+    if (!isRecord(evaluation)) { errors.push(`premium.evaluations[${index}] must be an object`); return; }
+    const card = requireRecord(evaluation.card, `premium.evaluations[${index}].card`, errors);
+    const binding = requireRecord(evaluation.binding, `premium.evaluations[${index}].binding`, errors);
+    const decision = requireRecord(evaluation.decision, `premium.evaluations[${index}].decision`, errors);
+    const suppliedReferenceAudit = requireRecord(evaluation.suppliedReferenceAudit, `premium.evaluations[${index}].suppliedReferenceAudit`, errors);
+    if (card) {
+      if (typeof card.category !== "string" || !["mobile", "desktop"].includes(String(card.viewport)) || typeof card.score !== "number" || !isRecord(card.originalityAudit) || card.originalityAudit.state !== "PASS") errors.push(`premium.evaluations[${index}].card is malformed`);
+      else observedPairs.push(`${card.category}:${card.viewport}`);
+    }
+    if (binding && (binding.gitSha !== git?.sha || !["pageGraphSha256", "designTokensSha256", "screenshotSha256"].every((key) => typeof binding[key] === "string" && SHA256.test(String(binding[key]))))) errors.push(`premium.evaluations[${index}].binding is not exact-head evidence`);
+    if (decision && (decision.overall !== "PREMIUM_PASS" || decision.evidenceState !== "PASS" || decision.structuralState !== "PASS")) errors.push(`premium.evaluations[${index}].decision did not pass`);
+    if (suppliedReferenceAudit && (suppliedReferenceAudit.originalityState !== "PASS" || typeof suppliedReferenceAudit.observedReferenceCount !== "number" || suppliedReferenceAudit.observedReferenceCount < 1)) errors.push(`premium.evaluations[${index}].reference originality was not exercised`);
+  });
+  if (observedPairs.length > 0 && new Set(observedPairs).size !== observedPairs.length) errors.push("premium evaluations contain duplicated category/viewports");
+  if (value.overall === "PASS" && (value.categoryCount !== 6 || viewportCoverage?.mobile !== 6 || viewportCoverage?.desktop !== 6 || value.exactHeadBound !== true || value.allEvidenceBound !== true || value.allStructuralPass !== true || value.allOriginalityPass !== true || premium?.state !== "PASS" || !Array.isArray(premium.evaluations) || premium.evaluations.length !== 12 || observedPairs.length !== 12)) errors.push("PASS is inconsistent with premium evidence coverage and bindings");
+  return errors;
+}
+
 const STRUCTURAL_VALIDATORS: Record<string, (value: JsonRecord) => string[]> = {
   "website-design-compiler/runtime-receipt/v1": validateRuntimeReceipt,
   "website-design-compiler/browser-qa-runtime-receipt/v1": validateBrowserReceipt,
@@ -445,7 +557,11 @@ const STRUCTURAL_VALIDATORS: Record<string, (value: JsonRecord) => string[]> = {
   "website-design-compiler/authoring-receipt/v1": validateAuthoringReceipt,
   "website-design-compiler/payload-cms-receipt/v2": validateCmsReceipt,
   "website-design-compiler/repository-rights-clearance/v2": validateRightsReceipt,
-  "website-design-compiler/release-gate-receipt/v2": validateCoreReceipt
+  "website-design-compiler/release-gate-receipt/v2": validateCoreReceipt,
+  "website-design-compiler/live-reference-receipt/v2": validateLiveReferenceReceipt,
+  "website-design-compiler/webgpu-runtime-receipt/v1": validateWebgpuReceipt,
+  "website-design-compiler/production-provider-status/v1": validateProductionProviderStatus,
+  "website-design-compiler/design-quality-eval-receipt/v2": validatePremiumQualityReceipt
 };
 
 export function bindReleaseEvidence(
@@ -470,7 +586,7 @@ export function bindReleaseEvidence(
   if (git && (!GIT_SHA.test(git.sha) || !git.ref.startsWith("refs/"))) errors.push("receipt Git subject must contain an exact SHA and ref");
   const validator = STRUCTURAL_VALIDATORS[expectedSchema];
   if (!validator) errors.push(`no structural validator for schema ${expectedSchema}`);
-  else errors.push(...validator(receipt));
+  else errors.push(...validatePublishedSchema(receipt, expectedSchema), ...validator(receipt));
   return {
     state: errors.length === 0 ? state as ReleaseInputState : "FAIL",
     binding,
@@ -484,6 +600,34 @@ function fileFailure(path: string, message: string, sha256: string | null = null
   return { state: "FAIL", binding: "ABSENT", schema: null, git: null, errors: [message], path, sha256 };
 }
 
+async function validateRuntimeArtifacts(root: string, receiptPath: string, receipt: JsonRecord): Promise<string[]> {
+  const errors: string[] = [];
+  if (!Array.isArray(receipt.stages)) return errors;
+  const receiptDirectory = dirname(resolve(root, receiptPath));
+  for (const [stageIndex, stage] of receipt.stages.entries()) {
+    if (!isRecord(stage) || stage.state !== "PASS" || !Array.isArray(stage.artifacts)) continue;
+    for (const [artifactIndex, artifact] of stage.artifacts.entries()) {
+      if (typeof artifact !== "string" || artifact.length === 0 || isAbsolute(artifact)) {
+        errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is not a safe relative path`);
+        continue;
+      }
+      const absolutePath = resolve(receiptDirectory, artifact);
+      const traversal = relative(receiptDirectory, absolutePath);
+      if (traversal.split(/[\\/]/)[0] === ".." || isAbsolute(traversal)) {
+        errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] escapes the runtime receipt directory`);
+        continue;
+      }
+      try {
+        const bytes = await readFile(absolutePath);
+        if (bytes.length === 0) errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is empty`);
+      } catch {
+        errors.push(`stages[${stageIndex}].artifacts[${artifactIndex}] is missing or unreadable`);
+      }
+    }
+  }
+  return errors;
+}
+
 export async function readBoundReleaseEvidence(
   root: string,
   path: string,
@@ -494,7 +638,13 @@ export async function readBoundReleaseEvidence(
     const bytes = await readFile(join(root, path));
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     try {
-      return { ...bindReleaseEvidence(JSON.parse(bytes.toString("utf8")), expectedSchema, expectedGit), path, sha256 };
+      const receipt = JSON.parse(bytes.toString("utf8")) as unknown;
+      const binding = bindReleaseEvidence(receipt, expectedSchema, expectedGit);
+      const runtimeArtifactErrors = expectedSchema === "website-design-compiler/runtime-receipt/v1" && isRecord(receipt)
+        ? await validateRuntimeArtifacts(root, path, receipt)
+        : [];
+      const errors = [...binding.errors, ...runtimeArtifactErrors];
+      return { ...binding, state: errors.length === 0 ? binding.state : "FAIL", errors, path, sha256 };
     } catch {
       return fileFailure(path, "receipt JSON is malformed", sha256);
     }
