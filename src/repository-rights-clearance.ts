@@ -175,11 +175,14 @@ export async function scanShippedAssets(root: string): Promise<RightsSubject[]> 
 export function applyWaivers(subjects: RightsSubject[], waivers: Waiver[], now: Date): { subjects: RightsSubject[]; expiredWaivers: string[]; diagnostics: string[] } {
   const expiredWaivers: string[] = [];
   const diagnostics: string[] = [];
+  if (!Array.isArray(waivers)) return { subjects, expiredWaivers, diagnostics: ["waivers:INVALID_COLLECTION"] };
   const subjectStates = new Map(subjects.map((subject) => [subject.id, subject.state]));
   const bySubject = new Map<string, Waiver>();
   const blockedSubjects = new Set<string>();
   const seenSubjects = new Set<string>();
-  for (const [index, waiver] of waivers.entries()) {
+  for (const [index, candidate] of waivers.entries()) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) { diagnostics.push(`waiver:${index}:INVALID_SHAPE`); continue; }
+    const waiver = candidate as Waiver;
     const blockKnownSubject = () => {
       if (typeof waiver.subjectId === "string" && subjectStates.has(waiver.subjectId)) {
         blockedSubjects.add(waiver.subjectId);

@@ -45,6 +45,16 @@ test("invalid review waivers stay non-ALLOW and produce diagnostics", () => {
   }
 });
 
+test("malformed runtime waiver shapes produce diagnostics instead of throwing", () => {
+  const subject: RightsSubject = { id: "package:x@1", kind: "package", name: "x", versionOrIdentity: "1", licenseExpression: "LGPL-3.0", state: "REVIEW_REQUIRED", evidence: ["package.json"], attributionRequired: true, distributed: true };
+  const malformedEntry = applyWaivers([subject], [null] as unknown as Parameters<typeof applyWaivers>[1], new Date("2026-08-17T00:00:00.000Z"));
+  assert.equal(malformedEntry.subjects[0]?.state, "REVIEW_REQUIRED");
+  assert.deepEqual(malformedEntry.diagnostics, ["waiver:0:INVALID_SHAPE"]);
+  const malformedCollection = applyWaivers([subject], {} as Parameters<typeof applyWaivers>[1], new Date("2026-08-17T00:00:00.000Z"));
+  assert.equal(malformedCollection.subjects[0]?.state, "REVIEW_REQUIRED");
+  assert.deepEqual(malformedCollection.diagnostics, ["waivers:INVALID_COLLECTION"]);
+});
+
 test("a conflicting invalid or expired waiver prevents admission of the same subject", () => {
   const subject: RightsSubject = { id: "package:x@1", kind: "package", name: "x", versionOrIdentity: "1", licenseExpression: "LGPL-3.0", state: "REVIEW_REQUIRED", evidence: ["package.json"], attributionRequired: true, distributed: true };
   const active = { subjectId: subject.id, owner: "ed3c", rationale: "reviewed boundary", scope: `subject:${subject.id}`, expiresAt: "2030-01-01T00:00:00.000Z" };
