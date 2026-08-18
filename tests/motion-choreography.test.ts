@@ -32,3 +32,15 @@ test("interactive graphics routes continuity effects through GSAP with static fa
   assert.equal(effect.reducedMotion,"disabled");
   assert.equal(effect.fallback,"static-visible");
 });
+
+test("structural chrome and disclosure sections remain static by design",()=>{
+  for(const page of compileAllSectionPageFixtures()){
+    const plan=compileMotionChoreography(page);
+    for(const effect of plan.effects.filter((entry)=>["navigation","footer","faq","proof-cloud"].includes(entry.kind))){
+      assert.equal(effect.engine,"none");
+      assert.equal(effect.durationMs,0);
+      assert.equal(effect.delayMs,0);
+    }
+    assert.ok(plan.engineRouting.none>=2);
+  }
+});
