@@ -135,12 +135,7 @@ async function indexPackage(path: string, expectedName: string, index: Map<strin
 
 async function loadOverrides(root: string): Promise<Record<string, PackageEvidenceOverride>> {
   const path = resolve(root, "rights-package-evidence.json");
-  let raw: unknown;
-  try { raw = await readJsonFile(path); }
-  catch (error) {
-    if (isEnoent(error instanceof Error && "cause" in error ? error.cause : error)) return {};
-    throw error;
-  }
+  const raw = await readJsonFile(path);
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("rights package evidence must be an object");
   const overrides: Record<string, PackageEvidenceOverride> = {};
   for (const [id, candidate] of Object.entries(raw)) {
