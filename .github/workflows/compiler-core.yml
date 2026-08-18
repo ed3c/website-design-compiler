@@ -82,6 +82,8 @@ jobs:
       - name: Verify shared binding resolver fixture
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
+        env:
+          WDC_STORYBOOK_VISUAL_ADMISSION_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_ADMISSION_SHA256 }}
         run: |
           set +e
           pnpm storybook:build
