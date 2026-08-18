@@ -7,8 +7,10 @@ Translate a product brief and optional design references into a deployable websi
 ## Pipeline
 
 ```text
-brief + references
-  -> reference-intelligence
+natural-language brief -> brief-normalization -> structured compiler input
+structured compiler input -> information-architecture
+references -> reference-intelligence
+information-architecture + reference-intelligence
   -> art-direction
   -> design-system-compiler
   -> page-architect
@@ -22,6 +24,20 @@ brief + references
 ```
 
 ## Contract boundaries
+
+### Brief normalization
+
+Converts natural-language requirements into a structured compiler input. Required facts, hard constraints, and evidence-sensitive content requests remain explicit; missing or contradictory inputs produce `NEEDS_INPUT` rather than guessed values.
+
+Required output:
+- `brief-normalization.json`
+
+### Information architecture
+
+Produces a page-family-specific section graph. Every section records its supporting brief evidence, required content, missing content, fallback, and `READY | NEEDS_INPUT` status. A brief objective can inform planning intent, but it cannot silently become publishable headline, action, proof, or product copy.
+
+Required output:
+- `information-architecture.json`
 
 ### Reference intelligence
 Produces observable facts only. It may describe layout, typography, motion, assets, hierarchy, and interaction patterns, but must not claim unknown implementation details as facts.
@@ -42,7 +58,7 @@ Required outputs:
 Converts visual direction into semantic tokens, states, responsive rules, motion policy, and media treatment.
 
 Required outputs:
-- `semantic.tokens.json`
+- `semantic-tokens.json`
 - `component-state-matrix.json`
 - `motion-spec.json`
 - `scene-spec.json`

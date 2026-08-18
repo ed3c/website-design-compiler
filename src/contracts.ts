@@ -43,6 +43,7 @@ export interface CompilerInput {
     audience: string;
     objective: string;
   };
+  hardConstraints?: string[];
   references?: CompilerReference[];
   artDirection?: {
     primary: ArtDirectorAuthority[];

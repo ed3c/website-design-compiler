@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { compile, writeRuntimeReceipt } from "./compiler.js";
 import { writeReferenceIntelligenceArtifacts } from "./reference-intelligence.js";
 import { writeDesignContracts } from "./design-contracts.js";
@@ -26,19 +26,30 @@ async function main(): Promise<void> {
     const raw = JSON.parse(await readFile(resolve(inputPath), "utf8")) as unknown;
     const input = await validateCompilerInput(raw);
     const resolvedOutputDirectory = resolve(outputDirectory);
+    const executedStageArtifacts = new Map<string, string[]>();
 
-    if (input.requestedStages.includes("reference-intelligence")) await writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("art-direction")) await writeDesignContracts(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("information-architecture")) await writeInformationArchitecturePlan(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("design-system-compiler")) await writeDesignSystemPlan(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("page-architect")) await writePageArchitecturePlan(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("frontend-builder")) await writeFrontendPlan(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("motion-director")) await writeMotionDirectorPlan(input, resolvedOutputDirectory);
-    if (input.requestedStages.includes("graphics-2d")) await writeGraphics2DPlan(resolvedOutputDirectory);
-    if (input.requestedStages.includes("graphics-3d")) await writeGraphics3DArtifacts(resolvedOutputDirectory);
-    if (input.requestedStages.includes("media-generator")) await writeMediaGeneratorPlan(resolvedOutputDirectory);
+    const executeStage = async (stage: string, writer: () => Promise<string | string[]>): Promise<void> => {
+      const result = await writer();
+      const paths = Array.isArray(result) ? result : [result];
+      executedStageArtifacts.set(stage, paths.map((path) => relative(resolvedOutputDirectory, path)));
+    };
 
-    const receipt = compile(input);
+    if (input.requestedStages.includes("reference-intelligence")) await executeStage("reference-intelligence", () => writeReferenceIntelligenceArtifacts(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("art-direction")) await executeStage("art-direction", () => writeDesignContracts(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("information-architecture")) await executeStage("information-architecture", () => writeInformationArchitecturePlan(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("design-system-compiler")) await executeStage("design-system-compiler", () => writeDesignSystemPlan(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("page-architect")) await executeStage("page-architect", () => writePageArchitecturePlan(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("frontend-builder")) await executeStage("frontend-builder", () => writeFrontendPlan(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("motion-director")) await executeStage("motion-director", () => writeMotionDirectorPlan(input, resolvedOutputDirectory));
+    if (input.requestedStages.includes("graphics-2d")) await executeStage("graphics-2d", () => writeGraphics2DPlan(resolvedOutputDirectory));
+    if (input.requestedStages.includes("graphics-3d")) await executeStage("graphics-3d", () => writeGraphics3DArtifacts(resolvedOutputDirectory));
+    if (input.requestedStages.includes("media-generator")) await executeStage("media-generator", () => writeMediaGeneratorPlan(resolvedOutputDirectory));
+
+    if (input.requestedStages.includes("release-receipt")) {
+      executedStageArtifacts.set("release-receipt", ["runtime-receipt.json"]);
+    }
+
+    const receipt = compile(input, new Date(), executedStageArtifacts);
     const receiptPath = await writeRuntimeReceipt(receipt, resolvedOutputDirectory);
     console.log(JSON.stringify({ receiptPath, overall: receipt.overall }));
     process.exitCode = receipt.overall === "FAIL" ? 1 : 0;

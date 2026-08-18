@@ -23,7 +23,9 @@ export interface PageArchitecturePlan {
     purpose: string;
     priority: IaPriority;
     status: IaSectionStatus;
+    evidence: string[];
     requiredContent: string[];
+    missingContent: string[];
     fallback: string;
   }>;
   optionalEnhancements: Array<{
@@ -68,7 +70,9 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
       purpose: section.purpose,
       priority: section.priority,
       status: section.status,
+      evidence: section.evidence,
       requiredContent: section.requiredContent,
+      missingContent: section.missingContent,
       fallback: section.fallback
     })),
     optionalEnhancements: ["motion", "graphics-2d", "graphics-3d"].map((capability) => ({

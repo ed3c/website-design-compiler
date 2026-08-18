@@ -5,6 +5,7 @@ import {
   PIPELINE_STAGES,
   type CompilerInput,
   type EvidenceState,
+  type PipelineStageName,
   type RuntimeReceipt,
   type StageEvidence
 } from "./contracts.js";
@@ -23,122 +24,49 @@ const IMPLEMENTED_CORE_STAGES = new Set([
   "release-receipt"
 ]);
 
+const STAGE_PASS_REASONS: Partial<Record<PipelineStageName, string>> = {
+  "reference-intelligence": "Reference Intelligence emitted evidence-bounded manifest, analysis, and originality-plan artifacts.",
+  "art-direction": "Art Direction enforced exactly one primary authority and emitted schema-validated design contracts.",
+  "information-architecture": "Information Architecture emitted an evidence-linked section graph with unsupported content marked NEEDS_INPUT.",
+  "design-system-compiler": "Design System Compiler emitted a schema-validated token and governed-component contract.",
+  "page-architect": "Page Architect emitted semantic sections, governed component slots, and enhancement fallbacks.",
+  "frontend-builder": "Frontend Builder emitted a schema-validated component graph restricted to the repository registry.",
+  "motion-director": "Motion Director emitted schema-validated effects with interruption, device, and reduced-motion policies.",
+  "graphics-2d": "Graphics 2D emitted a schema-validated progressive-enhancement scene contract.",
+  "graphics-3d": "Graphics 3D emitted a schema-validated scene contract and procedural provenance receipt.",
+  "media-generator": "Media Generator emitted an isolated-worker execution plan with bounded provenance policy.",
+  "release-receipt": "The compiler invocation reached the runtime-receipt writer with all prior requested stages classified."
+};
+
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-function stageEvidence(stage: string): StageEvidence {
+function stageEvidence(stage: string, executedStageArtifacts: ReadonlyMap<string, readonly string[]>): StageEvidence {
   if (!PIPELINE_STAGES.includes(stage as (typeof PIPELINE_STAGES)[number])) {
     return { stage, state: "FAIL", reason: "Unknown pipeline stage requested.", artifacts: [] };
   }
 
-  if (stage === "reference-intelligence") {
+  if (!IMPLEMENTED_CORE_STAGES.has(stage)) {
+    return { stage, state: "NOT_IMPLEMENTED", reason: "Stage contract is known but its executable adapter has not landed yet.", artifacts: [] };
+  }
+
+  const artifacts = executedStageArtifacts.get(stage) ?? [];
+  if (artifacts.length === 0) {
     return {
       stage,
-      state: "PASS",
-      reason: "Reference Intelligence emits evidence-bounded manifest, analysis, and originality-plan artifacts; unsupported live modes remain explicit rather than inferred.",
-      artifacts: [
-        "reference-intelligence/reference-manifest.json",
-        "reference-intelligence/reference-analysis.md",
-        "reference-intelligence/originality-plan.json",
-        "reference-intelligence/originality-plan.md"
-      ]
+      state: "NOT_EXERCISED",
+      reason: "The stage adapter is implemented, but this invocation supplied no emitted artifact evidence.",
+      artifacts: []
     };
   }
 
-  if (stage === "art-direction") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Art Direction enforces exactly one primary authority and emits schema-validated design contracts.",
-      artifacts: [
-        "art-direction/design-read.json",
-        "art-direction/DESIGN.md",
-        "art-direction/semantic-tokens.json",
-        "art-direction/component-state-matrix.json",
-        "art-direction/motion-spec.json",
-        "art-direction/scene-spec.json"
-      ]
-    };
-  }
-
-  if (stage === "information-architecture") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Information Architecture derives a page-family-specific, evidence-linked section graph and marks unsupported content requirements as NEEDS_INPUT instead of fabricating claims.",
-      artifacts: ["information-architecture/information-architecture.json"]
-    };
-  }
-
-  if (stage === "design-system-compiler") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Design System Compiler converts art-direction roles into a schema-validated original-values-only token and governed-component contract.",
-      artifacts: ["design-system-compiler/design-system-plan.json"]
-    };
-  }
-
-  if (stage === "page-architect") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Page Architect emits semantic required/optional sections, governed component slots, and non-blocking enhancement fallbacks.",
-      artifacts: ["page-architect/page-architecture-plan.json"]
-    };
-  }
-
-  if (stage === "frontend-builder") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Frontend Builder emits a schema-validated component graph restricted to the repository-owned registry; arbitrary markup is forbidden.",
-      artifacts: ["frontend-builder/frontend-plan.json"]
-    };
-  }
-
-  if (stage === "motion-director") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Motion Director emits schema-validated Motion/GSAP effects with purpose, interruption, mobile/coarse-pointer, reduced-motion, and non-blocking policies.",
-      artifacts: ["motion-director/motion-plan.json"]
-    };
-  }
-
-  if (stage === "graphics-2d") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Graphics 2D emits a schema-validated PixiJS progressive-enhancement scene contract with renderer capability order, DPR caps, lifecycle disposal, static fallback, and asset budget.",
-      artifacts: ["graphics-2d/graphics-2d-plan.json"]
-    };
-  }
-
-  if (stage === "graphics-3d") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Graphics 3D emits a schema-validated R3F/Three scene contract and a fail-closed procedural fixture provenance receipt before runtime use.",
-      artifacts: ["graphics-3d/graphics-3d-plan.json", "graphics-3d/procedural-provenance.json"]
-    };
-  }
-
-  if (stage === "media-generator") {
-    return {
-      stage,
-      state: "PASS",
-      reason: "Media Generator emits an isolated-worker execution plan and is runtime-proven by an authenticated deterministic mock request with hashed asset provenance; real model adapters remain fail-closed until rights admission.",
-      artifacts: ["media-generator/media-generator-plan.json"]
-    };
-  }
-
-  if (IMPLEMENTED_CORE_STAGES.has(stage)) {
-    return { stage, state: "PASS", reason: "Compiler core can emit and bind the runtime receipt for this stage.", artifacts: ["runtime-receipt.json"] };
-  }
-
-  return { stage, state: "NOT_IMPLEMENTED", reason: "Stage contract is known but its executable adapter has not landed yet.", artifacts: [] };
+  return {
+    stage,
+    state: "PASS",
+    reason: STAGE_PASS_REASONS[stage as PipelineStageName] ?? "The stage emitted runtime-bound artifacts.",
+    artifacts: [...artifacts]
+  };
 }
 
 function overallState(stages: StageEvidence[]): EvidenceState {
@@ -150,8 +78,12 @@ function overallState(stages: StageEvidence[]): EvidenceState {
   return "PASS";
 }
 
-export function compile(input: CompilerInput, now = new Date()): RuntimeReceipt {
-  const stages = input.requestedStages.map(stageEvidence);
+export function compile(
+  input: CompilerInput,
+  now = new Date(),
+  executedStageArtifacts: ReadonlyMap<string, readonly string[]> = new Map()
+): RuntimeReceipt {
+  const stages = input.requestedStages.map((stage) => stageEvidence(stage, executedStageArtifacts));
   return {
     schema: "website-design-compiler/runtime-receipt/v1",
     project: input.project,
