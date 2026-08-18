@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { CompletePageGraph } from "../../src/complete-page-graph";
+import { pageGraphFingerprint, pageGraphToPuck } from "../../src/page-graph-roundtrip";
 
 test("governed authoring render uses production registry components", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -31,12 +35,46 @@ test("invalid authoring data fails closed before production registry render", as
   await expect(page.getByText(/not an approved governed component/)).toBeVisible();
 });
 
-test("Puck editor route loads as a separate governed authoring surface", async ({ page }) => {
+test("Puck editor consumes every production benchmark page graph", async ({ page }) => {
+  test.setTimeout(120_000);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.goto("/studio", { waitUntil: "networkidle" });
-  await expect(page.locator("[data-authoring-studio='true']")).toBeVisible();
-  await expect(page.getByText("Website Design Compiler Studio")).toBeVisible();
-  await expect(page.frameLocator("iframe").locator("[data-page-node]")).toHaveCount(7);
+  const projection = JSON.parse(
+    await readFile(join(process.cwd(), "apps/site/generated/benchmark-page-graphs.json"), "utf8")
+  ) as { graphs: Record<string, CompletePageGraph> };
+  for (const [category, graph] of Object.entries(projection.graphs)) {
+    const fingerprint = pageGraphFingerprint(graph);
+    await page.goto(`/studio?category=${category}`, { waitUntil: "networkidle" });
+    await expect(page.locator(`[data-authoring-studio='true'][data-authoring-category='${category}']`)).toBeVisible();
+    await expect(page.getByText("Website Design Compiler Studio")).toBeVisible();
+    await expect(page.frameLocator("iframe").locator("[data-page-node]")).toHaveCount(graph.nodes.length);
+    await page.getByText("Publish", { exact: true }).click();
+    await expect(page.locator("[data-authoring-studio='true']"))
+      .toHaveAttribute("data-published-fingerprint", fingerprint);
+    const saved = await page.evaluate((key) => window.localStorage.getItem(key), `wdc:puck-page:${category}`);
+    expect(saved).not.toBeNull();
+  }
   expect(pageErrors).toEqual([]);
+});
+
+test("Puck publish readback rejects unknown blocks and extra properties", async ({ request }) => {
+  const projection = JSON.parse(
+    await readFile(join(process.cwd(), "apps/site/generated/benchmark-page-graphs.json"), "utf8")
+  ) as { graphs: Record<string, CompletePageGraph> };
+  const source = pageGraphToPuck(projection.graphs["b2b-product"]!);
+  const unknownBlock = structuredClone(source) as unknown as Record<string, unknown>;
+  (unknownBlock.content as Array<Record<string, unknown>>)[0]!.type = "RawHtml";
+  const blockResponse = await request.post("/api/studio/publish", { data: unknownBlock });
+  expect(blockResponse.status()).toBe(422);
+
+  const extraProperty = structuredClone(source) as unknown as Record<string, unknown>;
+  (extraProperty.root as { props: Record<string, unknown> }).props.unowned = true;
+  const propertyResponse = await request.post("/api/studio/publish", { data: extraProperty });
+  expect(propertyResponse.status()).toBe(422);
+});
+
+test("Puck editor rejects an unknown production graph category", async ({ page }) => {
+  const response = await page.goto("/studio?category=unknown-graph", { waitUntil: "networkidle" });
+  expect(response?.status()).toBe(404);
+  await expect(page.locator("[data-authoring-studio='true']")).toHaveCount(0);
 });
