@@ -99,7 +99,9 @@ jobs:
           generated_pages_status=$?
           pnpm site-graphs:browser-receipt
           site_graphs_status=$?
-          pnpm v2:design-quality
+          pnpm v3:design-quality-calibration
+          design_quality_calibration_status=$?
+          pnpm v3:design-quality
           design_quality_status=$?
           pnpm quality:receipt
           quality_status=$?
@@ -111,7 +113,7 @@ jobs:
           release_status=$?
           echo "storybook_build_status=$storybook_build_status" >> "$GITHUB_OUTPUT"
           echo "storybook_qa_status=$storybook_qa_status" >> "$GITHUB_OUTPUT"
-          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$site_graphs_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
+          if [ "$storybook_build_status" -ne 0 ] || [ "$storybook_qa_status" -ne 0 ] || [ "$storybook_receipt_status" -ne 0 ] || [ "$qa_status" -ne 0 ] || [ "$browser_receipt_status" -ne 0 ] || [ "$generated_pages_status" -ne 0 ] || [ "$site_graphs_status" -ne 0 ] || [ "$design_quality_calibration_status" -ne 0 ] || [ "$design_quality_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$arena_ia_status" -ne 0 ] || [ "$arena_status" -ne 0 ] || [ "$release_status" -ne 0 ]; then
             exit 1
           fi
       - name: Upload Ubuntu Storybook golden screenshot candidate
@@ -149,6 +151,7 @@ jobs:
           name: compiler-core-receipt-${{ github.sha }}
           path: |
             artifacts/v2/
+            artifacts/v3/
             artifacts/rights-clearance/
             artifacts/runtime/minimal/runtime-receipt.json
             artifacts/runtime/minimal/reference-intelligence/reference-manifest.json
