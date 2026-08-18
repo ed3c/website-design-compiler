@@ -26,7 +26,15 @@ function measureGeneratedPageLayout(){
     const overflowX=getComputedStyle(element).overflowX;
     return (overflowX==="auto"||overflowX==="scroll")&&element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{tag:element.tagName.toLowerCase(),text:(element.textContent??"").trim().slice(0,80),scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[];
   });
-  return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,unsafeHorizontalScroll};
+  const underfilledContentOnlyNodes=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node]")).flatMap((element)=>{
+    const content=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__content");
+    const auxiliary=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__media, :scope > .wdc-generated-node__field");
+    const declaredColumns=Number(element.dataset.activeColumns);
+    if(!content||auxiliary||element.clientWidth===0||declaredColumns<=1)return[];
+    const ratio=content.getBoundingClientRect().width/element.getBoundingClientRect().width;
+    return ratio<.9?[{id:element.dataset.pageNode??"UNKNOWN",ratio,declaredColumns}]:[];
+  });
+  return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,unsafeHorizontalScroll,underfilledContentOnlyNodes};
 }
 
 const categories=ARENA_CATEGORIES;
@@ -45,6 +53,7 @@ for(const category of categories){
     expect(runtimeLayout.nodeHorizontalOverflow,"generated section exceeds its runtime box").toEqual([]);
     expect(runtimeLayout.unsafeHorizontalScroll,"generated content requires unsafe horizontal scrolling").toEqual([]);
     expect(runtimeLayout.textClipping,"rendered text is actually clipped").toEqual([]);
+    expect(runtimeLayout.underfilledContentOnlyNodes,"content-only sections must span their declared outer composition").toEqual([]);
     const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
     const expectedLayoutAttribute=`data-${viewport}-layout`;
     await expect(nodes.first()).toHaveAttribute("data-current-viewport",viewport);

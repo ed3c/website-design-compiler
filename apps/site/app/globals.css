@@ -50,6 +50,7 @@ button:focus-visible, a:focus-visible { outline: var(--wdc-focus-ring) solid var
 .wdc-generated-node__content,
 .wdc-generated-node__media,
 .wdc-generated-node__field { min-width: 0; }
+.wdc-generated-node__content:only-child { grid-column: 1 / -1; }
 .wdc-generated-node__field { min-height: clamp(13rem, 32vw, 30rem); border-radius: var(--wdc-radius-lg); background: radial-gradient(circle at 70% 25%, color-mix(in oklch, var(--wdc-color-accent) 78%, white), transparent 18%), linear-gradient(135deg, var(--wdc-color-surface), color-mix(in oklch, var(--wdc-color-accent) 28%, var(--wdc-color-background))); box-shadow: var(--wdc-elevation-high); }
 .wdc-generated-node[data-active-media-placement="background"] { position: relative; isolation: isolate; }
 .wdc-generated-node[data-active-media-placement="background"] .wdc-generated-node__media { position: absolute; inset: 0; z-index: -1; opacity: 0.18; overflow: clip; }
