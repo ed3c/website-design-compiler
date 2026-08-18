@@ -23,11 +23,10 @@ test("missing or unimplemented evidence cannot become release PASS", () => {
   }
 });
 
-test("release evidence must bind its exact schema, SHA, and ref", () => {
+test("release evidence rejects a schema-only PASS shell", () => {
   const git = { sha: "a".repeat(40), ref: "refs/heads/main" };
-  const valid = { schema: "receipt/v1", overall: "PASS", git };
-  assert.equal(bindReleaseEvidence(valid, "receipt/v1", git).state, "PASS");
-  assert.equal(bindReleaseEvidence({ ...valid, schema: "attacker/v1" }, "receipt/v1", git).state, "FAIL");
-  assert.equal(bindReleaseEvidence({ ...valid, git: { ...git, sha: "b".repeat(40) } }, "receipt/v1", git).binding, "MISMATCH");
-  assert.equal(bindReleaseEvidence({ schema: "receipt/v1", overall: "PASS" }, "receipt/v1", git).binding, "ABSENT");
+  const hollow = { schema: "website-design-compiler/runtime-receipt/v1", overall: "PASS", git };
+  const binding = bindReleaseEvidence(hollow, hollow.schema, git);
+  assert.equal(binding.state, "FAIL");
+  assert.match(binding.errors.join("; "), /project|stages|inputSha256/);
 });

@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { verifyCoreReleaseEvidence } from "../src/release-evidence.js";
 import { CAPABILITY_RECEIPT_SCHEMAS, evaluateReleasePolicy, type Capability, type CapabilityEvidence, type CapabilityState, type ReleasePolicy, type ReleaseProfile } from "../src/release-policy-v2.js";
 
 const root=process.cwd();
@@ -19,8 +20,14 @@ const paths:Record<Capability,string>={
   productionProvider:"artifacts/media-generator/production-provider-status.json",
   premiumQuality:"artifacts/v2/design-quality/design-quality-eval-receipt.json"
 };
+const evidenceValidationErrors:Partial<Record<Capability,string[]>>={};
 function evidenceState(value:unknown):CapabilityState{return value==="PASS"||value==="FAIL"||value==="ABSENT"||value==="NOT_IMPLEMENTED"||value==="NOT_EXERCISED"||value==="SKIPPED_BY_POLICY"?value:"FAIL";}
 async function readEvidence(capability:Capability,path:string):Promise<CapabilityEvidence>{
+  if(capability==="core"){
+    const verified=await verifyCoreReleaseEvidence(root,{sha:git.sha,ref:git.ref});
+    if(verified.errors.length>0)evidenceValidationErrors.core=verified.errors;
+    return{state:verified.state,gitSha:verified.git?.sha??null,identity:verified.schema===CAPABILITY_RECEIPT_SCHEMAS.core?CAPABILITY_RECEIPT_SCHEMAS.core:null};
+  }
   try{
     const receipt=JSON.parse(await readFile(join(root,path),"utf8")) as {schema?:unknown;overall?:unknown;git?:{sha?:unknown};evidenceBindings?:Record<string,{binding?:unknown;errors?:unknown;sha256?:unknown}>};
     const schemaValid=receipt.schema===CAPABILITY_RECEIPT_SCHEMAS[capability];
@@ -38,7 +45,7 @@ async function readEvidence(capability:Capability,path:string):Promise<Capabilit
 const evidence={} as Record<Capability,CapabilityEvidence>;
 for(const [capability,path] of Object.entries(paths) as Array<[Capability,string]>)evidence[capability]=await readEvidence(capability,path);
 const evaluation=evaluateReleasePolicy(policy,profile,evidence,git);
-const receipt={...evaluation,premiumQualityProfile:{path:policy.premiumQuality.profilePath,sha256:createHash("sha256").update(premiumProfileBytes).digest("hex"),...premiumProfile},evidencePaths:paths,unresolvedBoundaries:Object.entries(evaluation.capabilities).filter(([,value])=>value.required&&(value.state!=="PASS"||value.binding!=="BOUND")).map(([capability,value])=>({capability,state:value.state,binding:value.binding}))};
+const receipt={...evaluation,premiumQualityProfile:{path:policy.premiumQuality.profilePath,sha256:createHash("sha256").update(premiumProfileBytes).digest("hex"),...premiumProfile},evidencePaths:paths,evidenceValidationErrors,unresolvedBoundaries:Object.entries(evaluation.capabilities).filter(([,value])=>value.required&&(value.state!=="PASS"||value.binding!=="BOUND")).map(([capability,value])=>({capability,state:value.state,binding:value.binding}))};
 const outputDirectory=join(root,"artifacts/release-v2");
 await mkdir(outputDirectory,{recursive:true});
 await writeFile(join(outputDirectory,"release-policy-v2-receipt.json"),`${JSON.stringify(receipt,null,2)}\n`,"utf8");
