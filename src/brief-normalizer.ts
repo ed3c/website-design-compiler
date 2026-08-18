@@ -181,6 +181,7 @@ export function normalizeBrief(input: NaturalLanguageBriefInput): BriefNormaliza
           audience: audience.value!,
           objective: objective.value!
         },
+        hardConstraints,
         ...(input.references ? { references: input.references } : {}),
         requestedStages
       }

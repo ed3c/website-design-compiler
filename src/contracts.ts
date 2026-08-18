@@ -45,6 +45,7 @@ export interface CompilerInput {
     audience: string;
     objective: string;
   };
+  hardConstraints?: string[];
   references?: CompilerReference[];
   artDirection?: {
     primary: ArtDirectorAuthority[];
@@ -55,6 +56,12 @@ export interface CompilerInput {
 
 export interface StageEvidence {
   stage: string;
+  state: EvidenceState;
+  reason: string;
+  artifacts: string[];
+}
+
+export interface StageExecutionEvidence {
   state: EvidenceState;
   reason: string;
   artifacts: string[];

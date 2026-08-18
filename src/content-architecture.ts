@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { CompilerInput } from "./contracts.js";
+import type { CompilerInput, StageExecutionEvidence } from "./contracts.js";
 import { compileInformationArchitecture, type IaSection } from "./information-architecture.js";
 import { validateAgainstSchema } from "./validate.js";
 
@@ -42,14 +42,6 @@ export interface ContentArchitecturePlan {
   overall: "READY" | "NEEDS_INPUT";
 }
 
-const PLACEHOLDER_SLOTS = new Set([
-  "feature-items",
-  "proof-items",
-  "story-beats",
-  "body-content",
-  "related-items"
-]);
-
 const FORBIDDEN_SLOTS = new Set([
   "customer-logos",
   "testimonials",
@@ -76,15 +68,7 @@ function maxCharactersFor(slot: string): number {
   return 280;
 }
 
-function safeDerivedValue(slot: string, input: CompilerInput, section: IaSection): string | null {
-  if (slot === "brand-or-project-name" || slot === "project-name") return input.project;
-  if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task") return input.brief.objective;
-  if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return "Explore the product";
-  if (slot === "scene-purpose" || slot === "interaction-purpose") return section.purpose;
-  return null;
-}
-
-function provenanceFor(slot: string, input: CompilerInput, section: IaSection): string[] {
+function planningProvenanceFor(slot: string, input: CompilerInput, section: IaSection): string[] {
   if (slot === "brand-or-project-name" || slot === "project-name") return [`compiler.project:${input.project}`];
   if (slot === "headline" || slot === "value-proposition" || slot === "product-description" || slot === "task") return [`brief.objective:${input.brief.objective}`];
   if (slot === "primary-action" || slot === "primary-action-label" || slot === "cta-label") return [`brief.objective:${input.brief.objective}`, `ia.section:${section.id}`];
@@ -116,19 +100,19 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
     };
   }
 
-  if (PLACEHOLDER_SLOTS.has(slot)) {
+  if (slot !== "brand-or-project-name" && slot !== "project-name") {
     return {
       slot,
       state: "NEEDS_INPUT",
       sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: [`ia.section:${section.id}`],
+      provenance: planningProvenanceFor(slot, input, section),
       lengthBudget: { maxCharacters }
     };
   }
 
-  const value = safeDerivedValue(slot, input, section);
+  const value = input.project;
   if (!value || value.length > maxCharacters) {
     return {
       slot,
@@ -136,7 +120,7 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
       sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: provenanceFor(slot, input, section),
+      provenance: planningProvenanceFor(slot, input, section),
       lengthBudget: { maxCharacters }
     };
   }
@@ -144,10 +128,10 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   return {
     slot,
     state: "READY",
-    sourceType: "derived_copy",
+    sourceType: "user_supplied_claim",
     value,
     publishable: true,
-    provenance: provenanceFor(slot, input, section),
+    provenance: planningProvenanceFor(slot, input, section),
     lengthBudget: { maxCharacters }
   };
 }
@@ -192,12 +176,18 @@ export function compileContentArchitecture(input: CompilerInput): ContentArchite
   };
 }
 
-export async function writeContentArchitecturePlan(input: CompilerInput, outputDirectory: string): Promise<string> {
+export async function writeContentArchitecturePlan(input: CompilerInput, outputDirectory: string): Promise<StageExecutionEvidence> {
   const plan = compileContentArchitecture(input);
   await validateAgainstSchema(plan, "content-architecture-v2.schema.json");
   const directory = join(outputDirectory, "content-architecture");
   await mkdir(directory, { recursive: true });
   const path = join(directory, "content-architecture.json");
   await writeFile(path, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
-  return path;
+  return {
+    state: plan.overall === "READY" ? "PASS" : "ABSENT",
+    reason: plan.overall === "READY"
+      ? "Content Architecture emitted complete, provenance-bound authoring contracts."
+      : "Required authoring inputs are absent; the artifact records explicit NEEDS_INPUT fields.",
+    artifacts: [path]
+  };
 }

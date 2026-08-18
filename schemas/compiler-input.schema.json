@@ -18,6 +18,12 @@
         "objective": { "type": "string", "minLength": 1 }
       }
     },
+    "hardConstraints": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
     "references": {
       "type": "array",
       "items": {

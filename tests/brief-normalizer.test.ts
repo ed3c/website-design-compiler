@@ -22,6 +22,7 @@ test("explicit natural-language brief normalizes into a compiler-ready contract"
   assert.ok(receipt.compilerInput?.requestedStages.includes("information-architecture"));
   assert.deepEqual(receipt.riskyContentRequests, []);
   assert.ok(receipt.hardConstraints.some((constraint) => constraint.startsWith("Do not invent")));
+  assert.deepEqual(receipt.compilerInput?.hardConstraints, receipt.hardConstraints);
   assert.equal(receipt.normalizer.version, BRIEF_NORMALIZER_VERSION);
   assert.equal(receipt.normalizer.config, BRIEF_NORMALIZER_CONFIG);
   assert.match(receipt.inputSha256, /^[a-f0-9]{64}$/);
