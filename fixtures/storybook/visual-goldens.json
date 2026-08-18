@@ -1,7 +1,470 @@
 {
-  "schema":"website-design-compiler/storybook-visual-goldens/v2",
-  "source":{"gitSha":"e08ead4c045c3ccc965d67d9143c3087ef54968c","workflowRun":31962001199,"artifactId":9267530397,"runnerImage":{"os":"ubuntu-24.04","version":"20260810.271.1","release":"ubuntu24/20260810.271"},"browser":{"engine":"Chrome Headless Shell","version":"151.0.7922.34","playwrightPackage":"1.59.0","playwrightChromiumRevision":1234},"fonts":["fonts-liberation=1:2.1.5-3","fonts-noto-color-emoji=2.047-0ubuntu0.24.04.1","fonts-freefont-ttf=20211204+svn4273-2","fonts-ipafont-gothic=00303-21ubuntu1","fonts-tlwg-loma-otf=1:0.7.3-1","fonts-unifont=1:15.1.01-1build1","fonts-wqy-zenhei=0.9.45-8","fontconfig=2.15.0-1.1ubuntu2","freetype=2.13.2+dfsg-1ubuntu0.1"],"projects":["storybook-desktop","storybook-mobile"]},
-  "screenshots":{
-    "storybook-desktop--governed-sections-section--bento-grid.png":"9ff5346b22e4682a8e515908cbe2c8111082be6f84eb7cc0b9826dee1f459a2c","storybook-desktop--governed-sections-section--comparison.png":"54b83ebba48fc7b2384b515521b96401df76174594b77b9386400cc1dd9a19d9","storybook-desktop--governed-sections-section--cta.png":"f9e63711761c2c2c9b75f7b86380e46393861c68e6ff4a4c0ddff5259a3fc002","storybook-desktop--governed-sections-section--editorial-media.png":"16382a4775d474783e7caa2e8fd11e698e5148b7482a0a1817bb6e89babe82dd","storybook-desktop--governed-sections-section--editorial-prose.png":"9f06e95f67afd91e17bcb9f1a926a9e1e9345c80f764fe5668f1f14d5a331050","storybook-desktop--governed-sections-section--faq.png":"2d286adedb464fbd5ba716f35b4d4168e668304a68f8277e2f9eeaf913a64862","storybook-desktop--governed-sections-section--feature-grid.png":"fad1ccbb3299ebda58eebc61a7ad64ea6435e5e8b718a325444eed9d6f49f362","storybook-desktop--governed-sections-section--footer.png":"46d8a59912d6ff4c64dfb08f672c2532afd166aea95cea3c5f3fb1b1f4059abe","storybook-desktop--governed-sections-section--graphics-2-d-stage.png":"581af0a9b78820916ec911662b884c750e69c1a7285fe6a5b47404542e899be4","storybook-desktop--governed-sections-section--graphics-3-d-stage.png":"d2497e3834c6c7f1c48085c42a90aeebd56f33314ca2cf469db18ea635337481","storybook-desktop--governed-sections-section--hero.png":"691ec407d493ec9eb6a0c99d90916fbbe5a81b92c4a3a15d4f9937625a40d7f8","storybook-desktop--governed-sections-section--media-stage.png":"e770fe2e331af33133a178ad172d7c24967eca1efa14973715bdd9a209777738","storybook-desktop--governed-sections-section--metrics.png":"ee0cff5f23e9145a71431f64f7ed98e2e09356234472852e00b3389f667ae159","storybook-desktop--governed-sections-section--navigation.png":"f70c3345af9cfcf6524e79033bb711059996da2143c465b6f002ab8c2f986f09","storybook-desktop--governed-sections-section--pricing.png":"7c319e36dde74f000030309d0681b40802d815eadf8d7923d76561661206ffed","storybook-desktop--governed-sections-section--product-showcase.png":"fb8228ec851fa8ecb00d6734d0b8d44d19c6ad6528501ceb9ce748fab5085690","storybook-desktop--governed-sections-section--proof-cloud.png":"e0d2449a5fb96fb597728f5a3160117c721b2ec67d22f8856314495d1d34a245","storybook-desktop--governed-sections-section--testimonial.png":"709b5d09dd7dd62153e2b1647145775229b4a5b91922074c53db7b74dfcec74d","storybook-desktop--governed-ui-button--disabled.png":"cdecaddf641b03bb61a7c1ea7191e44a8e4a8a319f7495445a78ab2624ef3e91","storybook-desktop--governed-ui-button--primary.png":"3cb89011f672beb5cbf8374a3b6a16350292720915c8e2b31cbb43107e487c0f","storybook-desktop--governed-ui-button--secondary.png":"5c87d4b47cdf7ea0ef1526c1bf24f72c17e480677bfd13ba6cd17f43fa4af9c5","storybook-desktop--governed-ui-statuspanel--empty.png":"8636fd6f48bb96bde6644612cbf693f1d8d68c74e59631178c5089bc007a9a4e","storybook-desktop--governed-ui-statuspanel--error.png":"792820257087519762180abe8a9f929e18ac981dd0814b835588e70449f7c534","storybook-desktop--governed-ui-statuspanel--loading.png":"4d861782b7925cc4c046d8a0194ed091a2265b23be1a4f1a214e24190c6616c6","storybook-desktop--governed-ui-statuspanel--success.png":"e39ad0d8aeb72da1dd268dc93b19161483afef890f7c17a03c384d19525bef71","storybook-mobile--governed-sections-section--bento-grid.png":"fad335d4301e5087fc04e4a50d80b70c37225bafc316d11f33b38a349aaf764e","storybook-mobile--governed-sections-section--comparison.png":"4cd9b284308f0c419fe37b7080b21e02253683b5a0c5f7dc621c1ada472b1fab","storybook-mobile--governed-sections-section--cta.png":"d6465cc8c931aad25c3c22e7b53c999a2fc3285c6769794f7307d1d233408de6","storybook-mobile--governed-sections-section--editorial-media.png":"82780c23e17cb73da50f25bfb6246d9ddbc1538acbf41ae12fbe8359e444d752","storybook-mobile--governed-sections-section--editorial-prose.png":"0eafb72ade72096af06c62ca150190070f047e283623e9eae705a13bca19e9b0","storybook-mobile--governed-sections-section--faq.png":"c565ac8e1f7c744badffc3bb878a77895bf2bd9277caebf3012375658f04bdfa","storybook-mobile--governed-sections-section--feature-grid.png":"f181c0a3bf9ed1424fd8ce281afcb632f108d2e84105d10eafbcbce6aba0c9d3","storybook-mobile--governed-sections-section--footer.png":"d51286d11e63bda53a5e4fbdad1c3c29b06d7a998dd5876bcfc4245742a3b39a","storybook-mobile--governed-sections-section--graphics-2-d-stage.png":"14451633842931bf676399e7b5d23556a09981144f0fd34ad5943ec5566fd904","storybook-mobile--governed-sections-section--graphics-3-d-stage.png":"b54175460a921febc2cf03299baed5545fad4581d8cb6016d57266db6b0bc571","storybook-mobile--governed-sections-section--hero.png":"bf14bc1eaedb80ae6430534c8194533cdcd1b94fd9527e01be7fe746ed03fb68","storybook-mobile--governed-sections-section--media-stage.png":"f5cb8f8d3f102b8e3e4743ad205a64a37d42a12311f09cb7ccb5272b48a0b431","storybook-mobile--governed-sections-section--metrics.png":"d0666eb5ed341ebb93ffc241b9f24420a3bd7dac256698d52f1ca6d9c810ec86","storybook-mobile--governed-sections-section--navigation.png":"7e5aff42c588188df67272ccf09d3d76fec77a1abfdb3c4459f9f328d79a46b9","storybook-mobile--governed-sections-section--pricing.png":"80cd850cb51e9d8fdda9fe184849081c801adda8ec79126af34455b699da1e1d","storybook-mobile--governed-sections-section--product-showcase.png":"d06379a0561567880a9f6900736e76316ce4c3b9688c1badaba35f142da41e0b","storybook-mobile--governed-sections-section--proof-cloud.png":"21e1dc96902810c2cffc8732deb9e29fea8b1346ef0db8a1203355f6b47421c7","storybook-mobile--governed-sections-section--testimonial.png":"c2bb889ea62258fe99da9597bcdd5273c6c56a549ce8930cb13b323f379fd04e","storybook-mobile--governed-ui-button--disabled.png":"35f8178fa44dc1299a4a7a59456c01df87c19d99028b1381cc6a572ce6b5f19b","storybook-mobile--governed-ui-button--primary.png":"fac67c17fd64ca6e07d8feeb4cbddef0a861980329ca8cd14186a00e4e6f3ba8","storybook-mobile--governed-ui-button--secondary.png":"cbb49070ea9fcbee19b3a3dcb17ee819b8181335eaf5ba740057084650313c9f","storybook-mobile--governed-ui-statuspanel--empty.png":"6e9027362356def6d573d29ba3db0f88dfcf6717f821472d603092502c633899","storybook-mobile--governed-ui-statuspanel--error.png":"4b93381e2604c323fcafc04b55de9b4b6318ce2e07b6b29a7892339e2b3bc134","storybook-mobile--governed-ui-statuspanel--loading.png":"8f5bfa263fc42e1793063cef143b5887a100b34bf82e2c355379c538c066fdc6","storybook-mobile--governed-ui-statuspanel--success.png":"c5b28375cde0dfbd7821b70cb508df864431a53406ccb016cdb9b280d4a8f311"
+  "schema": "website-design-compiler/storybook-visual-goldens/v3",
+  "candidateArtifact": {
+    "sha256": "5c628bde0b1fa0077b51f3af81bf076396df30f363804e786972164b52e92f18",
+    "document": "{\n  \"schema\": \"website-design-compiler/storybook-golden-candidate/v1\",\n  \"state\": \"NOT_EXERCISED\",\n  \"promotion\": \"HUMAN_REVIEW_REQUIRED\",\n  \"source\": {\n    \"git\": {\n      \"sha\": \"752907f1da5f50e11db2aceacc80cad1e441247a\",\n      \"ref\": \"refs/pull/42/merge\"\n    },\n    \"workflow\": {\n      \"repository\": \"ed3c/website-design-compiler\",\n      \"name\": \"compiler-core\",\n      \"runId\": 32160487180,\n      \"runAttempt\": 1\n    },\n    \"screenshotArtifact\": {\n      \"id\": 9333623749,\n      \"name\": \"storybook-golden-screenshots-752907f1da5f50e11db2aceacc80cad1e441247a-1\"\n    },\n    \"runnerImage\": {\n      \"os\": \"ubuntu-24.04\",\n      \"version\": \"20260810.271.1\",\n      \"release\": \"ubuntu24/20260810.271.1\"\n    },\n    \"browser\": {\n      \"engine\": \"chromium\",\n      \"distribution\": \"Chrome for Testing\",\n      \"version\": \"151.0.7922.34\",\n      \"playwrightPackage\": \"1.62.1\",\n      \"playwrightChromiumRevision\": 1234\n    },\n    \"fonts\": [\n      {\n        \"package\": \"fontconfig\",\n        \"version\": \"2.15.0-1.1ubuntu2\"\n      },\n      {\n        \"package\": \"fontconfig-config\",\n        \"version\": \"2.15.0-1.1ubuntu2\"\n      },\n      {\n        \"package\": \"fonts-dejavu\",\n        \"version\": \"2.37-8\"\n      },\n      {\n        \"package\": \"fonts-dejavu-core\",\n        \"version\": \"2.37-8\"\n      },\n      {\n        \"package\": \"fonts-dejavu-extra\",\n        \"version\": \"2.37-8\"\n      },\n      {\n        \"package\": \"fonts-dejavu-mono\",\n        \"version\": \"2.37-8\"\n      },\n      {\n        \"package\": \"fonts-lato\",\n        \"version\": \"2.015-1\"\n      },\n      {\n        \"package\": \"fonts-liberation\",\n        \"version\": \"1:2.1.5-3\"\n      },\n      {\n        \"package\": \"fonts-noto-color-emoji\",\n        \"version\": \"2.047-0ubuntu0.24.04.1\"\n      },\n      {\n        \"package\": \"fonts-ubuntu-console\",\n        \"version\": \"0.869+git20240321-0ubuntu1\"\n      },\n      {\n        \"package\": \"libfreetype6\",\n        \"version\": \"2.13.2+dfsg-1ubuntu0.1\"\n      }\n    ],\n    \"projects\": [\n      \"storybook-desktop\",\n      \"storybook-mobile\"\n    ],\n    \"qualification\": {\n      \"storybookBuild\": \"PASS\",\n      \"browserProjects\": \"PASS\",\n      \"storybookBuildExitCode\": 0,\n      \"storybookQaExitCode\": 0,\n      \"playwrightReport\": {\n        \"path\": \"artifacts/storybook/playwright-report.json\",\n        \"sha256\": \"95438332c3f56c84464a4db742df3ec77d1183ecad51d672f48767bdf4dfdf94\"\n      },\n      \"staticBuild\": {\n        \"path\": \"artifacts/storybook/static/index.html\",\n        \"sha256\": \"faa64d57365e658fd219f6f1de79393fa2ead632df1142a3fb70573e5165d3ac\"\n      }\n    }\n  },\n  \"screenshots\": {\n    \"storybook-desktop--governed-sections-section--bento-grid-asymmetric.png\": \"0dc7a6c7739d44c237ec48994c555ce9e39cd6fa14d954257ebc6bdd6fed656b\",\n    \"storybook-desktop--governed-sections-section--bento-grid.png\": \"643df04748cd8ba996f54cd388076c5ee9e5889f46e8b5de081afe71842f25bd\",\n    \"storybook-desktop--governed-sections-section--comparison-matrix.png\": \"7658882c758e853080992952e1b725cd94bb96bfc294108e2af834dce3abcd3d\",\n    \"storybook-desktop--governed-sections-section--comparison.png\": \"1c266db0213c98cc3910dd4467a5966683451ac71659eefafd268e4f7a989bfe\",\n    \"storybook-desktop--governed-sections-section--cta-split.png\": \"e9b817a3029d4df5ea781f737e7c667dfe5a53ccbbd3060174c8b114114931ec\",\n    \"storybook-desktop--governed-sections-section--cta.png\": \"8c2083c8733e5009bb5c709f11981cea825e60a196fc7ed95679f96b9df5415a\",\n    \"storybook-desktop--governed-sections-section--editorial-media-gallery.png\": \"0e8317e229922f072d36d54d1063da3b975a0b0cb4a8ecee3746eda005b27b5b\",\n    \"storybook-desktop--governed-sections-section--editorial-media.png\": \"3a50f85fd5200b6f4e38b69083eb7ff00cfc022cf3aaad3fa9789e856e1ba10e\",\n    \"storybook-desktop--governed-sections-section--editorial-prose-longform.png\": \"5d5443f1fee5e2b3f8b7427566bd506c0d62e93ae44ecea8fdb0bd44beaebeab\",\n    \"storybook-desktop--governed-sections-section--editorial-prose.png\": \"ef6daeb7c156350faea65269d2dd92da23b0489e0711c9ef5e10b57389a5dc49\",\n    \"storybook-desktop--governed-sections-section--faq-list.png\": \"068a5e7e679ed110b5a723f8718f76795093d3f5dfd46207164bbc6b75843039\",\n    \"storybook-desktop--governed-sections-section--faq.png\": \"e59700845ac7e50ed1acd5017d16cb9f0a4f95bc4dddaf2971af609d9c7d7800\",\n    \"storybook-desktop--governed-sections-section--feature-grid-icon-grid.png\": \"0b00dacd1cbca913b38003746b87ac0cc2dbc4f74921b691d16f202bd29f0ca9\",\n    \"storybook-desktop--governed-sections-section--feature-grid-rows.png\": \"d071307c9d2819efe960881ddccacc38474fcfc13bf9e6e33571d0ba68e016a6\",\n    \"storybook-desktop--governed-sections-section--feature-grid.png\": \"7b362d5f3401b73589bcb628684eb98e0a11c1da23236e7c31b3171abfb69edb\",\n    \"storybook-desktop--governed-sections-section--footer-multi-column.png\": \"06ebd1f55382a3ed21e46f6c0aef5068c54a2a188fa69edb5a63a0f8f11ff08e\",\n    \"storybook-desktop--governed-sections-section--footer.png\": \"98b1da1a7018867bb98bfc7ceced3815d19a1ca0eef5eccfa6bd0c3c9a0860d2\",\n    \"storybook-desktop--governed-sections-section--graphics-2-d-stage-interactive.png\": \"4eff9a9ec0e214c000278914e2393ab385adc2a854d2daaf4e9c32a4755b5e3d\",\n    \"storybook-desktop--governed-sections-section--graphics-2-d-stage.png\": \"baee2ba5fbc84d46d284a1eb8956e0fc06f57d6ad0f0eed7ffe04adb85640569\",\n    \"storybook-desktop--governed-sections-section--graphics-3-d-stage-spatial.png\": \"403ada696b7f5e166e11c8280c9948b6b3e0434f413946deebcf7de7229a1446\",\n    \"storybook-desktop--governed-sections-section--graphics-3-d-stage.png\": \"cdbc81175246df1035a15c5e0cd34f46ed2299754ab1a0725b86cee9c931daed\",\n    \"storybook-desktop--governed-sections-section--hero-interactive.png\": \"10731843697259a40c3b8d943f8e9bbd7e6d013649279af1c0b1591aae633298\",\n    \"storybook-desktop--governed-sections-section--hero-split-media.png\": \"783937b0a6ee8c512871f82828fcf4f23d4b5872d8bf8d94b840898cac2b1721\",\n    \"storybook-desktop--governed-sections-section--hero.png\": \"21a9e5934605daf8fa28d6bee17d06ac2bee9c4735b2b7a4dbcbe4347f61fb56\",\n    \"storybook-desktop--governed-sections-section--media-stage-video.png\": \"85d931e4f35dbaf1fe0ffd5e038730640bed696a631113f83b77e0ee8d5461cb\",\n    \"storybook-desktop--governed-sections-section--media-stage.png\": \"a039128eaaa4b7bea7eff84b80e9c1875169d6c0fab597bcb9899e3f51384ebe\",\n    \"storybook-desktop--governed-sections-section--metrics-grid.png\": \"643d75d8695f2cba1c19166cb6f4c74771e7b4ece5e7dadeace3368b5f3283c5\",\n    \"storybook-desktop--governed-sections-section--metrics.png\": \"fc037ec448a2f08ffa853644af796c1f4c599137dc2350d02227c5f0e90824fb\",\n    \"storybook-desktop--governed-sections-section--navigation-product.png\": \"a42d7781d31e0c85b61c7ac870fadcb5887688297777b6d21fe56595d9c94e32\",\n    \"storybook-desktop--governed-sections-section--navigation.png\": \"cc0da2b4f3e672d4f27c5126f61aaff6d7c55ec2fa93f9a5e4caab4b39486f01\",\n    \"storybook-desktop--governed-sections-section--pricing-single-offer.png\": \"e9669551f41631cc19ac3d1a388e887951bd5b25d7628914506ecd3b87ef5840\",\n    \"storybook-desktop--governed-sections-section--pricing.png\": \"49806b62e17fa57c740f9c9346e3eb8b09fa561867c0557957bf6ede45eace5b\",\n    \"storybook-desktop--governed-sections-section--product-showcase-stage.png\": \"927e9f741d1de881a693babd7f9cbaefebc42b6a9e26539ee8f13829b2453e5c\",\n    \"storybook-desktop--governed-sections-section--product-showcase.png\": \"4957b2589c29fad2985bd5921e21a74a9fa6c0937b08853a31b9707c46cd0192\",\n    \"storybook-desktop--governed-sections-section--proof-cloud-citations.png\": \"884a3a6f1c13d5ab5ed8be9347e80f714e846fc9fb6ca08e790e97d919e2f078\",\n    \"storybook-desktop--governed-sections-section--proof-cloud.png\": \"123ce99652e3062fd7830f208530f1a8cfb9b44cc4685e12ddcb2da4f45b2e5f\",\n    \"storybook-desktop--governed-sections-section--testimonial-carousel-shell.png\": \"8981758b7f64ca78a54566f784aa92dc40887e5294c58e993a79db2182998e4b\",\n    \"storybook-desktop--governed-sections-section--testimonial.png\": \"5ace4833f73990ddd6961f861953efe8586175b77108daeb0dbb4ea42f9f86f3\",\n    \"storybook-desktop--governed-ui-button--disabled.png\": \"8a4d6ed8fe591b18ec381c0a1fb8edf42e43cda9bdac016973e662b768596482\",\n    \"storybook-desktop--governed-ui-button--primary.png\": \"6cba07661cbf3775d07dfb40a628e21f35baa78cbd0e381929ad6804d6c7010c\",\n    \"storybook-desktop--governed-ui-button--secondary.png\": \"3b9eb28512ebbbc645f5c7e77eb39eb71d6f9d14b1ab49ae62e1278d7c0dfce1\",\n    \"storybook-desktop--governed-ui-statuspanel--empty.png\": \"5a02e3fd5a6f11a5c154827e779977f5922218af27c7c2b417c6250aadadeb99\",\n    \"storybook-desktop--governed-ui-statuspanel--error.png\": \"d556f7b9d5e634680e57ec1c9bc20bb0c7c9b9ae8409bac90bff89db664a2b0b\",\n    \"storybook-desktop--governed-ui-statuspanel--loading.png\": \"cf856a53e13fec841699497fe137e6e3bbf706d06b7deb65eb9cf7521aca3a95\",\n    \"storybook-desktop--governed-ui-statuspanel--success.png\": \"9fa444ff43ed6405da2869197c5590ba30abedd3523de8ad9a1c4aecba4a975b\",\n    \"storybook-mobile--governed-sections-section--bento-grid-asymmetric.png\": \"aea540c28765ce265c8f84a99669ed9a1d0ab9e564027203c2fa5698e8a0024a\",\n    \"storybook-mobile--governed-sections-section--bento-grid.png\": \"755c32f299129f1c45d7a7d058ae819a5dcc6694a7b0c27a162ba0cf2e2f60ef\",\n    \"storybook-mobile--governed-sections-section--comparison-matrix.png\": \"075b4717ac7437da763436b8729fafbf15af007e874a4de95a3ab94bd04a3fdb\",\n    \"storybook-mobile--governed-sections-section--comparison.png\": \"2cbe661c616a57cfbe89251867be9de5bea148eadcd2fe30225a36aed102aaf4\",\n    \"storybook-mobile--governed-sections-section--cta-split.png\": \"69fac1a4f2b6dc514bca2fe20cfa696e8507eda047d758b1c78027dc79ef7f00\",\n    \"storybook-mobile--governed-sections-section--cta.png\": \"b59796bd8935c09bcfb2495b0470d74bd1183fec372e2c6ec0b5618d6e741842\",\n    \"storybook-mobile--governed-sections-section--editorial-media-gallery.png\": \"186c9f9a06283cceb05e4cd1539e00b0390ecf36c54c399c10b9f4fe05fc1fe9\",\n    \"storybook-mobile--governed-sections-section--editorial-media.png\": \"ba186e9db12eb0c67113d0554c5703ff9d57d2345c9c47c4b50ce3623cdaf219\",\n    \"storybook-mobile--governed-sections-section--editorial-prose-longform.png\": \"fccf1eda83cddb312f8727c5d809329a2c72331c069f7ee42aaef8c953655c20\",\n    \"storybook-mobile--governed-sections-section--editorial-prose.png\": \"ed407f957fefb853333b6d6ee58732ad4c82211d6d84892657eb2165e4d14366\",\n    \"storybook-mobile--governed-sections-section--faq-list.png\": \"0eb551a7052bd6dd51bf1073fea5b66d4813f16c74008631f3b875dac3d9df6e\",\n    \"storybook-mobile--governed-sections-section--faq.png\": \"58716a349229a3ab25cdae42573d210581939d544c55d7288c4b61bafc8359e1\",\n    \"storybook-mobile--governed-sections-section--feature-grid-icon-grid.png\": \"bd34b49e4bf106458e8db0acc7a39e51cbcbc3554c522e7b3f83f4b2d2439b44\",\n    \"storybook-mobile--governed-sections-section--feature-grid-rows.png\": \"b9a478c162ed02d84a0ca9b6c58b3d5a0f502dbdd2962e559d68c9eb1c288917\",\n    \"storybook-mobile--governed-sections-section--feature-grid.png\": \"3f5b6720a66017168e0153ff0f5699656643b0a1729159fe6f7c15f635ce0e5d\",\n    \"storybook-mobile--governed-sections-section--footer-multi-column.png\": \"226572d3c781684dbf6c333beb4999cbc4db483160fe130a18f2ddbdd1abe553\",\n    \"storybook-mobile--governed-sections-section--footer.png\": \"0aa0d78a49308d4abe70abf437fbf98636c9cd19bd6d7cdcc32d8bf6755bff19\",\n    \"storybook-mobile--governed-sections-section--graphics-2-d-stage-interactive.png\": \"814281d31affe217287b94bcdfa10bb697fe5260c8697f8c034e6da87dd322a3\",\n    \"storybook-mobile--governed-sections-section--graphics-2-d-stage.png\": \"d82de6709a07fbb665d9949c3f531a41f674e1fd68f8bd3f31cf1009ee0466e7\",\n    \"storybook-mobile--governed-sections-section--graphics-3-d-stage-spatial.png\": \"18710c2ad0f4b2cd4745faaf596806bf056e4737b6fd7ebe27f0912072fa909f\",\n    \"storybook-mobile--governed-sections-section--graphics-3-d-stage.png\": \"d6c4731d94991d77a6e03c2984a16f0733e712c22bdc38c86c33abc155dad170\",\n    \"storybook-mobile--governed-sections-section--hero-interactive.png\": \"9aec6c5999854402e09d9fe4608ccb6160fa30a57277a882bf9baf66d655f8d3\",\n    \"storybook-mobile--governed-sections-section--hero-split-media.png\": \"3c82a4139a2eb5ba3d12ceacf96bdabf78d659a64b91114017103cd1642889d6\",\n    \"storybook-mobile--governed-sections-section--hero.png\": \"5744ff5c6170c7c738ea0035c1ae4a92d7857054b2d6dc6a1e806ff85d281e04\",\n    \"storybook-mobile--governed-sections-section--media-stage-video.png\": \"31247b2603c88eda6442e3527c563ec099bc5afbea17b49ba3cc870ea4495a9e\",\n    \"storybook-mobile--governed-sections-section--media-stage.png\": \"72df2b937fc8f3290da0f056f793e4d7f8aebfe2967ea0ae2e3c7a931041fdf0\",\n    \"storybook-mobile--governed-sections-section--metrics-grid.png\": \"23cf9ead6cd6fc58128dcdeb4372d45bfcba5f3452b36dcb1cd548c89f023b87\",\n    \"storybook-mobile--governed-sections-section--metrics.png\": \"41156f2053f206ef6eddcf22ad439f9390fb3a398098e10d628fb51f67d4be42\",\n    \"storybook-mobile--governed-sections-section--navigation-product.png\": \"120dfaf0f55f7178242a1b9f274be98e4bd2b126165fdd6d380eef9692f8988d\",\n    \"storybook-mobile--governed-sections-section--navigation.png\": \"56cae45f1c7f0fa4172b368a837c725b043ab9f4c8c7629b2e702f6bf7b68414\",\n    \"storybook-mobile--governed-sections-section--pricing-single-offer.png\": \"517ad5570de31cb3f8f8ffa434fd1d26f531ceb4dd2ccc64fd2ff81c2cbbe3a4\",\n    \"storybook-mobile--governed-sections-section--pricing.png\": \"0f606c5512f8d8427b7cc95b0e656c3b94f09e5b587fca01ea30c3351c9d6e86\",\n    \"storybook-mobile--governed-sections-section--product-showcase-stage.png\": \"78380608b21a5ac2bce29c3588c12b9caa100ab03d9a358582c2f4613787a359\",\n    \"storybook-mobile--governed-sections-section--product-showcase.png\": \"0ad2d24b7c98575b017ed64fabf3f1c15639d4ef6a49bbc90db15bc5af7ed49c\",\n    \"storybook-mobile--governed-sections-section--proof-cloud-citations.png\": \"ff9467cc3b3ee74d5f4594218e6219cf3117452c3e5e1436cf0f3554d2a75132\",\n    \"storybook-mobile--governed-sections-section--proof-cloud.png\": \"4e8c678afc6f78fb7bcd87ef0b3c51aea48177f7492d67353429fe29e6bf76ea\",\n    \"storybook-mobile--governed-sections-section--testimonial-carousel-shell.png\": \"3f7b12b19e9928518541ff3df9551d3d9aa67d57f9c582f5238ac58b69d86b34\",\n    \"storybook-mobile--governed-sections-section--testimonial.png\": \"3c568a83b227f4599f82e03ffb11bf9a58ba43e6ad96580b4c4279b0d2c9dea4\",\n    \"storybook-mobile--governed-ui-button--disabled.png\": \"1272215ed06387b4212364287c0662714cbcab8fa8b36231bc22c0e33df477fe\",\n    \"storybook-mobile--governed-ui-button--primary.png\": \"28f30d1232aab3698f8047d82d8c91d08a944621f3bf1fc339d74fdd4dcb73e9\",\n    \"storybook-mobile--governed-ui-button--secondary.png\": \"1f238d3e29b801c8d175096334eb2b44ef505496e934485e37568ccf1107ca90\",\n    \"storybook-mobile--governed-ui-statuspanel--empty.png\": \"c56f3531230a8eea78b2d212b7a574616319687078448e72b159b28398746397\",\n    \"storybook-mobile--governed-ui-statuspanel--error.png\": \"a931f015df0e61defbb0caf770ecba0aaa7163d4342979e642213d4f5d016c71\",\n    \"storybook-mobile--governed-ui-statuspanel--loading.png\": \"ab426a7f61d5a37a8b91125bfbf5cf9c207a315dd787d810d8d3bd9ee5f6adc9\",\n    \"storybook-mobile--governed-ui-statuspanel--success.png\": \"6d46ceafeb0816a53e3c936dfad29e21930c0b6a0045889e53c901e9bf33461a\"\n  }\n}\n"
+  },
+  "review": {
+    "schema": "website-design-compiler/storybook-golden-review/v1",
+    "candidateSha256": "5c628bde0b1fa0077b51f3af81bf076396df30f363804e786972164b52e92f18",
+    "decision": "ADMIT",
+    "reviewer": {
+      "identity": "Codex tech-lead visual reviewer",
+      "context": "Independent post-run review of all desktop and mobile contact sheets plus representative full-resolution section and UI-state images.",
+      "independence": "SEPARATE_REVIEW_CONTEXT"
+    },
+    "reviewedAt": "2026-08-18T16:38:10Z",
+    "inspectedScreenshots": [
+      {
+        "name": "storybook-desktop--governed-sections-section--bento-grid-asymmetric.png",
+        "sha256": "0dc7a6c7739d44c237ec48994c555ce9e39cd6fa14d954257ebc6bdd6fed656b",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--bento-grid.png",
+        "sha256": "643df04748cd8ba996f54cd388076c5ee9e5889f46e8b5de081afe71842f25bd",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--comparison-matrix.png",
+        "sha256": "7658882c758e853080992952e1b725cd94bb96bfc294108e2af834dce3abcd3d",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--comparison.png",
+        "sha256": "1c266db0213c98cc3910dd4467a5966683451ac71659eefafd268e4f7a989bfe",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--cta-split.png",
+        "sha256": "e9b817a3029d4df5ea781f737e7c667dfe5a53ccbbd3060174c8b114114931ec",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--cta.png",
+        "sha256": "8c2083c8733e5009bb5c709f11981cea825e60a196fc7ed95679f96b9df5415a",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--editorial-media-gallery.png",
+        "sha256": "0e8317e229922f072d36d54d1063da3b975a0b0cb4a8ecee3746eda005b27b5b",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--editorial-media.png",
+        "sha256": "3a50f85fd5200b6f4e38b69083eb7ff00cfc022cf3aaad3fa9789e856e1ba10e",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--editorial-prose-longform.png",
+        "sha256": "5d5443f1fee5e2b3f8b7427566bd506c0d62e93ae44ecea8fdb0bd44beaebeab",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--editorial-prose.png",
+        "sha256": "ef6daeb7c156350faea65269d2dd92da23b0489e0711c9ef5e10b57389a5dc49",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--faq-list.png",
+        "sha256": "068a5e7e679ed110b5a723f8718f76795093d3f5dfd46207164bbc6b75843039",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--faq.png",
+        "sha256": "e59700845ac7e50ed1acd5017d16cb9f0a4f95bc4dddaf2971af609d9c7d7800",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--feature-grid-icon-grid.png",
+        "sha256": "0b00dacd1cbca913b38003746b87ac0cc2dbc4f74921b691d16f202bd29f0ca9",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--feature-grid-rows.png",
+        "sha256": "d071307c9d2819efe960881ddccacc38474fcfc13bf9e6e33571d0ba68e016a6",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--feature-grid.png",
+        "sha256": "7b362d5f3401b73589bcb628684eb98e0a11c1da23236e7c31b3171abfb69edb",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--footer-multi-column.png",
+        "sha256": "06ebd1f55382a3ed21e46f6c0aef5068c54a2a188fa69edb5a63a0f8f11ff08e",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--footer.png",
+        "sha256": "98b1da1a7018867bb98bfc7ceced3815d19a1ca0eef5eccfa6bd0c3c9a0860d2",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--graphics-2-d-stage-interactive.png",
+        "sha256": "4eff9a9ec0e214c000278914e2393ab385adc2a854d2daaf4e9c32a4755b5e3d",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--graphics-2-d-stage.png",
+        "sha256": "baee2ba5fbc84d46d284a1eb8956e0fc06f57d6ad0f0eed7ffe04adb85640569",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--graphics-3-d-stage-spatial.png",
+        "sha256": "403ada696b7f5e166e11c8280c9948b6b3e0434f413946deebcf7de7229a1446",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--graphics-3-d-stage.png",
+        "sha256": "cdbc81175246df1035a15c5e0cd34f46ed2299754ab1a0725b86cee9c931daed",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--hero-interactive.png",
+        "sha256": "10731843697259a40c3b8d943f8e9bbd7e6d013649279af1c0b1591aae633298",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--hero-split-media.png",
+        "sha256": "783937b0a6ee8c512871f82828fcf4f23d4b5872d8bf8d94b840898cac2b1721",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--hero.png",
+        "sha256": "21a9e5934605daf8fa28d6bee17d06ac2bee9c4735b2b7a4dbcbe4347f61fb56",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--media-stage-video.png",
+        "sha256": "85d931e4f35dbaf1fe0ffd5e038730640bed696a631113f83b77e0ee8d5461cb",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--media-stage.png",
+        "sha256": "a039128eaaa4b7bea7eff84b80e9c1875169d6c0fab597bcb9899e3f51384ebe",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--metrics-grid.png",
+        "sha256": "643d75d8695f2cba1c19166cb6f4c74771e7b4ece5e7dadeace3368b5f3283c5",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--metrics.png",
+        "sha256": "fc037ec448a2f08ffa853644af796c1f4c599137dc2350d02227c5f0e90824fb",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--navigation-product.png",
+        "sha256": "a42d7781d31e0c85b61c7ac870fadcb5887688297777b6d21fe56595d9c94e32",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--navigation.png",
+        "sha256": "cc0da2b4f3e672d4f27c5126f61aaff6d7c55ec2fa93f9a5e4caab4b39486f01",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--pricing-single-offer.png",
+        "sha256": "e9669551f41631cc19ac3d1a388e887951bd5b25d7628914506ecd3b87ef5840",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--pricing.png",
+        "sha256": "49806b62e17fa57c740f9c9346e3eb8b09fa561867c0557957bf6ede45eace5b",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--product-showcase-stage.png",
+        "sha256": "927e9f741d1de881a693babd7f9cbaefebc42b6a9e26539ee8f13829b2453e5c",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--product-showcase.png",
+        "sha256": "4957b2589c29fad2985bd5921e21a74a9fa6c0937b08853a31b9707c46cd0192",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--proof-cloud-citations.png",
+        "sha256": "884a3a6f1c13d5ab5ed8be9347e80f714e846fc9fb6ca08e790e97d919e2f078",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--proof-cloud.png",
+        "sha256": "123ce99652e3062fd7830f208530f1a8cfb9b44cc4685e12ddcb2da4f45b2e5f",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--testimonial-carousel-shell.png",
+        "sha256": "8981758b7f64ca78a54566f784aa92dc40887e5294c58e993a79db2182998e4b",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-sections-section--testimonial.png",
+        "sha256": "5ace4833f73990ddd6961f861953efe8586175b77108daeb0dbb4ea42f9f86f3",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-button--disabled.png",
+        "sha256": "8a4d6ed8fe591b18ec381c0a1fb8edf42e43cda9bdac016973e662b768596482",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-button--primary.png",
+        "sha256": "6cba07661cbf3775d07dfb40a628e21f35baa78cbd0e381929ad6804d6c7010c",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-button--secondary.png",
+        "sha256": "3b9eb28512ebbbc645f5c7e77eb39eb71d6f9d14b1ab49ae62e1278d7c0dfce1",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-statuspanel--empty.png",
+        "sha256": "5a02e3fd5a6f11a5c154827e779977f5922218af27c7c2b417c6250aadadeb99",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-statuspanel--error.png",
+        "sha256": "d556f7b9d5e634680e57ec1c9bc20bb0c7c9b9ae8409bac90bff89db664a2b0b",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-statuspanel--loading.png",
+        "sha256": "cf856a53e13fec841699497fe137e6e3bbf706d06b7deb65eb9cf7521aca3a95",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-desktop--governed-ui-statuspanel--success.png",
+        "sha256": "9fa444ff43ed6405da2869197c5590ba30abedd3523de8ad9a1c4aecba4a975b",
+        "observation": "Desktop contact-sheet inspection: content is present, legible, contained within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--bento-grid-asymmetric.png",
+        "sha256": "aea540c28765ce265c8f84a99669ed9a1d0ab9e564027203c2fa5698e8a0024a",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--bento-grid.png",
+        "sha256": "755c32f299129f1c45d7a7d058ae819a5dcc6694a7b0c27a162ba0cf2e2f60ef",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--comparison-matrix.png",
+        "sha256": "075b4717ac7437da763436b8729fafbf15af007e874a4de95a3ab94bd04a3fdb",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--comparison.png",
+        "sha256": "2cbe661c616a57cfbe89251867be9de5bea148eadcd2fe30225a36aed102aaf4",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--cta-split.png",
+        "sha256": "69fac1a4f2b6dc514bca2fe20cfa696e8507eda047d758b1c78027dc79ef7f00",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--cta.png",
+        "sha256": "b59796bd8935c09bcfb2495b0470d74bd1183fec372e2c6ec0b5618d6e741842",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--editorial-media-gallery.png",
+        "sha256": "186c9f9a06283cceb05e4cd1539e00b0390ecf36c54c399c10b9f4fe05fc1fe9",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--editorial-media.png",
+        "sha256": "ba186e9db12eb0c67113d0554c5703ff9d57d2345c9c47c4b50ce3623cdaf219",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--editorial-prose-longform.png",
+        "sha256": "fccf1eda83cddb312f8727c5d809329a2c72331c069f7ee42aaef8c953655c20",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--editorial-prose.png",
+        "sha256": "ed407f957fefb853333b6d6ee58732ad4c82211d6d84892657eb2165e4d14366",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--faq-list.png",
+        "sha256": "0eb551a7052bd6dd51bf1073fea5b66d4813f16c74008631f3b875dac3d9df6e",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--faq.png",
+        "sha256": "58716a349229a3ab25cdae42573d210581939d544c55d7288c4b61bafc8359e1",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--feature-grid-icon-grid.png",
+        "sha256": "bd34b49e4bf106458e8db0acc7a39e51cbcbc3554c522e7b3f83f4b2d2439b44",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--feature-grid-rows.png",
+        "sha256": "b9a478c162ed02d84a0ca9b6c58b3d5a0f502dbdd2962e559d68c9eb1c288917",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--feature-grid.png",
+        "sha256": "3f5b6720a66017168e0153ff0f5699656643b0a1729159fe6f7c15f635ce0e5d",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--footer-multi-column.png",
+        "sha256": "226572d3c781684dbf6c333beb4999cbc4db483160fe130a18f2ddbdd1abe553",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--footer.png",
+        "sha256": "0aa0d78a49308d4abe70abf437fbf98636c9cd19bd6d7cdcc32d8bf6755bff19",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--graphics-2-d-stage-interactive.png",
+        "sha256": "814281d31affe217287b94bcdfa10bb697fe5260c8697f8c034e6da87dd322a3",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--graphics-2-d-stage.png",
+        "sha256": "d82de6709a07fbb665d9949c3f531a41f674e1fd68f8bd3f31cf1009ee0466e7",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--graphics-3-d-stage-spatial.png",
+        "sha256": "18710c2ad0f4b2cd4745faaf596806bf056e4737b6fd7ebe27f0912072fa909f",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--graphics-3-d-stage.png",
+        "sha256": "d6c4731d94991d77a6e03c2984a16f0733e712c22bdc38c86c33abc155dad170",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--hero-interactive.png",
+        "sha256": "9aec6c5999854402e09d9fe4608ccb6160fa30a57277a882bf9baf66d655f8d3",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--hero-split-media.png",
+        "sha256": "3c82a4139a2eb5ba3d12ceacf96bdabf78d659a64b91114017103cd1642889d6",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--hero.png",
+        "sha256": "5744ff5c6170c7c738ea0035c1ae4a92d7857054b2d6dc6a1e806ff85d281e04",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--media-stage-video.png",
+        "sha256": "31247b2603c88eda6442e3527c563ec099bc5afbea17b49ba3cc870ea4495a9e",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--media-stage.png",
+        "sha256": "72df2b937fc8f3290da0f056f793e4d7f8aebfe2967ea0ae2e3c7a931041fdf0",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--metrics-grid.png",
+        "sha256": "23cf9ead6cd6fc58128dcdeb4372d45bfcba5f3452b36dcb1cd548c89f023b87",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--metrics.png",
+        "sha256": "41156f2053f206ef6eddcf22ad439f9390fb3a398098e10d628fb51f67d4be42",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--navigation-product.png",
+        "sha256": "120dfaf0f55f7178242a1b9f274be98e4bd2b126165fdd6d380eef9692f8988d",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--navigation.png",
+        "sha256": "56cae45f1c7f0fa4172b368a837c725b043ab9f4c8c7629b2e702f6bf7b68414",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--pricing-single-offer.png",
+        "sha256": "517ad5570de31cb3f8f8ffa434fd1d26f531ceb4dd2ccc64fd2ff81c2cbbe3a4",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--pricing.png",
+        "sha256": "0f606c5512f8d8427b7cc95b0e656c3b94f09e5b587fca01ea30c3351c9d6e86",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--product-showcase-stage.png",
+        "sha256": "78380608b21a5ac2bce29c3588c12b9caa100ab03d9a358582c2f4613787a359",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--product-showcase.png",
+        "sha256": "0ad2d24b7c98575b017ed64fabf3f1c15639d4ef6a49bbc90db15bc5af7ed49c",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--proof-cloud-citations.png",
+        "sha256": "ff9467cc3b3ee74d5f4594218e6219cf3117452c3e5e1436cf0f3554d2a75132",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--proof-cloud.png",
+        "sha256": "4e8c678afc6f78fb7bcd87ef0b3c51aea48177f7492d67353429fe29e6bf76ea",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--testimonial-carousel-shell.png",
+        "sha256": "3f7b12b19e9928518541ff3df9551d3d9aa67d57f9c582f5238ac58b69d86b34",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-sections-section--testimonial.png",
+        "sha256": "3c568a83b227f4599f82e03ffb11bf9a58ba43e6ad96580b4c4279b0d2c9dea4",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-button--disabled.png",
+        "sha256": "1272215ed06387b4212364287c0662714cbcab8fa8b36231bc22c0e33df477fe",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-button--primary.png",
+        "sha256": "28f30d1232aab3698f8047d82d8c91d08a944621f3bf1fc339d74fdd4dcb73e9",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-button--secondary.png",
+        "sha256": "1f238d3e29b801c8d175096334eb2b44ef505496e934485e37568ccf1107ca90",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-statuspanel--empty.png",
+        "sha256": "c56f3531230a8eea78b2d212b7a574616319687078448e72b159b28398746397",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-statuspanel--error.png",
+        "sha256": "a931f015df0e61defbb0caf770ecba0aaa7163d4342979e642213d4f5d016c71",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-statuspanel--loading.png",
+        "sha256": "ab426a7f61d5a37a8b91125bfbf5cf9c207a315dd787d810d8d3bd9ee5f6adc9",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      },
+      {
+        "name": "storybook-mobile--governed-ui-statuspanel--success.png",
+        "sha256": "6d46ceafeb0816a53e3c936dfad29e21930c0b6a0045889e53c901e9bf33461a",
+        "observation": "Mobile contact-sheet inspection: content is present, legible, wraps within the viewport, and shows no clipping, overflow, unexpected blank, or error state."
+      }
+    ]
   }
 }
