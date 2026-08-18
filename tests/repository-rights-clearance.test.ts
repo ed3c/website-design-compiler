@@ -274,3 +274,30 @@ test("waiver and public-tree diagnostics independently fail the repository recei
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("malformed package evidence fails closed instead of becoming an empty override set", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wdc-rights-package-evidence-"));
+  const binDirectory = join(root, "bin");
+  const previousPath = process.env.PATH;
+  try {
+    await mkdir(join(root, "node_modules/.pnpm"), { recursive: true });
+    await mkdir(binDirectory);
+    const pnpmPath = join(binDirectory, "pnpm");
+    await writeFile(pnpmPath, "#!/bin/sh\nprintf '%s\\n' '[]'\n", "utf8");
+    await chmod(pnpmPath, 0o755);
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+
+    for (const contents of [
+      "{not-json",
+      JSON.stringify({ "example@1.0.0": { license: "MIT", source: "" } })
+    ]) {
+      await writeFile(join(root, "rights-package-evidence.json"), contents, "utf8");
+      const receipt = await scanRepositoryRights(root, [], new Date("2026-08-18T00:00:00.000Z"));
+      assert.equal(receipt.overall, "FAIL");
+      assert.match(receipt.diagnostics.join(" "), /diagnostic:package-evidence:(?:INVALID_JSON|INVALID_MANIFEST)/);
+    }
+  } finally {
+    process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true });
+  }
+});

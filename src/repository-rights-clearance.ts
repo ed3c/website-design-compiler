@@ -182,15 +182,37 @@ async function packageMetadataAtInstallPath(root: string, installPath: string, e
   return { license: typeof json.license === "string" ? json.license : legacyLicense, path: `${repositoryPath}/package.json` };
 }
 
-async function loadOverrides(root: string): Promise<Record<string, PackageEvidenceOverride>> {
-  try { return JSON.parse(await readFile(resolve(root, "rights-package-evidence.json"), "utf8")) as Record<string, PackageEvidenceOverride>; }
-  catch { return {}; }
-}
-
 function exactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const actual = Object.keys(value).sort();
   const wanted = [...expected].sort();
   return actual.length === wanted.length && actual.every((key, index) => key === wanted[index]);
+}
+
+async function loadOverrides(root: string): Promise<{ entries: Record<string, PackageEvidenceOverride>; diagnostic?: string }> {
+  const path = resolve(root, "rights-package-evidence.json");
+  let source: string;
+  try { source = await readFile(path, "utf8"); }
+  catch (error) {
+    if (errorCode(error) === "ENOENT") return { entries: {} };
+    return { entries: {}, diagnostic: `diagnostic:package-evidence:${errorCode(error)}` };
+  }
+  let value: unknown;
+  try { value = JSON.parse(source) as unknown; }
+  catch { return { entries: {}, diagnostic: "diagnostic:package-evidence:INVALID_JSON" }; }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { entries: {}, diagnostic: "diagnostic:package-evidence:INVALID_MANIFEST" };
+  }
+  const entries = value as Record<string, unknown>;
+  for (const [id, candidate] of Object.entries(entries)) {
+    if (!/^@?[A-Za-z0-9._/-]+@[^\s]+$/.test(id) || !candidate || typeof candidate !== "object" || Array.isArray(candidate) || !exactKeys(candidate as Record<string, unknown>, ["license", "source"])) {
+      return { entries: {}, diagnostic: "diagnostic:package-evidence:INVALID_MANIFEST" };
+    }
+    const record = candidate as Record<string, unknown>;
+    if (typeof record.license !== "string" || record.license.trim().length === 0 || typeof record.source !== "string" || record.source.trim().length === 0) {
+      return { entries: {}, diagnostic: "diagnostic:package-evidence:INVALID_MANIFEST" };
+    }
+  }
+  return { entries: entries as Record<string, PackageEvidenceOverride> };
 }
 
 async function loadAssetEvidence(root: string): Promise<{ entries: Map<string, AssetProvenanceEntry>; diagnostic?: string }> {
@@ -341,8 +363,9 @@ export async function scanRepositoryRights(root = process.cwd(), waivers: Waiver
   const { stdout } = await execFileAsync("pnpm", ["-r", "list", "--prod", "--json", "--depth", "Infinity"], { cwd: root, maxBuffer: 16 * 1024 * 1024 });
   const dependencies = flattenTree(JSON.parse(stdout) as PnpmProject[]);
   const metadata = await packageMetadataIndex(root);
-  const overrides = await loadOverrides(root);
-  const packageDiagnostics = new Set<string>();
+  const loadedOverrides = await loadOverrides(root);
+  const overrides = loadedOverrides.entries;
+  const packageDiagnostics = new Set<string>(loadedOverrides.diagnostic ? [loadedOverrides.diagnostic] : []);
   const packageSubjects: RightsSubject[] = await Promise.all([...dependencies.values()].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)).map(async ({ name, version, installPath }) => {
     const id = `${name}@${version}`;
     const installed = metadata.index.get(id);
