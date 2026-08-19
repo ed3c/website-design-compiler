@@ -79,7 +79,7 @@ interface CommonSourceInput {
 }
 
 export interface ByteSourceInput extends CommonSourceInput {
-  sourceClass: Exclude<SourceClass, "URL" | "GIT_REPOSITORY">;
+  sourceClass: SourceClass;
   locator: string;
   mediaType: string;
   bytes: Uint8Array;
