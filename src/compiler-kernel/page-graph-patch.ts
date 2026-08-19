@@ -88,6 +88,7 @@ export interface PageGraphPatchApplication {
 const SHA256 = /^[a-f0-9]{64}$/;
 const STABLE_ID = /^[a-z0-9][a-z0-9._:-]{2,127}$/;
 const FIELD = /^[A-Za-z][A-Za-z0-9_-]{0,127}$/;
+const SOURCE_OBSERVATION_PREFIX = "source-observation:sha256:";
 const CONVERSION_KINDS = new Set<CompletePageNode["kind"]>([
   "hero",
   "feature-grid",
@@ -146,6 +147,12 @@ function exactSha256(value: string, field: string): string {
   const normalized = value.trim().toLowerCase();
   if (!SHA256.test(normalized)) throw new Error(`${field} must be an exact SHA-256`);
   return normalized;
+}
+
+function sourceObservationDigest(provenance: string): string | null {
+  if (!provenance.startsWith(SOURCE_OBSERVATION_PREFIX)) return null;
+  const value = provenance.slice(SOURCE_OBSERVATION_PREFIX.length).toLowerCase();
+  return SHA256.test(value) ? value : null;
 }
 
 function normalizeJsonValue(value: PatchJsonValue, field: string): PatchJsonValue {
@@ -328,6 +335,22 @@ function undoId(operationId: string): string {
   return candidate.length <= 128 ? candidate : `undo-${digest(operationId).slice(0, 24)}`;
 }
 
+function validateForwardFieldProvenance(
+  patch: PageGraphPatch,
+  operation: SetSectionFieldOperation,
+  history: PatchHistoryContext
+): string | null {
+  if (history.revertsReceiptSha256 !== null) return null;
+  const observationSha256 = sourceObservationDigest(operation.fieldProvenance);
+  if (observationSha256 === null) {
+    return `operation ${operation.operationId} field provenance must bind source-observation:sha256:<digest>`;
+  }
+  if (!patch.evidenceSha256.includes(observationSha256)) {
+    return `operation ${operation.operationId} source observation digest is not admitted by patch evidence set`;
+  }
+  return null;
+}
+
 export function applyPageGraphPatch(
   baseGraph: CompletePageGraph,
   inputPatch: PageGraphPatchInput | PageGraphPatch,
@@ -355,6 +378,8 @@ export function applyPageGraphPatch(
     }
 
     if (operation.op === "SET_SECTION_FIELD") {
+      const provenanceError = validateForwardFieldProvenance(patch, operation, history);
+      if (provenanceError !== null) return rejected(patch, baseDigest, history, [provenanceError]);
       if (!Object.prototype.hasOwnProperty.call(located.node.section.props, operation.field)) {
         return rejected(patch, baseDigest, history, [`operation ${operation.operationId} cannot introduce unknown section field ${operation.field}`]);
       }
