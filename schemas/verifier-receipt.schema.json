@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://ed3c.github.io/website-design-compiler/schemas/verifier-receipt.schema.json",
+  "title":"Verifier Receipt","type":"object","additionalProperties":false,
+  "required":["schema","workerResultIdentitySha256","subjectHeadSha","verifierRole","workerRole","state","independent","negativeControls","diagnostics","verifiedAt","verifierReceiptIdentitySha256"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/verifier-receipt/v1"},"workerResultIdentitySha256":{"$ref":"#/$defs/sha256"},"subjectHeadSha":{"$ref":"#/$defs/gitSha"},"verifierRole":{"type":"string","minLength":1},"workerRole":{"type":"string","minLength":1},"state":{"enum":["PASS","FAIL","BLOCKED"]},"independent":{"const":true},
+    "negativeControls":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"diagnostics":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},"verifiedAt":{"type":"string","format":"date-time"},"verifierReceiptIdentitySha256":{"$ref":"#/$defs/sha256"}
+  },
+  "$defs":{"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"}}
+}
