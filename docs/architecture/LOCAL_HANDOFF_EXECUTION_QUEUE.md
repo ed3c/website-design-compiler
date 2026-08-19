@@ -16,7 +16,7 @@ convergence_parent:
   branch: codex/pr42-delivery-v2
   sha: 9e67222dea5580b1f807266162909422771da99e
 control_plane_branch: agent/shadow-architect-control-plane
-control_plane_pull_request: PENDING_AT_INITIAL_COMMIT
+control_plane_pull_request: 54
 production_provider_issue: 25
 ```
 
@@ -179,6 +179,7 @@ subject:
   parent_branch: codex/pr42-delivery-v2
   parent_sha: 9e67222dea5580b1f807266162909422771da99e
   child_branch: agent/shadow-architect-control-plane
+  child_pull_request: 54
 owner:
   role: local_repository_operator
 blocking_reason: >
@@ -219,7 +220,7 @@ completion_gate: >
   resolved by the named convergence owner.
 resume_target:
   issue: 49
-  pull_request: null
+  pull_request: 54
   phase: P8
   command: git town sync --stack
 ```
@@ -396,7 +397,9 @@ program_issue: 45
 owning_issue: 45
 subject:
   stack_root: pull_request_44
+  control_plane_pull_request: 54
   control_plane_branch: agent/shadow-architect-control-plane
+  initial_control_plane_commit: 08cae80b31d3a2bca633a4c8553e71dc4c027cf4
 owner:
   role:
     - convergence_owner
@@ -439,7 +442,7 @@ completion_gate: >
   truthful BLOCKED/REJECTED decision.
 resume_target:
   issue: 45
-  pull_request: 44
+  pull_request: 54
   phase: P9
   command: NOT_APPLICABLE_HUMAN_AUTHORITY
 ```

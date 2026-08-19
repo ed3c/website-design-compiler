@@ -42,8 +42,8 @@ refs/heads/main
     `-- PR #44: codex/pr42-delivery-v2
           9e67222dea5580b1f807266162909422771da99e
             |
-            `-- agent/shadow-architect-control-plane
-                  initial PR: PENDING
+            `-- PR #54: agent/shadow-architect-control-plane
+                  initial commit: 08cae80b31d3a2bca633a4c8553e71dc4c027cf4
                   program: #45
 ```
 
@@ -53,7 +53,7 @@ The control-plane documentation branch is a child of PR #44 because it describes
 
 ```mermaid
 flowchart TD
-    S0[PR 44 convergence parent] --> S1[Control-plane docs #45]
+    S0[PR 44 convergence parent] --> S1[Control-plane docs PR 54 / #45]
 
     S1 --> A1[Source contracts #46]
     S1 --> C1[Technology admission contracts #48]
@@ -105,7 +105,7 @@ The fan-out branches after A1/C1/D1/E1 are independent stacks based on an accept
 
 | Stack ID | Branch | Parent | Purpose |
 |---|---|---|---|
-| A1 | `feat/source-manifest-contracts` | S1 control-plane docs | source manifest, observation, publication and drift schemas/fixtures |
+| A1 | `feat/source-manifest-contracts` | PR #54 control-plane docs | source manifest, observation, publication and drift schemas/fixtures |
 
 ### Parallel adapter stacks
 
@@ -141,11 +141,11 @@ B5 and B6 are mutually exclusive decision outcomes, not parallel implementations
 
 ## Stack C — Technology admission (#48)
 
-Independent from source adapter implementation after S1.
+Independent from source adapter implementation after PR #54.
 
 | Stack ID | Branch | Parent | Purpose |
 |---|---|---|---|
-| C1 | `feat/technology-admission-contracts` | S1 | candidate, rights-subject, admission and revocation schemas/fixtures |
+| C1 | `feat/technology-admission-contracts` | PR #54 | candidate, rights-subject, admission and revocation schemas/fixtures |
 | C2 | `feat/spdx-expression-evaluator` | C1 | expression-aware policy and negative fixtures |
 | C3 | `feat/sbom-notice-evidence` | C1 | exact lockfile/package/bundle subject and notice candidates |
 | C4 | `feat/rights-subject-convergence` | C2 + C3 accepted | canonical repository/model/provider rights subject bridge |
@@ -160,7 +160,7 @@ Independent product-control stack.
 
 | Stack ID | Branch | Parent | Purpose |
 |---|---|---|---|
-| D1 | `feat/control-plane-contracts` | S1 | program/task/DAG/lease/result/verifier/handoff schemas |
+| D1 | `feat/control-plane-contracts` | PR #54 | program/task/DAG/lease/result/verifier/handoff schemas |
 | D2 | `feat/control-plane-dag-admission` | D1 | true dependency and start-eligibility assertions |
 | D3 | `feat/control-plane-lease-lifecycle` | D1 | attempt/lease/checkpoint/result terminal separation |
 | D4 | `feat/control-plane-worker-verifier` | D1 | worker and independent verifier receipt assertions |
@@ -175,7 +175,7 @@ Optional and never a core release dependency.
 
 | Stack ID | Branch | Parent | Purpose |
 |---|---|---|---|
-| E1 | `feat/projection-export-bundle` | S1 | local deterministic Markdown/CSV/JSON bundle and projection receipt |
+| E1 | `feat/projection-export-bundle` | PR #54 | local deterministic Markdown/CSV/JSON bundle and projection receipt |
 | E2 | `feat/google-docs-projection` | E1 | one-way digest-bound Docs write adapter |
 | E3 | `feat/google-sheets-projection` | E1 | one-way registry/dashboard write adapter |
 | E4 | `feat/codexdoc-projection` | E1 | optional hosted documentation adapter |
@@ -285,8 +285,8 @@ Exact commands must be checked against the installed Git Town version and reposi
 ## Merge order
 
 1. PR #44 only after its required gates and Human decisions permit.
-2. S1 control-plane documentation.
-3. Contract foundations A1, C1, D1 and E1 in any order after S1, subject to review capacity.
+2. PR #54 control-plane documentation.
+3. Contract foundations A1, C1, D1 and E1 in any order after PR #54, subject to review capacity.
 4. Independent leaves within each accepted foundation.
 5. Convergence branch for each workstream.
 6. Cross-workstream integration only when a true dependency exists.

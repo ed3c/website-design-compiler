@@ -24,9 +24,10 @@
     },
     "controlPlaneDelivery": {
       "branch": "agent/shadow-architect-control-plane",
-      "pullRequest": null,
-      "sha": null,
-      "parentPullRequest": 44
+      "pullRequest": 54,
+      "parentPullRequest": 44,
+      "initialCommit": "08cae80b31d3a2bca633a4c8553e71dc4c027cf4",
+      "headBindingState": "RESOLVE_AT_RUN"
     },
     "programIssue": 45,
     "productionProviderIssue": 25,
