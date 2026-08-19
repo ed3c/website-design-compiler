@@ -1,0 +1,30 @@
+{
+  "adapter": {
+    "git_blob": "731e6292c19fbbe1066a84b555a3657cce1884ee",
+    "id": "github-actions-consumer-bootstrap/v1",
+    "path": "skills/shared-skills-infra/modules/github-actions-consumer-bootstrap.yml",
+    "sha256": "eb1214617b09a054bff1ff36deb5abfcdbaa8551d058db4368cce5291c9a557f"
+  },
+  "generator": {
+    "git_blob": "efaacb6f0caad26a318234aa38833d4676f32a63",
+    "path": "skills/shared-skills-infra/scripts/shared_skills.py",
+    "sha256": "cbfd944cfb8dc2f849592b5dec7ba4d66492fbc086f37b2139312c4d63cb9ae3"
+  },
+  "interface": {
+    "git_blob": "a8725a09bae14dd606ca627d3c41a5c9e699620c",
+    "id": "DOMAIN-DECOUPLING-V1",
+    "path": "docs/architecture/DOMAIN_DECOUPLING.md",
+    "sha256": "c4b2c7edb36cd86bd2792471703704d411e94a8e66052eccb4214ca72e819329"
+  },
+  "profile": {
+    "git_blob": "0bbc22e24e1f19b6dd7cae529652412bdac8f6f2",
+    "path": "skills/shared-skills-infra/references/repository-control-plane-profile.default.json",
+    "sha256": "144b8e0a7c118a356aeb7fb90be4e5d1996bd474b73e8dbde287bbfa647a4a94"
+  },
+  "schema": "shared-skills/source-pin/v1",
+  "source": {
+    "commit": "ccef97dedd7ea8b1873e3afa130ca82b8eabb413",
+    "repository": "https://github.com/ed3c/skills-shared",
+    "tree": "fa804c843df0eead9f00df3d752522d6f95e8968"
+  }
+}

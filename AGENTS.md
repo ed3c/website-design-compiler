@@ -39,3 +39,15 @@ The compiler is organized as:
 `reference intelligence -> art direction -> design contracts -> implementation -> motion/2D/3D/media specialists -> browser verification -> accessibility/performance/originality/license gates -> runtime receipts`
 
 No single mega-prompt owns the whole pipeline. Specialist skills have explicit input/output contracts and stop conditions.
+
+<!-- BEGIN DOMAIN DECOUPLING BOOTSTRAP -->
+## Modular Agent bootstrap route
+
+1. Read `README.md`, `CONTEXT.md`, `ARCHITECTURE.md`, and `docs/INDEX.md`.
+2. Read the nearest governed-directory `README.md`.
+3. Load `docs/architecture/DOMAIN_DECOUPLING.md` only for Skill, module, binding, adapter, provider-profile, or domain-boundary work.
+4. Resolve `.agents/control-plane/source.json`, `.agents/control-plane/requirements.json`, and `.agents/bindings/repository-control-plane.json` before executing a shared procedure.
+5. Treat scripts, verifiers, receipts, workflows, and exact Git/forge subjects as machine authority.
+
+Do not copy a canonical shared `SKILL.md`. Do not infer runtime execution from a projection. Merge, release, permission expansion, and rollback remain Human/trusted-operator boundaries.
+<!-- END DOMAIN DECOUPLING BOOTSTRAP -->

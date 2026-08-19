@@ -1,6 +1,6 @@
 {
   "binding": "repository-control-plane",
-  "content_sha256": "904c24814f602d4e1ef4852583dcbcf979e5a6571ae7aca03450d5a53ff788cf",
+  "content_sha256": "592f279eb593b3b636de46de39d0108a1c4baf48ebb0bc25383274c77b8e604d",
   "registry_sha256": "b02bea2cd6cccf97769696205398e4da349ac984240027c1836ec6de65e3594c",
   "repo_owned": [],
   "requirements_sha256": "f526ed0f91cc3a45c5077fe58a4b5eaa5e41f1a778fb6fa969cac9a9b8e1e175",
@@ -38,9 +38,9 @@
     }
   ],
   "source": {
-    "commit": "fad02756797c1d0948507fc9edbef7931ead3f1d",
+    "commit": "ccef97dedd7ea8b1873e3afa130ca82b8eabb413",
     "repository": "https://github.com/ed3c/skills-shared",
-    "tree": "e793c67d27ea159915c1301033b286a8c6dad373"
+    "tree": "fa804c843df0eead9f00df3d752522d6f95e8968"
   },
   "surfaces": {
     "claude": ".claude/skills",
