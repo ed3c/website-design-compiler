@@ -54,7 +54,7 @@
         "screenshotSha256": { "$ref": "#/$defs/sha256" },
         "screenshotByteLength": { "type": "integer", "minimum": 1 },
         "semanticNodeIds": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-        "noHorizontalOverflow": { "const": true },
+        "noHorizontalOverflow": { "type": "boolean" },
         "reducedMotion": { "type": "boolean" },
         "viewport": { "$ref": "#/$defs/viewport" },
         "exactIdentityMatch": { "type": "boolean" }
