@@ -265,10 +265,9 @@ function normalizeCommon(input: CommonSourceInput): Omit<SourceManifest, "source
   };
 }
 
-function sourceIdentityMaterial(
-  manifest: Omit<SourceManifest, "sourceIdentitySha256" | "capturedAt" | "warnings">
-): unknown {
-  return manifest;
+function sourceIdentityMaterial(manifest: Omit<SourceManifest, "sourceIdentitySha256">): unknown {
+  const { capturedAt: _capturedAt, warnings: _warnings, ...stable } = manifest;
+  return stable;
 }
 
 export function createByteSourceManifest(input: ByteSourceInput): SourceManifest {
