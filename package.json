@@ -57,7 +57,7 @@
     "storybook:golden-promote": "tsx scripts/storybook-golden-promote.ts",
     "browser:typecheck": "tsc --noEmit -p tsconfig.browser.json",
     "browser:qa": "playwright test && playwright test -c playwright.runtime.config.ts",
-    "browser:receipt": "tsx scripts/browser-qa-receipt.ts && tsx scripts/kernel-edited-page-browser-receipt.ts",
+    "browser:receipt": "tsx scripts/browser-qa-receipt.ts && tsx scripts/kernel-edited-page-browser-receipt.ts && tsx scripts/persist-kernel-edited-page-browser-artifacts.ts",
     "reference:media-fixture": "tsx scripts/reference-media-fixture.ts",
     "reference:browser-fixture": "tsx scripts/reference-browser-fixture.ts",
     "quality:receipt": "tsx scripts/accessibility-performance-receipt.ts",
