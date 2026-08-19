@@ -124,7 +124,7 @@ const observations: Array<{
   screenshotSha256: string;
   screenshotByteLength: number;
   semanticNodeIds: string[];
-  noHorizontalOverflow: true;
+  noHorizontalOverflow: boolean;
   reducedMotion: boolean;
   viewport: { width: number; height: number } | null;
   exactIdentityMatch: boolean;
@@ -182,7 +182,7 @@ for (const project of expectedProjects) {
     screenshotSha256,
     screenshotByteLength,
     semanticNodeIds,
-    noHorizontalOverflow: true,
+    noHorizontalOverflow: observation.noHorizontalOverflow,
     reducedMotion: observation.reducedMotion,
     viewport: observation.viewport,
     exactIdentityMatch
