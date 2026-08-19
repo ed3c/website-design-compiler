@@ -97,6 +97,32 @@ test("wrong base and field preconditions produce explicit conflict receipts with
   assert.match(conflict.receipt.diagnostics.join("; "), /value precondition/);
 });
 
+test("forward field edits must bind provenance to a source observation admitted by the patch evidence set", () => {
+  const { graph, patch } = headlinePatch();
+  const original = patch.operations[0]!;
+  if (original.op !== "SET_SECTION_FIELD") throw new Error("headline patch must contain a field operation");
+
+  const mismatched = createPageGraphPatch({
+    ...patch,
+    patchId: "mismatched-source-evidence",
+    operations: [{ ...original, fieldProvenance: `source-observation:sha256:${"f".repeat(64)}` }]
+  });
+  const mismatch = applyPageGraphPatch(graph, mismatched);
+  assert.equal(mismatch.receipt.state, "REJECTED");
+  assert.equal(mismatch.graph, null);
+  assert.match(mismatch.receipt.diagnostics.join("; "), /not admitted by patch evidence set/);
+
+  const unbound = createPageGraphPatch({
+    ...patch,
+    patchId: "unbound-source-evidence",
+    operations: [{ ...original, fieldProvenance: "model-inference:unbound" }]
+  });
+  const missing = applyPageGraphPatch(graph, unbound);
+  assert.equal(missing.receipt.state, "REJECTED");
+  assert.equal(missing.graph, null);
+  assert.match(missing.receipt.diagnostics.join("; "), /must bind source-observation/);
+});
+
 test("patches cannot introduce unknown fields or invalid governed variants", () => {
   const graph = baseGraph();
   const hero = graph.nodes.find((node) => node.kind === "hero")!;
