@@ -54,7 +54,7 @@ button:focus-visible, a:focus-visible { outline: var(--wdc-focus-ring) solid var
 .wdc-generated-node__field { min-height: clamp(13rem, 32vw, 30rem); border-radius: var(--wdc-radius-lg); background: radial-gradient(circle at 70% 25%, color-mix(in oklch, var(--wdc-color-accent) 78%, white), transparent 18%), linear-gradient(135deg, var(--wdc-color-surface), color-mix(in oklch, var(--wdc-color-accent) 28%, var(--wdc-color-background))); box-shadow: var(--wdc-elevation-high); }
 .wdc-generated-node[data-active-media-placement="background"] { position: relative; isolation: isolate; }
 .wdc-generated-node[data-active-media-placement="background"] .wdc-generated-node__media { position: absolute; inset: 0; z-index: -1; opacity: 0.18; overflow: clip; }
-.wdc-generated-node [data-governed-section] { display: grid; gap: var(--wdc-space-sm); padding: var(--wdc-space-md); border-radius: var(--wdc-radius-lg); }
+.wdc-generated-node [data-governed-section] { display: grid; width: 100%; margin-inline: 0; gap: var(--wdc-space-sm); padding: var(--wdc-space-md); border-radius: var(--wdc-radius-lg); }
 .wdc-generated-node [data-governed-section] h1,
 .wdc-generated-node [data-governed-section] h2 { margin: 0; font-family: var(--wdc-font-display); font-weight: var(--wdc-font-display-weight); line-height: var(--wdc-font-display-line-height); letter-spacing: var(--wdc-font-display-letter-spacing); }
 .wdc-generated-node [data-governed-section] h1 { max-width: 13ch; font-size: clamp(var(--wdc-type-scale-4), 7vw, var(--wdc-type-scale-5)); }

@@ -15,20 +15,59 @@ const plans=new Map(compileAllSectionPageFixtures().map((page)=>[page.category,c
 
 test("route cleanup remains durable when it interrupts an active Motion animation",async({page},testInfo)=>{
   test.skip(testInfo.project.name!=="desktop-chromium","one browser lane owns the asynchronous cleanup regression");
+  await page.addInitScript(()=>{
+    type BoundaryWindow=typeof window&{__wdcGeneratedMotion?:{mountedEffects:number;routeListeners:number};__wdcCleanupBoundary?:{state:"PENDING"|"TRIGGERED";id?:string;opacity?:number}};
+    const runtime=window as BoundaryWindow;
+    runtime.__wdcCleanupBoundary={state:"PENDING"};
+    const observer=new MutationObserver(()=>{
+      if(runtime.__wdcCleanupBoundary?.state!=="PENDING")return;
+      const hero=document.querySelector<HTMLElement>("[data-page-node='02-hero']");
+      const nodes=[...document.querySelectorAll<HTMLElement>("[data-page-node]")];
+      const metrics=runtime.__wdcGeneratedMotion;
+      if(!hero||nodes.length===0||hero.dataset.motionRuntime!=="ACTIVE"||metrics?.mountedEffects!==nodes.length||metrics.routeListeners!==nodes.length)return;
+      const opacity=Number(getComputedStyle(hero).opacity);
+      if(!Number.isFinite(opacity)||opacity<.9999)return;
+      runtime.__wdcCleanupBoundary={state:"TRIGGERED",id:hero.dataset.pageNode,opacity};
+      observer.disconnect();
+      window.dispatchEvent(new Event("wdc:generated-motion:route-change"));
+    });
+    observer.observe(document,{subtree:true,attributes:true,attributeFilter:["style","data-motion-runtime"]});
+  });
   const response=await page.goto("/benchmarks/b2b-product?media=off&graphics=off&graphics3d=off",{waitUntil:"domcontentloaded"});
   expect(response?.ok()).toBeTruthy();
   const nodes=page.locator("[data-page-node]");
+  const hero=page.locator("[data-page-node='02-hero']");
   await expect.poll(
-    ()=>nodes.evaluateAll((entries)=>entries.some((entry)=>entry.getAttribute("data-motion-engine")==="motion"&&entry.getAttribute("data-motion-runtime")==="ACTIVE")),
-    {message:"the regression must interrupt a live Motion animation"}
-  ).toBe(true);
+    ()=>page.evaluate(()=>(window as typeof window&{__wdcCleanupBoundary?:{state:string}}).__wdcCleanupBoundary?.state),
+    {message:"the regression must dispatch cleanup at the observed Motion completion boundary",timeout:5_000}
+  ).toBe("TRIGGERED");
+  await expect(hero).toHaveAttribute("data-motion-cleanup-observed","true");
+  await expect(hero).toHaveAttribute("data-motion-runtime","CLEANED");
+  await page.evaluate(()=>new Promise<void>((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+  await expect(hero).toHaveAttribute("data-motion-runtime","CLEANED");
+  expect(await nodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-motion-runtime")==="CLEANED")),"completion-boundary cleanup must remain terminal for every generated motion node").toBe(true);
+});
+
+test("route cleanup remains durable when it interrupts an active GSAP timeline",async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=="desktop-chromium","one browser lane owns the GSAP cleanup regression");
+  const response=await page.goto("/benchmarks/interactive-2d?media=off&graphics=off&graphics3d=off",{waitUntil:"domcontentloaded"});
+  expect(response?.ok()).toBeTruthy();
+  const nodes=page.locator("[data-page-node]");
+  const stage=page.locator("[data-page-node][data-motion-engine='gsap']").first();
+  await expect(stage).toHaveCount(1);
+  await stage.scrollIntoViewIfNeeded();
+  await expect(stage).toHaveAttribute("data-motion-engine","gsap");
+  await expect(stage).toHaveAttribute("data-motion-runtime","ACTIVE");
   await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
-  await expect.poll(
-    ()=>nodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-motion-runtime")==="CLEANED")),
-    {message:"route cleanup must synchronously own every generated motion node"}
-  ).toBe(true);
-  await page.waitForTimeout(600);
-  expect(await nodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-motion-runtime")==="CLEANED")),"a stopped Motion promise must not overwrite CLEANED after route disposal").toBe(true);
+  await expect(stage).toHaveAttribute("data-motion-cleanup-observed","true");
+  await expect(stage).toHaveAttribute("data-motion-runtime","CLEANED");
+  await page.waitForTimeout(750);
+  await expect(stage).toHaveAttribute("data-motion-runtime","CLEANED");
+  expect(await page.evaluate(()=>{
+    const metrics=(window as typeof window&{__wdcGeneratedMotion?:{active:number;activeTimelines:number;routeListeners:number}}).__wdcGeneratedMotion;
+    return Boolean(metrics&&metrics.active===0&&metrics.activeTimelines===0&&metrics.routeListeners===0);
+  }),"GSAP cleanup must release timeline, motion slot, and route listener ownership").toBe(true);
+  expect(await nodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-motion-runtime")==="CLEANED")),"late GSAP completion must not overwrite route cleanup").toBe(true);
 });
 
 test("generated motion records bounded performance and zero leaked resources after route cleanup and true unmount",async({page},testInfo)=>{

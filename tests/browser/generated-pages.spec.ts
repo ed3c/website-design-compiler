@@ -170,17 +170,41 @@ test("runtime layout gate detects injected clipping, scrolling, and underfilled 
   expect(observation.underfilledContentOnlyNodes.length,"negative control must trip multi-column content-only underfill measurement").toBeGreaterThan(0);
 });
 
-test("interactive tablet composition contains nested governed media across the responsive boundary",async({page},testInfo)=>{
+test("interactive tablet composition contains visible governed content and media across the responsive boundary",async({page},testInfo)=>{
   test.skip(testInfo.project.name!=="tablet-chromium","the tablet lane owns the 48rem boundary regression");
-  await page.setViewportSize({width:769,height:1024});
-  const response=await page.goto("/benchmarks/interactive-2d",{waitUntil:"networkidle"});
-  expect(response?.ok()).toBeTruthy();
-  const nodes=page.locator("[data-page-node]");
-  await expect.poll(
-    ()=>nodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-current-viewport")==="tablet")),
-    {message:"all generated sections must hydrate the tablet responsive contract before boundary measurement"}
-  ).toBe(true);
-  const observation=await page.evaluate(measureGeneratedPageLayout);
-  expect(observation.nodeHorizontalOverflow,"nested governed media must not widen its assigned tablet column").toEqual([]);
-  expect(observation.mediaHorizontalOverflow,"runtime media must remain inside its tablet composition column").toEqual([]);
+  for(const width of [768,769]){
+    await page.setViewportSize({width,height:1024});
+    const response=await page.goto("/benchmarks/interactive-2d",{waitUntil:"networkidle"});
+    expect(response?.ok()).toBeTruthy();
+    const nodes=page.locator("[data-page-node]");
+    await expect.poll(
+      ()=>nodes.evaluateAll((entries)=>entries.length>0&&entries.every((entry)=>entry.getAttribute("data-current-viewport")==="tablet")),
+      {message:`all generated sections must hydrate the tablet responsive contract at ${width}px before boundary measurement`}
+    ).toBe(true);
+    const hero=page.locator("[data-page-node='02-experience-hero']");
+    const content=hero.locator(":scope > .wdc-generated-node__content");
+    const media=hero.locator(":scope > .wdc-generated-node__media");
+    const governedHero=content.locator("[data-governed-section='hero']");
+    await expect(hero).toHaveCount(1);
+    await expect(content).toBeVisible();
+    await expect(media).toBeVisible();
+    await expect(governedHero).toBeVisible();
+    expect(await hero.evaluate((element)=>{
+      const contentElement=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__content");
+      const mediaElement=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__media");
+      const governed=contentElement?.querySelector<HTMLElement>("[data-governed-section='hero']");
+      if(!contentElement||!mediaElement||!governed)return false;
+      const contentBox=contentElement.getBoundingClientRect();
+      const mediaBox=mediaElement.getBoundingClientRect();
+      const governedBox=governed.getBoundingClientRect();
+      return contentBox.width>0&&contentBox.height>0&&mediaBox.width>0&&mediaBox.height>0&&governedBox.width===contentBox.width&&getComputedStyle(governed).gridTemplateColumns.split(" ").filter(Boolean).length===1;
+    }),`tablet hero content and media must remain materially rendered at ${width}px`).toBe(true);
+    const observation=await page.evaluate(measureGeneratedPageLayout);
+    expect(observation.documentHorizontalOverflow,`document must not overflow at ${width}px`).toBe(false);
+    expect(observation.nodeHorizontalOverflow,`generated sections must stay inside their runtime boxes at ${width}px`).toEqual([]);
+    expect(observation.mediaHorizontalOverflow,`runtime media must remain inside its composition column at ${width}px`).toEqual([]);
+    expect(observation.unsafeHorizontalScroll,`generated content must not require horizontal scrolling at ${width}px`).toEqual([]);
+    expect(observation.textClipping,`responsive containment must not clip text at ${width}px`).toEqual([]);
+    expect(observation.underfilledContentOnlyNodes,`content-only sections must preserve their declared composition at ${width}px`).toEqual([]);
+  }
 });
