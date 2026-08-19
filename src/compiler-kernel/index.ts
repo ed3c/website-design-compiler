@@ -16,6 +16,7 @@ import {
 
 export * from "./page-graph-patch.js";
 export * from "./constraint-model.js";
+export * from "./production-content-patch.js";
 
 export type CompilerKernelPatchState = "APPLIED" | "CONFLICT" | "REJECTED" | "HARD_CONSTRAINT_REJECTED";
 
