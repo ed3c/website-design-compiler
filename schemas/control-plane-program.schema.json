@@ -1,0 +1,25 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://ed3c.github.io/website-design-compiler/schemas/control-plane-program.schema.json",
+  "title":"Control Plane Program","type":"object","additionalProperties":false,
+  "required":["schema","programId","repository","baseSha","tasks","programIdentitySha256"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/control-plane-program/v1"},
+    "programId":{"$ref":"#/$defs/id"},
+    "repository":{"type":"string","format":"uri","pattern":"^https://github\\.com/[^/]+/[^/?#]+$"},
+    "baseSha":{"$ref":"#/$defs/gitSha"},
+    "tasks":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/task"}},
+    "programIdentitySha256":{"$ref":"#/$defs/sha256"}
+  },
+  "$defs":{
+    "id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{2,127}$"},
+    "gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"},
+    "sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "path":{"type":"string","pattern":"^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\).+$"},
+    "task":{"type":"object","additionalProperties":false,"required":["schema","taskId","role","subjectSha","dependsOn","writeset","excludedPaths","convergenceOwner","requiredArtifacts","negativeControls","taskIdentitySha256"],"properties":{
+      "schema":{"const":"website-design-compiler/task-packet/v1"},"taskId":{"$ref":"#/$defs/id"},"role":{"type":"string","minLength":1},"subjectSha":{"$ref":"#/$defs/gitSha"},
+      "dependsOn":{"type":"array","uniqueItems":true,"items":{"$ref":"#/$defs/id"}},"writeset":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/path"}},"excludedPaths":{"type":"array","uniqueItems":true,"items":{"$ref":"#/$defs/path"}},
+      "convergenceOwner":{"type":["string","null"],"minLength":1},"requiredArtifacts":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/path"}},"negativeControls":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"taskIdentitySha256":{"$ref":"#/$defs/sha256"}
+    }}
+  }
+}
