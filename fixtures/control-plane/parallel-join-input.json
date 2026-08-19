@@ -1,0 +1,40 @@
+{
+  "programId": "public-wave-fixture",
+  "repository": "https://github.com/ed3c/website-design-compiler",
+  "baseSha": "7777777777777777777777777777777777777777",
+  "tasks": [
+    {
+      "taskId": "leaf-a",
+      "role": "article-worker",
+      "subjectSha": "7777777777777777777777777777777777777777",
+      "dependsOn": [],
+      "writeset": ["src/source-plane/article-adapter.ts"],
+      "excludedPaths": ["README.md"],
+      "convergenceOwner": null,
+      "requiredArtifacts": ["artifacts/control-plane/leaf-a.json"],
+      "negativeControls": ["invalid input fails closed"]
+    },
+    {
+      "taskId": "leaf-b",
+      "role": "repository-worker",
+      "subjectSha": "7777777777777777777777777777777777777777",
+      "dependsOn": [],
+      "writeset": ["src/source-plane/repository-adapter.ts"],
+      "excludedPaths": ["README.md"],
+      "convergenceOwner": null,
+      "requiredArtifacts": ["artifacts/control-plane/leaf-b.json"],
+      "negativeControls": ["stale subject fails closed"]
+    },
+    {
+      "taskId": "source-join",
+      "role": "source-convergence-owner",
+      "subjectSha": "7777777777777777777777777777777777777777",
+      "dependsOn": ["leaf-a", "leaf-b"],
+      "writeset": ["src/source-plane/index.ts"],
+      "excludedPaths": ["src/source-plane/article-adapter.ts", "src/source-plane/repository-adapter.ts"],
+      "convergenceOwner": "source-convergence-owner",
+      "requiredArtifacts": ["artifacts/control-plane/source-join.json"],
+      "negativeControls": ["missing predecessor receipt blocks convergence"]
+    }
+  ]
+}
