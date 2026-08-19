@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/optional-capability-decision.schema.json",
+  "title": "Optional Capability Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","decisionId","track","decision","rationale","evidenceAnchors","requiredPrerequisites","blockedByIssues","requiredFallbacks","dependencyAdmissionRequired","providerAdmissionRequired","humanAdmissionRequired","implementationStartCondition","targetProduct","implementationEligible","decisionIdentitySha256","decidedAt"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/optional-capability-decision/v1" },
+    "decisionId": { "type": "string", "pattern": "^decision-[a-f0-9]{20}$" },
+    "track": { "enum": ["THREE_D_PRODUCT_PHOTOSHOOT","MOTION_VIDEO_EXPORT","DJ_AUDIO_ENGINE"] },
+    "decision": { "enum": ["ADOPT","DEFER","REJECT","SEPARATE_PRODUCT"] },
+    "rationale": { "type": "string", "minLength": 1 },
+    "evidenceAnchors": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceAnchor" } },
+    "requiredPrerequisites": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "blockedByIssues": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1 } },
+    "requiredFallbacks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "dependencyAdmissionRequired": { "type": "boolean" },
+    "providerAdmissionRequired": { "type": "boolean" },
+    "humanAdmissionRequired": { "type": "boolean" },
+    "implementationStartCondition": { "type": "string", "minLength": 1 },
+    "targetProduct": { "type": ["string","null"], "minLength": 3 },
+    "implementationEligible": { "const": false },
+    "decisionIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "decidedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "evidenceAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceIdentitySha256","observationIdentitySha256"],
+      "properties": {
+        "sourceIdentitySha256": { "$ref": "#/$defs/sha256" },
+        "observationIdentitySha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
