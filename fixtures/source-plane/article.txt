@@ -1,0 +1,3 @@
+Source-plane deterministic fixture.
+This text is intentionally synthetic and public.
+The compiler may observe these bytes, but it must not infer implementation details from them.
