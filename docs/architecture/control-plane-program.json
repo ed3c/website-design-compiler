@@ -1,0 +1,544 @@
+{
+  "schema": "website-design-compiler/shadow-architect-program/v1",
+  "programId": "wdc-shadow-architecture-2026-08-19",
+  "title": "Article, PDF and repository architecture closure",
+  "state": "PLAN_ADMITTED",
+  "authority": {
+    "automaticMerge": false,
+    "automaticConflictResolution": false,
+    "visibilityChange": false,
+    "credentialValues": false,
+    "legalDecision": false,
+    "productionPromotion": false
+  },
+  "subject": {
+    "repository": "ed3c/website-design-compiler",
+    "canonicalMain": {
+      "ref": "refs/heads/main",
+      "sha": "4a79d9635911690950f02edda4505672ba7544f6"
+    },
+    "convergenceParent": {
+      "pullRequest": 44,
+      "ref": "refs/heads/codex/pr42-delivery-v2",
+      "sha": "9e67222dea5580b1f807266162909422771da99e"
+    },
+    "controlPlaneDelivery": {
+      "branch": "agent/shadow-architect-control-plane",
+      "pullRequest": null,
+      "sha": null,
+      "parentPullRequest": 44
+    },
+    "programIssue": 45,
+    "productionProviderIssue": 25,
+    "sharedBinding": {
+      "path": ".agents/bindings/repository-control-plane.json",
+      "mode": "reference-only-no-vendoring"
+    }
+  },
+  "sources": [
+    {
+      "sourceId": "modern-web-design-architecture-extension-2026-08-18",
+      "sourceClass": "PDF",
+      "title": "現代網頁設計架構擴充建議",
+      "mediaType": "application/pdf",
+      "byteLength": 1878749,
+      "sha256": "7350f0e3d29ace70a6c92343e5501b34763f452e057d9b8acef3829f57230ef6",
+      "locatorClass": "user-provided-attachment",
+      "publicBytesCommitted": false,
+      "publicationState": "DIGEST_AND_ANCHORS_ONLY",
+      "runtimeManifestState": "NOT_IMPLEMENTED",
+      "reviewState": "PLANNING_REVIEW_ONLY"
+    },
+    {
+      "sourceId": "website-design-compiler-main",
+      "sourceClass": "GIT_REPOSITORY",
+      "repository": "ed3c/website-design-compiler",
+      "ref": "refs/heads/main",
+      "commit": "4a79d9635911690950f02edda4505672ba7544f6",
+      "reviewState": "EXERCISED_BASELINE"
+    },
+    {
+      "sourceId": "website-design-compiler-convergence-parent",
+      "sourceClass": "GIT_PULL_REQUEST",
+      "repository": "ed3c/website-design-compiler",
+      "pullRequest": 44,
+      "ref": "refs/heads/codex/pr42-delivery-v2",
+      "commit": "9e67222dea5580b1f807266162909422771da99e",
+      "reviewState": "DRAFT_FAIL_CLOSED"
+    }
+  ],
+  "evidenceStates": [
+    "PASS",
+    "FAIL",
+    "ABSENT",
+    "NOT_IMPLEMENTED",
+    "NOT_EXERCISED",
+    "SKIPPED_BY_POLICY",
+    "NEEDS_INPUT",
+    "BLOCKED"
+  ],
+  "phases": [
+    {
+      "phaseId": "P0",
+      "name": "SUBJECT_AND_AUTHORITY_FREEZE",
+      "owner": "TECH_LEAD_CONTROLLER",
+      "predecessors": [],
+      "requiredOutputs": [
+        "exact-subject-envelope",
+        "authority-matrix",
+        "source-set"
+      ],
+      "exitGate": "all repository/ref/source/authority fields are unambiguous"
+    },
+    {
+      "phaseId": "P1",
+      "name": "SOURCE_NORMALIZATION",
+      "owner": "SOURCE_STEWARD",
+      "predecessors": [
+        "P0"
+      ],
+      "requiredOutputs": [
+        "source-manifest",
+        "source-observations",
+        "publication-classification"
+      ],
+      "exitGate": "every architecture claim can bind source bytes/ref and page/path anchors"
+    },
+    {
+      "phaseId": "P2",
+      "name": "SHADOW_ARCHITECT_AUDIT",
+      "owner": "SHADOW_ARCHITECT_MONITOR",
+      "predecessors": [
+        "P1"
+      ],
+      "requiredOutputs": [
+        "closure-matrix",
+        "unknowns",
+        "contradictions",
+        "negative-controls"
+      ],
+      "exitGate": "read-only audit complete; no unsupported implementation inference"
+    },
+    {
+      "phaseId": "P3",
+      "name": "TECH_LEAD_DAG_COMPILATION",
+      "owner": "TECH_LEAD_PLANNER",
+      "predecessors": [
+        "P2"
+      ],
+      "requiredOutputs": [
+        "task-packets",
+        "dependency-dag",
+        "start-eligibility-graph",
+        "writeset-plan",
+        "convergence-owners"
+      ],
+      "exitGate": "only true dependencies remain and every overlap has one owner"
+    },
+    {
+      "phaseId": "P4",
+      "name": "CONTRACT_FOUNDATION",
+      "owner": "CONTRACT_WORKERS_AND_INDEPENDENT_VERIFIERS",
+      "predecessors": [
+        "P3"
+      ],
+      "requiredOutputs": [
+        "schemas",
+        "state-machines",
+        "invariants",
+        "positive-fixtures",
+        "negative-fixtures"
+      ],
+      "exitGate": "contract and negative-fixture receipts pass on the exact head"
+    },
+    {
+      "phaseId": "P5",
+      "name": "BOUNDED_PARALLEL_IMPLEMENTATION",
+      "owner": "LEASED_WORKERS",
+      "predecessors": [
+        "P4"
+      ],
+      "requiredOutputs": [
+        "worker-results",
+        "attempt-receipts",
+        "lease-receipts",
+        "test-artifacts"
+      ],
+      "exitGate": "all required leaves have independently verifiable results"
+    },
+    {
+      "phaseId": "P6",
+      "name": "CONVERGENCE",
+      "owner": "NAMED_INTEGRATION_OWNER",
+      "predecessors": [
+        "P5"
+      ],
+      "requiredOutputs": [
+        "integrated-tree",
+        "overlap-decisions",
+        "retained-invariants",
+        "convergence-receipt"
+      ],
+      "exitGate": "all required predecessor receipts match the integration subject"
+    },
+    {
+      "phaseId": "P7",
+      "name": "INDEPENDENT_RUNTIME_VERIFICATION",
+      "owner": "INDEPENDENT_VERIFIER",
+      "predecessors": [
+        "P6"
+      ],
+      "requiredOutputs": [
+        "build-receipt",
+        "browser-receipt",
+        "accessibility-performance-receipt",
+        "originality-rights-receipt",
+        "release-receipt"
+      ],
+      "exitGate": "all required gates pass or retain explicit fail-closed state"
+    },
+    {
+      "phaseId": "P8",
+      "name": "STACKED_PR_DELIVERY",
+      "owner": "STACK_PR_WORKER",
+      "predecessors": [
+        "P7"
+      ],
+      "requiredOutputs": [
+        "branch-lineage",
+        "pull-requests",
+        "issue-links",
+        "review-artifacts"
+      ],
+      "exitGate": "reviewable oldest-first stack exists; automatic merge remains disabled"
+    },
+    {
+      "phaseId": "P9",
+      "name": "LOCAL_AND_HUMAN_ADMISSION",
+      "owner": "LOCAL_OPERATOR_AND_HUMAN_AUTHORITIES",
+      "predecessors": [
+        "P8"
+      ],
+      "requiredOutputs": [
+        "local-handoff-receipts",
+        "protected-admission-receipts",
+        "merge-decision",
+        "canonical-main-readback"
+      ],
+      "exitGate": "required Human/local gates match the exact subject or remain truthfully blocked"
+    }
+  ],
+  "workstreams": [
+    {
+      "workstreamId": "SOURCE",
+      "issue": 46,
+      "state": "OPEN",
+      "startAfter": [
+        "S1_CONTROL_PLANE_DOCS"
+      ],
+      "foundation": "source-manifest-and-observation-contracts",
+      "leaves": [
+        {
+          "taskId": "SOURCE_ARTICLE_ADAPTER",
+          "parallelGroup": "SOURCE_ADAPTERS",
+          "startAfter": [
+            "SOURCE_FOUNDATION_ACCEPTED"
+          ],
+          "writeset": [
+            "src/source-plane/article-adapter.ts",
+            "fixtures/source-plane/article/**",
+            "tests/source-plane/article/**"
+          ]
+        },
+        {
+          "taskId": "SOURCE_PDF_ADAPTER",
+          "parallelGroup": "SOURCE_ADAPTERS",
+          "startAfter": [
+            "SOURCE_FOUNDATION_ACCEPTED"
+          ],
+          "writeset": [
+            "src/source-plane/pdf-adapter.ts",
+            "fixtures/source-plane/pdf/**",
+            "tests/source-plane/pdf/**"
+          ]
+        },
+        {
+          "taskId": "SOURCE_REPOSITORY_ADAPTER",
+          "parallelGroup": "SOURCE_ADAPTERS",
+          "startAfter": [
+            "SOURCE_FOUNDATION_ACCEPTED"
+          ],
+          "writeset": [
+            "src/source-plane/repository-adapter.ts",
+            "fixtures/source-plane/repository/**",
+            "tests/source-plane/repository/**"
+          ]
+        }
+      ],
+      "convergence": {
+        "taskId": "SOURCE_CONVERGENCE",
+        "startAfter": [
+          "SOURCE_ARTICLE_ADAPTER_VERIFIED",
+          "SOURCE_PDF_ADAPTER_VERIFIED",
+          "SOURCE_REPOSITORY_ADAPTER_VERIFIED"
+        ]
+      }
+    },
+    {
+      "workstreamId": "COMPILER_KERNEL",
+      "issue": 47,
+      "state": "OPEN",
+      "startAfter": [
+        "SOURCE_CONVERGENCE_ACCEPTED"
+      ],
+      "foundation": "page-graph-patch-and-constraint-contracts",
+      "leaves": [
+        {
+          "taskId": "PATCH_CONFLICT_HISTORY",
+          "parallelGroup": "COMPILER_KERNEL",
+          "startAfter": [
+            "COMPILER_KERNEL_FOUNDATION_ACCEPTED"
+          ]
+        },
+        {
+          "taskId": "CONSTRAINT_MODEL",
+          "parallelGroup": "COMPILER_KERNEL",
+          "startAfter": [
+            "COMPILER_KERNEL_FOUNDATION_ACCEPTED"
+          ]
+        },
+        {
+          "taskId": "SOLVER_DECISION",
+          "parallelGroup": null,
+          "startAfter": [
+            "CONSTRAINT_MODEL_VERIFIED"
+          ]
+        }
+      ]
+    },
+    {
+      "workstreamId": "TECHNOLOGY_ADMISSION",
+      "issue": 48,
+      "state": "OPEN",
+      "startAfter": [
+        "S1_CONTROL_PLANE_DOCS"
+      ],
+      "foundation": "technology-and-rights-subject-contracts",
+      "leaves": [
+        {
+          "taskId": "SPDX_EXPRESSION_EVALUATOR",
+          "parallelGroup": "TECHNOLOGY_ADMISSION",
+          "startAfter": [
+            "TECHNOLOGY_FOUNDATION_ACCEPTED"
+          ]
+        },
+        {
+          "taskId": "SBOM_NOTICE_EVIDENCE",
+          "parallelGroup": "TECHNOLOGY_ADMISSION",
+          "startAfter": [
+            "TECHNOLOGY_FOUNDATION_ACCEPTED"
+          ]
+        }
+      ]
+    },
+    {
+      "workstreamId": "CONTROL_PLANE_RUNTIME",
+      "issue": 49,
+      "state": "OPEN",
+      "startAfter": [
+        "S1_CONTROL_PLANE_DOCS"
+      ],
+      "foundation": "program-task-dag-lease-result-handoff-contracts",
+      "leaves": [
+        {
+          "taskId": "DAG_START_ADMISSION",
+          "parallelGroup": "CONTROL_PLANE_RUNTIME",
+          "startAfter": [
+            "CONTROL_PLANE_FOUNDATION_ACCEPTED"
+          ]
+        },
+        {
+          "taskId": "LEASE_LIFECYCLE",
+          "parallelGroup": "CONTROL_PLANE_RUNTIME",
+          "startAfter": [
+            "CONTROL_PLANE_FOUNDATION_ACCEPTED"
+          ]
+        },
+        {
+          "taskId": "WORKER_VERIFIER_RECEIPTS",
+          "parallelGroup": "CONTROL_PLANE_RUNTIME",
+          "startAfter": [
+            "CONTROL_PLANE_FOUNDATION_ACCEPTED"
+          ]
+        }
+      ]
+    },
+    {
+      "workstreamId": "PROJECTIONS",
+      "issue": 50,
+      "state": "OPEN_OPTIONAL",
+      "startAfter": [
+        "S1_CONTROL_PLANE_DOCS"
+      ],
+      "foundation": "deterministic-local-export-bundle",
+      "leaves": [
+        {
+          "taskId": "GOOGLE_DOCS_PROJECTION",
+          "parallelGroup": "PROJECTIONS",
+          "startAfter": [
+            "PROJECTION_EXPORT_BUNDLE_ACCEPTED"
+          ],
+          "requiredForCoreRelease": false
+        },
+        {
+          "taskId": "GOOGLE_SHEETS_PROJECTION",
+          "parallelGroup": "PROJECTIONS",
+          "startAfter": [
+            "PROJECTION_EXPORT_BUNDLE_ACCEPTED"
+          ],
+          "requiredForCoreRelease": false
+        },
+        {
+          "taskId": "CODEXDOC_PROJECTION",
+          "parallelGroup": "PROJECTIONS",
+          "startAfter": [
+            "PROJECTION_EXPORT_BUNDLE_ACCEPTED"
+          ],
+          "requiredForCoreRelease": false
+        }
+      ]
+    },
+    {
+      "workstreamId": "OPTIONAL_PRODUCT_TRACK_DECISIONS",
+      "issue": 51,
+      "state": "OPEN_DECISION_ONLY",
+      "startAfter": [
+        "S1_CONTROL_PLANE_DOCS"
+      ],
+      "decisionTracks": [
+        "3D_PRODUCT_PHOTOSHOOT",
+        "MOTION_VIDEO_COMPOSITION",
+        "DJ_AUDIO_DSP"
+      ],
+      "allowedDecisions": [
+        "ADOPT",
+        "DEFER",
+        "REJECT",
+        "SEPARATE_PRODUCT"
+      ],
+      "implementationStartAfterAdopt": [
+        "COMPILER_KERNEL_ACCEPTED",
+        "TECHNOLOGY_ADMISSION_ACCEPTED",
+        "PRODUCTION_PROVIDER_ADMISSION_IF_APPLICABLE"
+      ]
+    },
+    {
+      "workstreamId": "PRODUCTION_PROVIDER",
+      "issue": 25,
+      "state": "OPEN_HUMAN_BOUNDARY",
+      "startAfter": [
+        "TECHNOLOGY_RIGHTS_INTEGRATION_ACCEPTED",
+        "HUMAN_LEGAL_ADMISSION",
+        "PROTECTED_PROVIDER_CONFIGURATION"
+      ],
+      "requiredForProfiles": [
+        "COMMERCIAL_PRODUCTION",
+        "FULL_V2"
+      ]
+    }
+  ],
+  "issueGraph": [
+    {
+      "issue": 45,
+      "kind": "PROGRAM",
+      "dependsOn": []
+    },
+    {
+      "issue": 46,
+      "kind": "SOURCE_PLANE",
+      "dependsOn": [
+        45
+      ]
+    },
+    {
+      "issue": 47,
+      "kind": "COMPILER_KERNEL",
+      "dependsOn": [
+        46
+      ]
+    },
+    {
+      "issue": 48,
+      "kind": "TECHNOLOGY_ADMISSION",
+      "dependsOn": [
+        45
+      ]
+    },
+    {
+      "issue": 49,
+      "kind": "CONTROL_PLANE_RUNTIME",
+      "dependsOn": [
+        45
+      ]
+    },
+    {
+      "issue": 50,
+      "kind": "OPTIONAL_PROJECTION",
+      "dependsOn": [
+        45
+      ]
+    },
+    {
+      "issue": 51,
+      "kind": "OPTIONAL_DECISION",
+      "dependsOn": [
+        45
+      ]
+    },
+    {
+      "issue": 25,
+      "kind": "HUMAN_PROVIDER_ADMISSION",
+      "dependsOn": [
+        48
+      ]
+    }
+  ],
+  "localHandoff": {
+    "document": "docs/architecture/LOCAL_HANDOFF_EXECUTION_QUEUE.md",
+    "activeItems": [
+      "LHQ-001",
+      "LHQ-002",
+      "LHQ-003",
+      "LHQ-004",
+      "LHQ-005",
+      "LHQ-006"
+    ]
+  },
+  "documentation": {
+    "readme": "README.md",
+    "agentContract": "AGENTS.md",
+    "productPipeline": "docs/architecture/COMPILER_PIPELINE.md",
+    "controlPlane": "docs/architecture/SHADOW_ARCHITECT_CONTROL_PLANE.md",
+    "phasePrompts": "docs/architecture/PHASE_SYSTEM_PROMPTS.md",
+    "sourceTechnologyRegistry": "docs/architecture/SOURCE_AND_TECHNOLOGY_REGISTRY.md",
+    "stackIndex": "docs/architecture/STACKED_PR_INDEX.md",
+    "localHandoffQueue": "docs/architecture/LOCAL_HANDOFF_EXECUTION_QUEUE.md"
+  },
+  "closureRule": {
+    "requiredLinks": [
+      "source-manifest",
+      "architecture-finding",
+      "issue",
+      "task-packet",
+      "attempt-and-lease",
+      "worker-result",
+      "independent-verifier",
+      "branch-and-commit",
+      "pull-request",
+      "runtime-receipt-or-local-handoff"
+    ],
+    "documentationAloneCanPass": false,
+    "sampleCodeCanPass": false,
+    "productAnalogyCanPass": false
+  }
+}
