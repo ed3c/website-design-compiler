@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/lease-lifecycle-snapshot.schema.json",
+  "title": "Lease Lifecycle Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","leaseIdentitySha256","leaseWindowIdentitySha256","taskIdentitySha256","attemptId","headSha","issuedAt","expiresAt","state","checkpointSha256","terminalReason","transitionedAt","lifecycleIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/lease-lifecycle-snapshot/v1" },
+    "leaseIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "leaseWindowIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "taskIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "attemptId": { "type": "string", "minLength": 3 },
+    "headSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "state": { "enum": ["ACTIVE","CHECKPOINTED","RELEASED","LOST","EXPIRED"] },
+    "checkpointSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "terminalReason": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+    "transitionedAt": { "type": "string", "format": "date-time" },
+    "lifecycleIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
