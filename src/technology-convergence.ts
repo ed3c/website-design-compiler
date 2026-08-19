@@ -64,14 +64,15 @@ function exactTimestamp(value: string): string {
 }
 
 function exactPackageComponent(candidate: TechnologyCandidate, sbom: SbomNoticeEvidence): SbomComponentEvidence {
-  if (candidate.subjectKind !== "SOFTWARE_PACKAGE" || candidate.identity.kind !== "PACKAGE") {
+  const identity = candidate.identity;
+  if (candidate.subjectKind !== "SOFTWARE_PACKAGE" || identity.kind !== "PACKAGE") {
     throw new Error("technology convergence currently requires an exact SOFTWARE_PACKAGE candidate");
   }
   if (sbom.overall !== "PASS") throw new Error("SBOM/notice evidence must PASS before technology convergence");
   const component = sbom.components.find((entry) =>
-    entry.name === candidate.identity.packageName &&
-    entry.version === candidate.identity.version &&
-    entry.artifactSha256 === candidate.identity.distributionSha256
+    entry.name === identity.packageName &&
+    entry.version === identity.version &&
+    entry.artifactSha256 === identity.distributionSha256
   );
   if (!component) throw new Error("SBOM does not contain the candidate exact package/version/artifact subject");
   if (!component.distributed || component.evidenceState !== "COMPLETE") {
