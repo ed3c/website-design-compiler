@@ -169,3 +169,18 @@ test("runtime layout gate detects injected clipping, scrolling, and underfilled 
   expect(observation.unsafeHorizontalScroll.length,"negative control must trip unsafe scroll-container measurement").toBeGreaterThan(0);
   expect(observation.underfilledContentOnlyNodes.length,"negative control must trip multi-column content-only underfill measurement").toBeGreaterThan(0);
 });
+
+test("interactive tablet composition contains nested governed media across the responsive boundary",async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=="tablet-chromium","the tablet lane owns the 48rem boundary regression");
+  await page.setViewportSize({width:769,height:1024});
+  const response=await page.goto("/benchmarks/interactive-2d",{waitUntil:"networkidle"});
+  expect(response?.ok()).toBeTruthy();
+  const nodes=page.locator("[data-page-node]");
+  await expect.poll(
+    ()=>nodes.evaluateAll((entries)=>entries.every((entry)=>entry.getAttribute("data-current-viewport")==="tablet")),
+    {message:"all generated sections must hydrate the tablet responsive contract before boundary measurement"}
+  ).toBe(true);
+  const observation=await page.evaluate(measureGeneratedPageLayout);
+  expect(observation.nodeHorizontalOverflow,"nested governed media must not widen its assigned tablet column").toEqual([]);
+  expect(observation.mediaHorizontalOverflow,"runtime media must remain inside its tablet composition column").toEqual([]);
+});
