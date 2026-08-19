@@ -52,6 +52,10 @@ jobs:
           slug = urlparse(source['repository']).path.strip('/').removesuffix('.git')
           if slug != 'ed3c/skills-shared':
               raise SystemExit(f'unexpected shared repository: {slug}')
+          # public-consumer-private-import (check_skill_bootstrap.py) needs an
+          # honest canonical_visibility, not a guess. Ask GitHub's own API for
+          # the one fact that answers it. Any failure to observe (network,
+          # non-200, malformed body) stays conservative: PRIVATE, never PUBLIC.
           canonical_visibility = 'PRIVATE'
           try:
               request = urllib.request.Request(
