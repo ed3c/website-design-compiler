@@ -27,7 +27,8 @@ test("route cleanup remains durable when it interrupts an active Motion animatio
       if(!hero||nodes.length===0||hero.dataset.motionRuntime!=="ACTIVE"||metrics?.mountedEffects!==nodes.length||metrics.routeListeners!==nodes.length)return;
       const opacity=Number(getComputedStyle(hero).opacity);
       if(!Number.isFinite(opacity)||opacity<.9999)return;
-      runtime.__wdcCleanupBoundary={state:"TRIGGERED",id:hero.dataset.pageNode,opacity};
+      const id=hero.dataset.pageNode;
+      runtime.__wdcCleanupBoundary={state:"TRIGGERED",opacity,...(id?{id}:{})};
       observer.disconnect();
       window.dispatchEvent(new Event("wdc:generated-motion:route-change"));
     });
