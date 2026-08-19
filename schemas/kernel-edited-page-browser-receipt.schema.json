@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/kernel-edited-page-browser-receipt.schema.json",
+  "title": "Kernel Edited Page Browser Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "subjectHeadSha", "category", "route", "sourceManifestIdentitySha256", "sourceObservationIdentitySha256", "basePageDigest", "patchIdentitySha256", "patchReceiptIdentitySha256", "resultPageDigest", "expectedProjects", "observations", "failures", "receiptIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/kernel-edited-page-browser-receipt/v1" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "subjectHeadSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "category": { "type": "string", "minLength": 1 },
+    "route": { "type": "string", "pattern": "^/" },
+    "sourceManifestIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "sourceObservationIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "basePageDigest": { "$ref": "#/$defs/sha256" },
+    "patchIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "patchReceiptIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "resultPageDigest": { "$ref": "#/$defs/sha256" },
+    "expectedProjects": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "enum": ["desktop-chromium", "tablet-chromium", "mobile-chromium", "reduced-motion-chromium"] }
+    },
+    "observations": { "type": "array", "items": { "$ref": "#/$defs/observation" } },
+    "failures": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "receiptIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "viewport": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["browserProject", "screenshotPath", "screenshotSha256", "screenshotByteLength", "semanticNodeIds", "noHorizontalOverflow", "reducedMotion", "viewport", "exactIdentityMatch"],
+      "properties": {
+        "browserProject": { "enum": ["desktop-chromium", "tablet-chromium", "mobile-chromium", "reduced-motion-chromium"] },
+        "screenshotPath": { "type": "string", "pattern": "^screenshots/kernel-edit--[a-z-]+\\.png$" },
+        "screenshotSha256": { "$ref": "#/$defs/sha256" },
+        "screenshotByteLength": { "type": "integer", "minimum": 1 },
+        "semanticNodeIds": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "noHorizontalOverflow": { "const": true },
+        "reducedMotion": { "type": "boolean" },
+        "viewport": { "$ref": "#/$defs/viewport" },
+        "exactIdentityMatch": { "type": "boolean" }
+      }
+    }
+  }
+}
