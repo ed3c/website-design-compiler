@@ -97,6 +97,7 @@ function exactHead(value: string, field: string): string {
 
 const root = process.cwd();
 const browserRoot = join(root, "artifacts", "browser-qa");
+const uploadedEvidenceRoot = join(browserRoot, "test-results-functional");
 const projection = JSON.parse(await readFile(join(root, "apps", "site", "generated", "benchmark-page-graphs.json"), "utf8")) as { kernelEditProof?: KernelEditProof };
 const proof = projection.kernelEditProof;
 if (!proof || proof.schema !== "website-design-compiler/kernel-edited-page-browser-subject/v1") {
@@ -130,7 +131,7 @@ const observations: Array<{
 }> = [];
 
 for (const project of expectedProjects) {
-  const evidencePath = join(browserRoot, "kernel-edit-evidence", `${project}.json`);
+  const evidencePath = join(uploadedEvidenceRoot, "kernel-edit-evidence", `${project}.json`);
   let observation: Observation;
   try {
     observation = JSON.parse(await readFile(evidencePath, "utf8")) as Observation;
@@ -208,8 +209,8 @@ const stable = {
 };
 const receipt = { ...stable, receiptIdentitySha256: digest(stable) };
 await validateAgainstSchema(receipt, "kernel-edited-page-browser-receipt.schema.json");
-await mkdir(browserRoot, { recursive: true });
-const receiptPath = join(browserRoot, "kernel-edited-page-browser-receipt.json");
+await mkdir(uploadedEvidenceRoot, { recursive: true });
+const receiptPath = join(uploadedEvidenceRoot, "kernel-edited-page-browser-receipt.json");
 await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ receiptPath, overall: receipt.overall, subjectHeadSha: receipt.subjectHeadSha, observationCount: observations.length, failureCount: receipt.failures.length }));
 if (receipt.overall !== "PASS") process.exitCode = 1;
