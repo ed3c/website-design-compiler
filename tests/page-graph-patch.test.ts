@@ -85,9 +85,11 @@ test("wrong base and field preconditions produce explicit conflict receipts with
   assert.equal(stale.graph, null);
   assert.match(stale.receipt.diagnostics.join("; "), /base digest/);
 
+  const original = patch.operations[0]!;
+  if (original.op !== "SET_SECTION_FIELD") throw new Error("headline patch must contain a field operation");
   const wrongValue = createPageGraphPatch({
     ...patch,
-    operations: [{ ...patch.operations[0]!, expectedValueSha256: "d".repeat(64) }]
+    operations: [{ ...original, expectedValueSha256: "d".repeat(64) }]
   });
   const conflict = applyPageGraphPatch(graph, wrongValue);
   assert.equal(conflict.receipt.state, "CONFLICT");
