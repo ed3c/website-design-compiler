@@ -59,6 +59,9 @@ test("exact tracked Git identity preserves the CI ref and rejects an empty branc
     const sha=git(root,["rev-parse","HEAD"]);
     const tree=git(root,["rev-parse","HEAD^{tree}"]);
     assert.deepEqual(exactTrackedGitIdentity(root,sha,"refs/pull/44/merge"),{sha,tree,ref:"refs/pull/44/merge"});
+    assert.throws(()=>exactTrackedGitIdentity(root,sha,""),/exact refs/);
     assert.throws(()=>exactTrackedGitIdentity(root,sha,"refs/heads/"),/exact refs/);
+    git(root,["checkout","--detach","-q"]);
+    assert.deepEqual(exactTrackedGitIdentity(root,sha),{sha,tree,ref:`refs/detached/${sha}`});
   }finally{await rm(root,{recursive:true,force:true});}
 });

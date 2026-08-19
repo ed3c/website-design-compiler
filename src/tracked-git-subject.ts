@@ -24,9 +24,12 @@ export function exactTrackedGitIdentity(root:string,expectedSha?:string,expected
   const sha=expectedSha??git(root,["rev-parse","HEAD"]);
   const subject=assertCleanTrackedGitSubject(root,sha);
   let ref=expectedRef;
-  if(!ref){
+  if(ref===undefined){
     try{ref=git(root,["symbolic-ref","--quiet","HEAD"]);}
-    catch{ref=`refs/detached/${sha}`;}
+    catch(error){
+      if(error&&typeof error==="object"&&"status" in error&&error.status===1)ref=`refs/detached/${sha}`;
+      else throw new Error("unable to resolve the tracked Git ref",{cause:error});
+    }
   }
   if(!exactRefPattern.test(ref))throw new Error("tracked Git identity requires an exact refs/* ref");
   return{...subject,ref};
