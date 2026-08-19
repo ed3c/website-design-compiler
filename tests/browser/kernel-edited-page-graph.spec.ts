@@ -56,7 +56,7 @@ test("browser binds the exact compiler-kernel edited page graph",async({page},te
   const screenshot=await page.screenshot({fullPage:true});
   const screenshotSha256=createHash("sha256").update(screenshot).digest("hex");
   const screenshotDirectory=join(process.cwd(),"artifacts","browser-qa","screenshots");
-  const evidenceDirectory=join(process.cwd(),"artifacts","browser-qa","kernel-edit-evidence");
+  const evidenceDirectory=join(process.cwd(),"artifacts","browser-qa","test-results-functional","kernel-edit-evidence");
   await mkdir(screenshotDirectory,{recursive:true});await mkdir(evidenceDirectory,{recursive:true});
   const screenshotName=`kernel-edit--${testInfo.project.name}.png`;
   await writeFile(join(screenshotDirectory,screenshotName),screenshot);
