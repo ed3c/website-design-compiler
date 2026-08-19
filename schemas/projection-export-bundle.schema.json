@@ -29,7 +29,14 @@
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "access": { "enum": ["PUBLIC","INTERNAL","PRIVATE","PROTECTED"] },
-    "scalar": { "type": ["string","number","boolean","null"] },
+    "scalar": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
     "record": {
       "type": "object",
       "additionalProperties": false,
