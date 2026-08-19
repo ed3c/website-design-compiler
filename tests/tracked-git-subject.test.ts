@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { assertCleanTrackedGitSubject } from "../src/tracked-git-subject.js";
+import { assertCleanTrackedGitSubject, exactTrackedGitIdentity } from "../src/tracked-git-subject.js";
 
 function git(root:string,args:string[]):string{
   return execFileSync("git",args,{cwd:root,encoding:"utf8"}).trim();
@@ -44,5 +44,21 @@ test("exact Git subject rejects a different checked-out commit",async()=>{
     await writeFile(join(root,"subject.txt"),"two\n");
     git(root,["commit","-q","-am","two"]);
     assert.throws(()=>assertCleanTrackedGitSubject(root,first),/does not match expected/);
+  }finally{await rm(root,{recursive:true,force:true});}
+});
+
+test("exact tracked Git identity preserves the CI ref and rejects an empty branch ref",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"wdc-tracked-identity-"));
+  try{
+    git(root,["init","-q"]);
+    git(root,["config","user.name","WDC Test"]);
+    git(root,["config","user.email","wdc-test@example.invalid"]);
+    await writeFile(join(root,"subject.txt"),"subject\n");
+    git(root,["add","subject.txt"]);
+    git(root,["commit","-q","-m","subject"]);
+    const sha=git(root,["rev-parse","HEAD"]);
+    const tree=git(root,["rev-parse","HEAD^{tree}"]);
+    assert.deepEqual(exactTrackedGitIdentity(root,sha,"refs/pull/44/merge"),{sha,tree,ref:"refs/pull/44/merge"});
+    assert.throws(()=>exactTrackedGitIdentity(root,sha,"refs/heads/"),/exact refs/);
   }finally{await rm(root,{recursive:true,force:true});}
 });
