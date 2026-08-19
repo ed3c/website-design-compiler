@@ -28,7 +28,10 @@ for(const category of categories)test(`${category} emits browser-derived visual 
     return metrics?.mountedEffects===count&&metrics.routeListeners===count;
   },pageNodeCount);
   await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
-  await expect(root.locator("[data-page-node][data-motion-runtime='CLEANED']")).toHaveCount(pageNodeCount);
+  await expect.poll(
+    ()=>pageNodes.evaluateAll((entries)=>entries.flatMap((entry)=>entry.getAttribute("data-motion-runtime")==="CLEANED"?[]:[{id:entry.getAttribute("data-page-node"),engine:entry.getAttribute("data-motion-engine"),trigger:entry.getAttribute("data-motion-trigger"),runtime:entry.getAttribute("data-motion-runtime"),cleanupObserved:entry.getAttribute("data-motion-cleanup-observed")}])),
+    {message:"every route listener must leave a diagnostic-free terminal motion state"}
+  ).toEqual([]);
 
   const outputRoot=join(process.cwd(),"artifacts","design-quality-browser");
   const screenshotDirectory=join(outputRoot,"screenshots");

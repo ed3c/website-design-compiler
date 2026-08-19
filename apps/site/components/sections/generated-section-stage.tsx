@@ -158,6 +158,10 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
       if(reason==="unmount"&&!unmountCleanupRecorded){unmountCleanupRecorded=true;metrics.unmountCleanupCount+=1;metrics.mountedEffects=Math.max(0,metrics.mountedEffects-1);}
       if(resourcesCleaned)return;
       resourcesCleaned=true;
+      if(reason==="route-change"){
+        setRuntimeState("CLEANED");
+        setCleanupObserved(true);
+      }
       controller.abort();
       controls.stop();
       disconnectIntersection();
@@ -168,10 +172,6 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
       release=undefined;
       element.style.opacity="1";
       element.style.transform="none";
-      if(reason==="route-change"){
-        setRuntimeState("CLEANED");
-        setCleanupObserved(true);
-      }
     };
     const onRouteChange=()=>{removeRouteListener();cleanupResources("route-change");};
     window.addEventListener("wdc:generated-motion:route-change",onRouteChange);
@@ -202,13 +202,14 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
         metrics.activeTimelines+=1;
         context=gsap.context(()=>{
           gsap.fromTo(element,{opacity:0.78,y:coarse?4:12},{opacity:1,y:0,duration:node.motionHook.durationMs/1000,delay:node.motionHook.delayMs/1000,ease:"power2.out",overwrite:"auto",onComplete:()=>{
-            release?.();release=undefined;releaseTimeline();setRuntimeState("SETTLED");
+            release?.();release=undefined;releaseTimeline();
+            if(!resourcesCleaned)setRuntimeState("SETTLED");
           }});
         },element);
         return;
       }
       release?.();release=undefined;
-      setRuntimeState("SETTLED");
+      if(!controller.signal.aborted&&!resourcesCleaned)setRuntimeState("SETTLED");
     };
     const start=()=>void run().catch((error:unknown)=>{if(!(error instanceof DOMException&&error.name==="AbortError"))throw error;});
     if(node.motionHook.trigger==="scroll-progress"&&"IntersectionObserver" in window){
