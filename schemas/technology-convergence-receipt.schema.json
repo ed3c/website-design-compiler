@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/technology-convergence-receipt.schema.json",
+  "title": "Technology Convergence Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","candidateIdentitySha256","buildSubjectSha256","sbomEvidenceIdentitySha256","componentBomRef","spdxEvaluationIdentitySha256","policyState","engineeringDecision","humanLegalState","admissionIdentitySha256","rightsEvidenceSha256","evaluatedAt","receiptIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/technology-convergence-receipt/v1" },
+    "candidateIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "buildSubjectSha256": { "$ref": "#/$defs/sha256" },
+    "sbomEvidenceIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "componentBomRef": { "type": "string", "minLength": 1 },
+    "spdxEvaluationIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "policyState": { "enum": ["ALLOW","REVIEW_REQUIRED","DENY","UNKNOWN"] },
+    "engineeringDecision": { "enum": ["ALLOW","REVIEW_REQUIRED","DENY","UNKNOWN"] },
+    "humanLegalState": { "const": "NOT_EVALUATED" },
+    "admissionIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "rightsEvidenceSha256": { "$ref": "#/$defs/sha256" },
+    "evaluatedAt": { "type": "string", "format": "date-time" },
+    "receiptIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

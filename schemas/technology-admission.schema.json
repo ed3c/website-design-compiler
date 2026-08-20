@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/technology-admission.schema.json",
+  "title": "Technology Admission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","candidateIdentitySha256","buildSubjectSha256","decision","rightsSubjects","evaluatedAt","authority","legalDisclaimer","admissionIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/technology-admission/v1" },
+    "candidateIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "buildSubjectSha256": { "$ref": "#/$defs/sha256" },
+    "decision": { "enum": ["ALLOW","REVIEW_REQUIRED","DENY","UNKNOWN"] },
+    "rightsSubjects": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rightsSubject" } },
+    "evaluatedAt": { "type": "string", "format": "date-time" },
+    "authority": { "const": "ENGINEERING_POLICY" },
+    "legalDisclaimer": { "const": "ENGINEERING_ADMISSION_NOT_LEGAL_ADVICE" },
+    "admissionIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "rightsSubject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subjectId","kind","state","evidenceSha256"],
+      "properties": {
+        "subjectId": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["SOFTWARE_LICENSE","MODEL_WEIGHT_LICENSE","GENERATED_OUTPUT_TERMS","HOSTED_SERVICE_TERMS","DATA_USE_TERMS","ASSET_RIGHTS","FONT_RIGHTS","CODEC_RIGHTS"] },
+        "state": { "enum": ["ALLOW","REVIEW_REQUIRED","DENY","UNKNOWN","NOT_APPLICABLE"] },
+        "evidenceSha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
