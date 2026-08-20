@@ -1,16 +1,23 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import test from "node:test";
 import { canonicalMediaValue, sha256, signMediaRequest, type MediaRequest } from "../src/media-router.js";
-import { productionAdmissionSigningPayload, type ProductionAdmissionPacket } from "../src/production-provider-admission.js";
+import { productionAdmissionPacketSha256, productionAdmissionSigningPayload, type ProductionAdmissionPacket } from "../src/production-provider-admission.js";
 import {
   executeProductionProviderConfiguration,
+  serializeProductionProviderExecutionEvidence,
+  validateProductionProviderExecutionEvidence,
   validateProductionProviderExecutionConfig,
   type ProductionProviderExecutionConfig
 } from "../src/production-provider-execution.js";
-import type { ProductionProviderPolicy } from "../src/production-media-provider.js";
+import { productionRightsAdmissionSha256, type ProductionProviderPolicy } from "../src/production-media-provider.js";
 import type { RepositoryClearanceReceipt, RightsSubject } from "../src/repository-rights-clearance.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { RELEASE_CAPABILITY_SPECS, readBoundReleaseEvidence, readCapabilityEvidence } from "../src/release-evidence.js";
+import { buildMediaCandidateRejectionReceipt } from "../src/media-candidate-rejection.js";
 
 const secret = "fixture-request-secret";
 const request: MediaRequest = {
@@ -19,7 +26,7 @@ const request: MediaRequest = {
   kind: "image",
   modelId: "fixture-model",
   prompt: "A neutral geometric product scene",
-  parameters: { width: 16, height: 12, seed: 42 },
+  parameters: { width: 16, height: 12, seed: 42, privateNote: "do-not-persist" },
   optimization: { target: "web", maxBytes: 65_536 }
 };
 const policy: ProductionProviderPolicy = {
@@ -47,7 +54,9 @@ function subject(id: string, kind: RightsSubject["kind"], identity: string): Rig
     geographicRestrictions: [], usageRestrictions: []
   };
 }
-const rightsReceipt: RepositoryClearanceReceipt = {
+const git={sha:"a".repeat(40),ref:"refs/heads/test"};
+const releaseGit={...git,tree:"c".repeat(40)};
+const rightsReceipt: RepositoryClearanceReceipt & {git:{sha:string;ref:string}} = {
   schema: "website-design-compiler/repository-rights-clearance/v2",
   overall: "PASS",
   generatedAt: "2026-08-18T00:00:00.000Z",
@@ -57,8 +66,9 @@ const rightsReceipt: RepositoryClearanceReceipt = {
     subject(policy.rights.hostedService.subjectId, "service", policy.rights.hostedService.expectedIdentity)
   ],
   counts: { ALLOW: 3, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 },
-  unresolved: [], expiredWaivers: [], noticeSubjects: [],
-  legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"
+  unresolved: [], expiredWaivers: [], noticeSubjects: [], diagnostics: [],
+  legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE",
+  git
 };
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const publicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -67,7 +77,6 @@ const config: ProductionProviderExecutionConfig = {
   schema: "website-design-compiler/production-provider-execution-config/v1",
   signedRequestPath: "signed-request.json",
   policyPath: "policy.json",
-  rightsReceiptPath: "rights.json",
   admissionPacketPath: "admission.json",
   admissionAuthority: { authorityId: "fixture-reviewer", publicKeyPath: "reviewer.pub.pem" },
   adapter: {
@@ -92,7 +101,7 @@ function admission(): ProductionAdmissionPacket {
     transportSha256: sha256(canonicalMediaValue(config.adapter)),
     modelIdentitySha256: sha256(canonicalMediaValue({ modelId: policy.identity.modelId, modelRevision: policy.identity.modelRevision, kind: policy.identity.kind })),
     policySha256: sha256(canonicalMediaValue(policy)),
-    rightsReceiptSha256: sha256(canonicalMediaValue(rightsReceipt)),
+    rightsReceiptSha256: productionRightsAdmissionSha256(rightsReceipt, policy),
     credentials: "AVAILABLE",
     budget: "AUTHORIZED",
     rateLimitRemaining: 1,
@@ -116,6 +125,9 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
     admissionPublicKeyPem: publicKeyPem,
     requestSecret: secret,
     providerCredential: "fixture-provider-token",
+    rightsReceiptBytesSha256: sha256(Buffer.from(`${JSON.stringify(rightsReceipt, null, 2)}\n`)),
+    git,
+    resolveHost: async()=>["93.184.216.34"],
     now: new Date("2026-08-18T12:00:00.000Z"),
     fetchImpl: async () => new Response(JSON.stringify({
       schema: "website-design-compiler/http-production-provider-response/v1",
@@ -134,7 +146,136 @@ test("configured status path composes signed admission, HTTP adapter, asset vali
   assert.match(result.status.executionReceiptSha256, /^[a-f0-9]{64}$/);
   assert.equal(result.status.assetSha256, result.receipt.asset?.sha256);
   assert.doesNotMatch(JSON.stringify(result.status), /fixture-provider-token|fixture-request-secret/);
-  await validateAgainstSchema({ ...result.status, git: { sha: "a".repeat(40), ref: "refs/heads/test" } }, "production-provider-status.schema.json");
+  assert.doesNotMatch(JSON.stringify(result.executionEvidence), /do-not-persist|privateNote|neutral geometric product scene/i);
+  const executionInputBytes=serializeProductionProviderExecutionEvidence(result.executionEvidence);
+  assert.equal(result.receipt.executionInputSha256,sha256(executionInputBytes));
+  assert.deepEqual(validateProductionProviderExecutionEvidence(result.executionEvidence,rightsReceipt),[]);
+  await validateAgainstSchema(result.executionEvidence,"production-provider-execution-evidence.schema.json");
+  await validateAgainstSchema(result.receipt,"production-provider-receipt.schema.json");
+  await validateAgainstSchema({
+    ...result.status,
+    executedAt:result.executionEvidence.executedAt,
+    artifacts:{
+      executionInput:{path:"production-provider-execution-input.json",sha256:result.receipt.executionInputSha256,bytes:executionInputBytes.byteLength},
+      executionReceipt:{path:"production-provider-execution-receipt.json",sha256:"b".repeat(64),bytes:100},
+      asset:{path:"production-provider-asset.png",sha256:result.status.assetSha256,bytes:80,mediaType:"image/png"},
+      candidateRejection:{path:"media-candidate-rejection.json",schema:"website-design-compiler/media-candidate-rejection/v2",sha256:"c".repeat(64),bytes:100,sourceAdmissionSha256:"d".repeat(64),trustedGitTree:"e".repeat(40)}
+    },
+    git
+  }, "production-provider-status.schema.json");
+
+  const root=await mkdtemp(join(tmpdir(),"wdc-provider-release-valid-"));
+  const outside=await mkdtemp(join(tmpdir(),"wdc-provider-status-outside-"));
+  const previousTrustedRights=process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256;
+  const previousTrustedTree=process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE;
+  try{
+    const providerDirectory=join(root,"artifacts/media-generator");
+    const rightsPath=join(root,"artifacts/rights-clearance/repository-rights-clearance.json");
+    await mkdir(providerDirectory,{recursive:true});
+    await mkdir(dirname(rightsPath),{recursive:true});
+    await mkdir(join(root,"schemas"),{recursive:true});
+    await mkdir(join(root,"fixtures/media"),{recursive:true});
+    const [candidatePolicyBytes,candidateRightsBytes]=await Promise.all([
+      readFile(join(process.cwd(),"fixtures/media/model-policy.json")),
+      readFile(join(process.cwd(),"rights-production-evidence.json"))
+    ]);
+    await Promise.all([
+      writeFile(join(root,"fixtures/media/model-policy.json"),candidatePolicyBytes),
+      writeFile(join(root,"rights-production-evidence.json"),candidateRightsBytes),
+      writeFile(join(root,"schemas/production-provider-status.schema.json"),await readFile(join(process.cwd(),"schemas/production-provider-status.schema.json")))
+    ]);
+    const trustedRightsEvidenceSha256=sha256(candidateRightsBytes);
+    process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256=trustedRightsEvidenceSha256;
+    const trustedGitTree=releaseGit.tree;
+    process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE=trustedGitTree;
+    const candidateReceipt=await buildMediaCandidateRejectionReceipt(root,{...git,tree:trustedGitTree},new Date("2026-08-18T12:00:00.000Z"),trustedRightsEvidenceSha256,trustedGitTree);
+    const candidateBytes=Buffer.from(`${JSON.stringify(candidateReceipt,null,2)}\n`);
+    const candidateBinding={path:"media-candidate-rejection.json",schema:candidateReceipt.schema,sha256:sha256(candidateBytes),bytes:candidateBytes.byteLength,sourceAdmissionSha256:trustedRightsEvidenceSha256,trustedGitTree};
+    const executionBytes=Buffer.from(`${JSON.stringify(result.receipt,null,2)}\n`);
+    const assetBytes=Buffer.from(result.asset?.bytes??[]);
+    const status={...result.status,executedAt:result.executionEvidence.executedAt,executionReceiptSha256:sha256(executionBytes),assetSha256:sha256(assetBytes),artifacts:{executionInput:{path:"production-provider-execution-input.json",sha256:sha256(executionInputBytes),bytes:executionInputBytes.byteLength},executionReceipt:{path:"production-provider-execution-receipt.json",sha256:sha256(executionBytes),bytes:executionBytes.byteLength},asset:{path:"production-provider-asset.png",sha256:sha256(assetBytes),bytes:assetBytes.byteLength,mediaType:"image/png"},candidateRejection:candidateBinding},git};
+    await Promise.all([
+      writeFile(join(providerDirectory,"production-provider-execution-input.json"),executionInputBytes),
+      writeFile(join(providerDirectory,"production-provider-execution-receipt.json"),executionBytes),
+      writeFile(join(providerDirectory,"production-provider-asset.png"),assetBytes),
+      writeFile(join(providerDirectory,"media-candidate-rejection.json"),candidateBytes),
+      writeFile(rightsPath,`${JSON.stringify(rightsReceipt,null,2)}\n`),
+      writeFile(join(root,RELEASE_CAPABILITY_SPECS.productionProvider.path),`${JSON.stringify(status,null,2)}\n`)
+    ]);
+    const bound=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
+    assert.equal(bound.state,"PASS",bound.errors.join("; "));
+    const wrongRef=await readCapabilityEvidence(root,"productionProvider",{...releaseGit,ref:"refs/heads/main"});
+    assert.equal(wrongRef.state,"FAIL","capability evidence must bind the externally expected Git ref");
+
+    const statusPath=join(root,RELEASE_CAPABILITY_SPECS.productionProvider.path);
+    const statusBytes=await readFile(statusPath);
+    const outsideStatus=join(outside,"production-provider-status.json");
+    await writeFile(outsideStatus,statusBytes);
+    await rm(statusPath);
+    await symlink(outsideStatus,statusPath);
+    const symlinkedStatus=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
+    assert.equal(symlinkedStatus.state,"FAIL","top-level provider status symlinks must fail closed");
+    await rm(statusPath);
+    await writeFile(statusPath,statusBytes);
+
+    await rm(join(providerDirectory,"media-candidate-rejection.json"));
+    const missingCandidate=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
+    assert.equal(missingCandidate.state,"FAIL");
+    assert.match(missingCandidate.errors.join("; "),/candidate rejection artifact is missing or unreadable/);
+    await writeFile(join(providerDirectory,"media-candidate-rejection.json"),candidateBytes);
+
+    const tamperedInput=structuredClone(result.executionEvidence);
+    tamperedInput.admissionPacket.rateLimitRemaining+=1;
+    const tamperedInputBytes=serializeProductionProviderExecutionEvidence(tamperedInput);
+    const tamperedExecution=structuredClone(result.receipt);
+    tamperedExecution.executionInputSha256=sha256(tamperedInputBytes);
+    tamperedExecution.admissionEvidence.admissionPacketSha256=productionAdmissionPacketSha256(tamperedInput.admissionPacket);
+    const tamperedExecutionBytes=Buffer.from(`${JSON.stringify(tamperedExecution,null,2)}\n`);
+    const tamperedStatus={...status,executionReceiptSha256:sha256(tamperedExecutionBytes),artifacts:{...status.artifacts,executionInput:{...status.artifacts.executionInput,sha256:sha256(tamperedInputBytes),bytes:tamperedInputBytes.byteLength},executionReceipt:{...status.artifacts.executionReceipt,sha256:sha256(tamperedExecutionBytes),bytes:tamperedExecutionBytes.byteLength}}};
+    await Promise.all([
+      writeFile(join(providerDirectory,"production-provider-execution-input.json"),tamperedInputBytes),
+      writeFile(join(providerDirectory,"production-provider-execution-receipt.json"),tamperedExecutionBytes),
+      writeFile(join(root,RELEASE_CAPABILITY_SPECS.productionProvider.path),`${JSON.stringify(tamperedStatus,null,2)}\n`)
+    ]);
+    const tampered=await readBoundReleaseEvidence(root,RELEASE_CAPABILITY_SPECS.productionProvider.path,RELEASE_CAPABILITY_SPECS.productionProvider.schema,releaseGit);
+    assert.equal(tampered.state,"FAIL");
+    assert.match(tampered.errors.join("; "),/signature verification failed/);
+  }finally{
+    if(previousTrustedRights===undefined)delete process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256;
+    else process.env.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256=previousTrustedRights;
+    if(previousTrustedTree===undefined)delete process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE;
+    else process.env.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE=previousTrustedTree;
+    await rm(root,{recursive:true,force:true});
+    await rm(outside,{recursive:true,force:true});
+  }
+});
+
+test("configured credential-bearing execution denies non-ALLOW rights before fetch",async()=>{
+  let fetchCalls=0;
+  const deniedSubjects=rightsReceipt.subjects.map((entry)=>entry.id===policy.rights.modelWeight.subjectId?{...entry,state:"DENY" as const}:entry);
+  const deniedRights:typeof rightsReceipt={
+    ...rightsReceipt,
+    subjects:deniedSubjects,
+    counts:{ALLOW:2,REVIEW_REQUIRED:0,DENY:1,UNKNOWN:0,NOT_DISTRIBUTED:0}
+  };
+  const result=await executeProductionProviderConfiguration({
+    config,
+    signed:{request,signature:signMediaRequest(request,secret)},
+    policy,
+    rightsReceipt:deniedRights,
+    admissionPacket:admission(),
+    admissionPublicKeyPem:publicKeyPem,
+    requestSecret:secret,
+    providerCredential:"fixture-provider-token",
+    rightsReceiptBytesSha256:sha256(Buffer.from(`${JSON.stringify(deniedRights,null,2)}\n`)),
+    git,
+    now:new Date("2026-08-18T12:00:00.000Z"),
+    fetchImpl:async()=>{fetchCalls+=1;throw new Error("must not call credential-bearing fetch");}
+  });
+  assert.equal(fetchCalls,0);
+  assert.equal(result.receipt.overall,"NOT_EXERCISED");
+  assert.equal(result.receipt.admissionState,"DENIED");
+  assert.match(result.receipt.reason,/model:fixture-model rights state is DENY/);
 });
 
 test("execution config rejects traversal, common environment variables, and secret reuse", () => {
@@ -148,4 +289,11 @@ test("execution config rejects traversal, common environment variables, and secr
   assert.match(errors, /requestSecretEnv.*dedicated/);
   assert.match(errors, /credentialEnv.*dedicated/);
   assert.match(errors, /separate environment/);
+});
+
+test("execution config cannot select an alternate repository rights receipt", async () => {
+  await assert.rejects(
+    validateAgainstSchema({ ...config, rightsReceiptPath: "alternate-rights.json" }, "production-provider-execution-config.schema.json"),
+    /additional properties/
+  );
 });

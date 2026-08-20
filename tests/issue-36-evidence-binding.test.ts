@@ -10,7 +10,7 @@ import { distantVisualCorpus, qualityObservation, tokenMatchPass } from "./helpe
 
 const digest = "a".repeat(64);
 const gitSha = "b".repeat(40);
-const categories = ["b2b-product", "editorial", "premium-consumer", "motion-heavy", "interactive-2d", "interactive-3d"];
+const categories = ["b2b-product", "editorial", "premium-consumer-brand", "motion-heavy-creative", "interactive-2d", "interactive-3d"];
 
 function evaluation(category: string, viewport: "mobile" | "desktop") {
   const pages=compileAllSectionPageFixtures();

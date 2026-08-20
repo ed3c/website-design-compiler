@@ -1,0 +1,22 @@
+{
+  "blockers": [
+    "license-missing",
+    "export-tree-drift",
+    "open-delivery-slices",
+    "open-delivery-prs"
+  ],
+  "commit": "4a79d9635911690950f02edda4505672ba7544f6",
+  "export_source_commit": "16ba691b23f1933d7049b3d5b29e7ffc2a893ad7",
+  "export_tree_sha": "6287b2dc9dc63fc6e4b96baf414a55fe8c35bf31",
+  "file_count": 321,
+  "github_repo": "ed3c/website-design-compiler",
+  "github_repository_id": "R_kgDOT5yxHQ",
+  "history_root": true,
+  "license_spdx": "Apache-2.0",
+  "line": "website-design-compiler",
+  "public_ready": false,
+  "remote_url": "https://github.com/ed3c/website-design-compiler",
+  "schema": "github-publication-attestation/v1",
+  "verified_at": "2026-08-18T22:40:49Z",
+  "visibility": "PUBLIC"
+}

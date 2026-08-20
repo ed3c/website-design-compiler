@@ -4,11 +4,12 @@ import { mkdir,readFile,writeFile } from "node:fs/promises";
 import { join,resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
 const evaluatorPath="artifacts/v3/design-quality/design-quality-eval-receipt.json";
 const bindingPath="artifacts/handoff/issue-36-evidence-binding.json";
 const arenaPath="artifacts/arena/arena-score.json";
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
+const categories=ARENA_CATEGORIES;
 type GitSubject={sha:string;ref:string;tree:string};
 type Gate="PASS"|"FAIL";
 const isRecord=(value:unknown):value is Record<string,any>=>Boolean(value)&&typeof value==="object"&&!Array.isArray(value);

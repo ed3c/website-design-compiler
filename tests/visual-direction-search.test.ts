@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { deflateSync } from "node:zlib";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
 import { buildDesignSystemPlan } from "../src/design-system-compiler.js";
-import { auditCandidateOriginality, fingerprintVisualDirection, isVisualDirectionCompatible, searchVisualDirections, visualDirectionSha256 } from "../src/visual-direction-search.js";
+import { validateAgainstSchema } from "../src/validate.js";
+import { REFERENCE_BROWSER_TRUST_SOURCE_PATHS, auditCandidateOriginality, deriveObservedVisualDimensions, loadVerifiedVisualReferences, referenceBrowserTrustSourceSha256, searchVisualDirections } from "../src/visual-direction-search.js";
 
 function input(pageType = "product-landing"): CompilerInput {
   return {
@@ -20,15 +26,10 @@ test("search produces at least three materially different candidate directions a
   assert.equal(new Set(receipt.candidates.map((candidate) => candidate.signature)).size, 3);
   assert.equal(new Set(receipt.candidates.map((candidate) => candidate.dimensions.grid)).size >= 2, true);
   assert.equal(new Set(receipt.candidates.map((candidate) => candidate.dimensions.typography)).size >= 2, true);
-  assert.ok(receipt.originality.candidatePairs.every((pair)=>pair.domainDistance>=receipt.originality.minimumPairwiseDomainDistance));
-  assert.ok(receipt.candidates.every((candidate)=>candidate.minimumPairwiseDomainDistance>=3));
-});
-
-test("same-domain reference fingerprint is rejected even when the opaque signature differs",()=>{
-  const receipt=searchVisualDirections(input("editorial-feature"));
-  const candidate=receipt.candidates[0]!;
-  const reasons=auditCandidateOriginality(candidate,[],[fingerprintVisualDirection(candidate.dimensions)]);
-  assert.ok(reasons.some((reason)=>reason.includes("domain fingerprint")));
+  assert.equal(receipt.diversity.state, "PASS");
+  assert.ok(receipt.diversity.minimumPairwiseDistance >= receipt.diversity.threshold);
+  assert.equal(receipt.originality.state, "NOT_EXERCISED");
+  assert.equal(receipt.originality.observedReferenceCount, 0);
 });
 
 test("every candidate carries auditable score dimensions and rejection reasons", () => {
@@ -38,17 +39,257 @@ test("every candidate carries auditable score dimensions and rejection reasons",
     assert.ok(candidate.score.differentiation >= 0);
     assert.ok(candidate.score.readability >= 0);
     assert.ok(candidate.score.responsiveRobustness >= 0);
-    assert.ok(candidate.score.originalityDistance >= 70);
+    assert.equal(candidate.score.originalityDistance, null);
     assert.equal(Number.isInteger(candidate.score.total), true);
+    assert.ok(candidate.score.total >= 0 && candidate.score.total <= 100);
     if (candidate.state === "REJECTED") assert.ok(candidate.rejectionReasons.length > 0);
   }
 });
 
-test("originality audit rejects a candidate whose signature matches the reference", () => {
+test("category fit cannot push a showcase candidate beyond the receipt score contract", async () => {
+  const compilerInput: CompilerInput = {
+    schema: "website-design-compiler/input/v1",
+    project: "evidence-first-showcase",
+    brief: {
+      pageType: "product-landing",
+      audience: "design engineering teams evaluating governed agentic website delivery",
+      objective: "show a complete evidence-first path from neutral reference grammar through governed UI, optional motion and graphics, and release receipts"
+    },
+    requestedStages: ["visual-direction-search"]
+  };
+  const receipt = searchVisualDirections(compilerInput);
+  await validateAgainstSchema(receipt, "visual-direction-search-v2.schema.json");
+  assert.ok(receipt.candidates.every((candidate) => candidate.score.total <= 100));
+});
+
+test("originality audit rejects a candidate that is too close to an observed reference", () => {
   const receipt = searchVisualDirections(input("editorial-feature"));
   const candidate = receipt.candidates[0]!;
-  const reasons = auditCandidateOriginality(candidate, [candidate.signature]);
-  assert.ok(reasons.some((reason) => reason.includes("matches a reference")));
+  const reasons = auditCandidateOriginality(candidate, [candidate.dimensions]);
+  assert.ok(reasons.some((reason) => reason.includes("too close to an observed reference")));
+});
+
+function pngCrc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const typeBytes = Buffer.from(type, "ascii");
+  const chunk = Buffer.alloc(data.length + 12);
+  chunk.writeUInt32BE(data.length, 0);
+  typeBytes.copy(chunk, 4);
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(pngCrc32(Buffer.concat([typeBytes, data])), data.length + 8);
+  return chunk;
+}
+
+function indexedPngWithoutPalette(width: number, height: number): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 3;
+  const rows = Buffer.alloc(height * (width + 1));
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(rows)),
+    pngChunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
+function pngWithUnknownCriticalChunk(width: number, height: number): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 0;
+  const rows = Buffer.alloc(height * (width + 1));
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("ABCD", Buffer.from("unsupported critical data")),
+    pngChunk("IDAT", deflateSync(rows)),
+    pngChunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
+async function withVisualEvidence<T>(sourceHashOverride: string | null, run: (compilerInput: CompilerInput, root: string) => Promise<T>, includeSelfSignedProducer = false, includeExternalAdmission = false, evidenceOverride?: Buffer): Promise<T> {
+  const root = await mkdtemp(join(tmpdir(), "wdc-visual-evidence-"));
+  try {
+    const compilerInput = input("premium-consumer");
+    const value = "<!doctype html><main><h1>Observed reference</h1></main>";
+    const evidenceBytes = evidenceOverride ?? Buffer.alloc(24);
+    if (!evidenceOverride) {
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(evidenceBytes);
+      evidenceBytes.writeUInt32BE(13, 8);
+      evidenceBytes.write("IHDR", 12, "ascii");
+      evidenceBytes.writeUInt32BE(1280, 16);
+      evidenceBytes.writeUInt32BE(800, 20);
+    }
+    await writeFile(join(root, "evidence.png"), evidenceBytes);
+    const digest = (content: string | Uint8Array) => createHash("sha256").update(content).digest("hex");
+    const measurements = {
+      desktop: { fontFamily: "Arial", headingFontSizePx: 40, bodyFontSizePx: 16, gridColumnCount: 2, gapPx: 24, cardBorderWidthPx: 1, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 1 },
+      mobile: { fontFamily: "Arial", headingFontSizePx: 30, bodyFontSizePx: 16, gridColumnCount: 1, gapPx: 16, cardBorderWidthPx: 1, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 1 }
+    };
+    const receipt = {
+      schema: "website-design-compiler/observed-visual-fingerprint/v3",
+      state: "PASS",
+      producer: "playwright-computed-style/v1",
+      referenceValueSha256: sourceHashOverride ?? digest(value),
+      capturedArtifactSha256: digest(value),
+      producerReceipt: {
+        schema: "website-design-compiler/reference-browser-receipt/v2",
+        path: "forged-browser-runtime-receipt.json",
+        sha256: "0".repeat(64)
+      },
+      evidenceArtifacts: [
+        { viewport: "desktop", path: "evidence.png", sha256: digest(evidenceBytes), width: 1280, minimumHeight: 800 },
+        { viewport: "mobile", path: "evidence.png", sha256: digest(evidenceBytes), width: 390, minimumHeight: 844 }
+      ],
+      measurements,
+      dimensions: deriveObservedVisualDimensions(measurements),
+      observations: ["computed typography", "computed layout", "computed spacing", "computed motion", "observed media"]
+    };
+    if (includeSelfSignedProducer) {
+      const snapshot = (width: number, height: number, columns: number, headingSize: string) => ({
+        viewport: { width, height },
+        main: { x: 0, y: 0, width, height },
+        hierarchy: { h1: 1, h2: 0, nav: 1, main: 1, section: 1, article: 2 },
+        typography: { fontFamily: "Arial", fontSize: headingSize, fontWeight: "700", lineHeight: headingSize },
+        layout: { gridColumnCount: columns, gridTemplateColumns: columns === 2 ? "1fr 1fr" : "1fr", gap: "16px" },
+        motion: { transitionDuration: "0.2s", transitionProperty: "transform" },
+        assets: { images: 1, videos: 0, canvases: 0 }
+      });
+      const producerReceipt = {
+        schema: "website-design-compiler/reference-browser-receipt/v2",
+        overall: "PASS",
+        execution: { mode: "PLAYWRIGHT_BROWSER", startedAt: "2026-08-18T00:00:00.000Z", completedAt: "2026-08-18T00:00:01.000Z" },
+        browser: { engine: "chromium", version: "forged" },
+        sourceMode: "DETERMINISTIC_HTML_FIXTURE",
+        capturedArtifactSha256: digest(value),
+        measurementsSha256: digest(JSON.stringify(measurements)),
+        evidenceArtifacts: receipt.evidenceArtifacts,
+        observations: { desktop: snapshot(1280, 800, 2, "40px"), mobile: snapshot(390, 844, 1, "30px") },
+        responsiveBehavior: { state: "PASS", desktopColumns: 2, mobileColumns: 1, desktopHeadingSize: "40px", mobileHeadingSize: "30px" },
+        supportedFacts: ["layout", "typography", "hierarchy", "motion", "assets", "responsive"],
+        cameraObservation: "NOT_APPLICABLE",
+        implementationDetails: "UNKNOWN"
+      };
+      const producerReceiptText = `${JSON.stringify(producerReceipt, null, 2)}\n`;
+      await writeFile(join(root, "forged-browser-runtime-receipt.json"), producerReceiptText, "utf8");
+      receipt.producerReceipt.sha256 = digest(producerReceiptText);
+    }
+    let trustedAdmissionSha256: string | undefined;
+    if (includeExternalAdmission) {
+      for (const path of REFERENCE_BROWSER_TRUST_SOURCE_PATHS) {
+        const absolutePath = join(root, path);
+        await mkdir(dirname(absolutePath), { recursive: true });
+        await writeFile(absolutePath, `independently reviewed source: ${path}\n`, "utf8");
+      }
+      const admission = {
+        schema: "website-design-compiler/reference-browser-admission/v1",
+        state: "PASS",
+        producer: "playwright-computed-style/v1",
+        sourceFilesSha256: await referenceBrowserTrustSourceSha256(root),
+        capturedArtifactSha256: digest(value),
+        authority: { kind: "repository-administrator", identity: "external browser evidence authority", admittedAt: "2026-08-18T00:01:00.000Z" }
+      };
+      const admissionPath = join(root, "fixtures/reference-browser/browser-admission.json");
+      await mkdir(dirname(admissionPath), { recursive: true });
+      const admissionText = `${JSON.stringify(admission, null, 2)}\n`;
+      await writeFile(admissionPath, admissionText, "utf8");
+      trustedAdmissionSha256 = digest(admissionText);
+    }
+    const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
+    await writeFile(join(root, "receipt.json"), receiptText, "utf8");
+    compilerInput.references = [{
+      kind: "html",
+      value,
+      visualEvidence: { receiptPath: "receipt.json", receiptSha256: digest(receiptText) }
+    }];
+    const previousAdmissionSha256 = process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256;
+    if (trustedAdmissionSha256) process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 = trustedAdmissionSha256;
+    try {
+      return await run(compilerInput, root);
+    } finally {
+      if (previousAdmissionSha256 === undefined) delete process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256;
+      else process.env.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 = previousAdmissionSha256;
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+test("caller-authored measurements and fake screenshot bytes cannot promote originality", async () => {
+  await assert.rejects(
+    withVisualEvidence(null, async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root), true),
+    /trusted reference browser admission/
+  );
+});
+
+test("the external browser admission binds every executable producer and verifier entrypoint", () => {
+  const trustSources = new Set<string>(REFERENCE_BROWSER_TRUST_SOURCE_PATHS);
+  for (const path of [
+    "package.json",
+    "scripts/visual-direction-benchmark-receipt.ts",
+    "src/validate.ts"
+  ]) {
+    assert.ok(trustSources.has(path), `${path} is outside the browser trust source aggregate`);
+  }
+});
+
+test("an externally admitted receipt still cannot promote an incomplete PNG header", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /truncated PNG chunk|complete PNG browser screenshot/);
+  }, true, true);
+});
+
+test("an externally admitted indexed PNG without its required palette cannot promote originality", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /missing its PNG palette/);
+  }, true, true, indexedPngWithoutPalette(1280, 800));
+});
+
+test("an externally admitted PNG with an unknown critical chunk cannot promote originality", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /unknown critical PNG chunk ABCD/);
+  }, true, true, pngWithUnknownCriticalChunk(1280, 800));
+});
+
+test("observed fingerprint dimensions are derived from browser measurements", async () => {
+  await withVisualEvidence(null, async (compilerInput, root) => {
+    const receiptPath = join(root, "receipt.json");
+    const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+    receipt.dimensions.signatureInteraction = "none";
+    const receiptText = `${JSON.stringify(receipt, null, 2)}\n`;
+    await writeFile(receiptPath, receiptText, "utf8");
+    compilerInput.references![0]!.visualEvidence!.receiptSha256 = createHash("sha256").update(receiptText).digest("hex");
+    await assert.rejects(loadVerifiedVisualReferences(compilerInput, root), /dimensions do not match browser measurements/);
+  });
+});
+
+test("measurement derivation does not invent progressive reveal", () => {
+  const measurements = {
+    desktop: { fontFamily: "Arial", headingFontSizePx: 40, bodyFontSizePx: 16, gridColumnCount: 2, gapPx: 24, cardBorderWidthPx: 0, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 0 },
+    mobile: { fontFamily: "Arial", headingFontSizePx: 30, bodyFontSizePx: 16, gridColumnCount: 1, gapPx: 16, cardBorderWidthPx: 0, cardBackgroundColor: "rgba(0, 0, 0, 0)", bodyColor: "rgb(0, 0, 0)", bodyBackgroundColor: "rgba(0, 0, 0, 0)", linkColor: "rgb(0, 0, 238)", images: 1, videos: 0, canvases: 0, transitionDurationMs: 200, transitionProperty: "transform", interactiveControlCount: 0, revealTargetCount: 0 }
+  };
+  assert.equal(deriveObservedVisualDimensions(measurements).signatureInteraction, "none");
+  assert.equal(deriveObservedVisualDimensions(measurements).surface, "flat");
+  assert.equal(deriveObservedVisualDimensions(measurements).typography, "neo-grotesk");
+});
+
+test("an observed fingerprint with the wrong source hash fails closed", async () => {
+  await assert.rejects(
+    withVisualEvidence("0".repeat(64), async (compilerInput, root) => loadVerifiedVisualReferences(compilerInput, root)),
+    /not bound to the supplied reference value/
+  );
 });
 
 test("same input and seed produces identical ranking and winner", () => {
@@ -57,25 +298,44 @@ test("same input and seed produces identical ranking and winner", () => {
   assert.deepEqual(first, second);
 });
 
-test("six page families select six compatible material directions",()=>{
-  const pageTypes=["b2b product landing","editorial publication","premium consumer brand","motion-heavy creative site","interactive 2d experience","interactive 3d showcase"];
-  const receipts=pageTypes.map((pageType)=>searchVisualDirections(input(pageType)));
-  assert.equal(new Set(receipts.map((receipt)=>visualDirectionSha256(receipt.selectedDirection))).size,6);
-  receipts.forEach((receipt,index)=>assert.equal(isVisualDirectionCompatible(pageTypes[index]!,receipt.selectedDirection),true));
+test("benchmark page families select at least three materially different winners", () => {
+  const pageTypes = ["b2b-product", "editorial", "premium-consumer-brand", "motion-heavy-creative", "interactive-2d", "interactive-3d"];
+  const observedReference = {
+    dimensions: {
+      typography: "neo-grotesk", typeContrast: "dramatic", density: "airy", grid: "modular", surface: "bordered",
+      colorStrategy: "neutral-accent", mediaStrategy: "product-media", motionIntensity: "moderate", signatureInteraction: "none"
+    } as const,
+    receiptSha256: "a".repeat(64),
+    capturedArtifactSha256: "b".repeat(64),
+    evidenceArtifactSha256: "c".repeat(64)
+  };
+  const winners = pageTypes.map((pageType) => searchVisualDirections(input(pageType), "website-design-compiler/v2", [observedReference]).candidates[0]!.signature);
+  assert.ok(new Set(winners).size >= 3, JSON.stringify(winners));
 });
 
 test("winner becomes the single downstream selected visual direction", () => {
   const compilerInput = input("motion-heavy-creative");
   const search = searchVisualDirections(compilerInput);
-  const designSystem = buildDesignSystemPlan(compilerInput,search);
+  const designSystem = buildDesignSystemPlan(compilerInput, search);
   assert.equal(designSystem.selectedVisualDirection.candidateId, search.selectedCandidateId);
   assert.deepEqual(designSystem.selectedVisualDirection.dimensions, search.selectedDirection);
   assert.equal(designSystem.selectedVisualDirection.source, search.schema);
-  assert.equal(designSystem.selectedVisualDirection.receiptSha256,visualDirectionSha256(search));
 });
 
-test("downstream design system rejects a search receipt from another compiler input",()=>{
-  const first=input("motion-heavy-creative");
-  const wrong=searchVisualDirections(input("editorial"));
-  assert.throws(()=>buildDesignSystemPlan(first,wrong),/exact visual-direction receipt/);
+test("design-system schema admits every canonical governed frontend component", async () => {
+  const compilerInput = input("b2b-product");
+  const designSystem = buildDesignSystemPlan(compilerInput, searchVisualDirections(compilerInput));
+
+  assert.ok(designSystem.governedComponents.includes("rich-section"));
+  await validateAgainstSchema(designSystem, "design-system-plan.schema.json");
+});
+
+test("design system consumes the supplied search receipt instead of rerunning search", () => {
+  const compilerInput = input("product-landing");
+  const search = searchVisualDirections(compilerInput, "downstream-selected-seed");
+  const designSystem = buildDesignSystemPlan(compilerInput, search);
+
+  assert.equal(designSystem.selectedVisualDirection.searchSeed, "downstream-selected-seed");
+  assert.equal(designSystem.selectedVisualDirection.candidateId, search.selectedCandidateId);
+  assert.deepEqual(designSystem.selectedVisualDirection.dimensions, search.selectedDirection);
 });

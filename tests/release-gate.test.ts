@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateReleaseGate } from "../src/release-gate.js";
+import { bindReleaseEvidence, evaluateReleaseGate } from "../src/release-gate.js";
 
 const pass = {
   runtime: "PASS", browser: "PASS", accessibilityPerformance: "PASS", storybook: "PASS", sharedBindings: "PASS", arena: "PASS", showcase: "PASS", externalSkills: "PASS", mediaGenerator: "PASS", authoringStudio: "PASS", payloadCms: "PASS", repositoryRights: "PASS"
@@ -21,4 +21,12 @@ test("missing or unimplemented evidence cannot become release PASS", () => {
   for (const [key, state] of [["browser","NOT_EXERCISED"],["runtime","NOT_IMPLEMENTED"],["storybook","ABSENT"],["repositoryRights","ABSENT"]] as const) {
     assert.equal(evaluateReleaseGate({ ...pass, [key]: state }).overall, "FAIL");
   }
+});
+
+test("release evidence rejects a schema-only PASS shell", () => {
+  const git = { sha: "a".repeat(40), ref: "refs/heads/main" };
+  const hollow = { schema: "website-design-compiler/runtime-receipt/v1", overall: "PASS", git };
+  const binding = bindReleaseEvidence(hollow, hollow.schema, git);
+  assert.equal(binding.state, "FAIL");
+  assert.match(binding.errors.join("; "), /project|stages|inputSha256/);
 });

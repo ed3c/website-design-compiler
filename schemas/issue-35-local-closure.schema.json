@@ -12,7 +12,7 @@
       "additionalProperties": false,
       "required": ["ref", "sha", "tree", "trackedWorktreeClean"],
       "properties": {
-        "ref": { "type": "string", "pattern": "^refs/heads/.+" },
+        "ref": { "type": "string", "pattern": "^refs/[A-Za-z0-9._/-]+$" },
         "sha": { "$ref": "#/$defs/gitHash" },
         "tree": { "$ref": "#/$defs/gitHash" },
         "trackedWorktreeClean": { "type": "boolean" }

@@ -3,12 +3,12 @@
 import { gsap } from "gsap";
 import { motion, useAnimationControls } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {transitionMotionRuntimeState,type MotionRuntimeEvent,type MotionRuntimeState} from "./generated-motion-state";
 import { GovernedSection } from "./governed-section";
 import { MediaOrchestrationStage } from "./media-orchestration-stage";
 import type { ProjectedNode } from "./generated-page";
 
 type ViewportName="mobile"|"tablet"|"desktop";
-type MotionRuntimeState="PENDING"|"ACTIVE"|"SETTLED"|"VISIBLE_NO_MOTION"|"CLEANED";
 
 type RuntimeWindow=typeof window&{
   __wdcGeneratedMotion?:{
@@ -127,6 +127,7 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     let unmountCleanupRecorded=false;
     const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const coarse=window.matchMedia("(pointer: coarse)").matches;
+    const transitionRuntime=(event:MotionRuntimeEvent)=>setRuntimeState((current)=>transitionMotionRuntimeState(current,event));
     element.dataset.reducedMotion=String(reduced);
     element.dataset.coarsePointer=String(coarse);
 
@@ -153,11 +154,20 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
       timelineRegistered=false;
       metrics.activeTimelines=Math.max(0,metrics.activeTimelines-1);
     };
+    const settleIfLive=()=>{
+      release?.();release=undefined;releaseTimeline();
+      if(resourcesCleaned||controller.signal.aborted)return;
+      transitionRuntime("COMPLETE");
+    };
     const cleanupResources=(reason:"route-change"|"unmount")=>{
       if(reason==="route-change"&&!routeCleanupRecorded){routeCleanupRecorded=true;metrics.routeCleanupCount+=1;}
       if(reason==="unmount"&&!unmountCleanupRecorded){unmountCleanupRecorded=true;metrics.unmountCleanupCount+=1;metrics.mountedEffects=Math.max(0,metrics.mountedEffects-1);}
       if(resourcesCleaned)return;
       resourcesCleaned=true;
+      if(reason==="route-change"){
+        transitionRuntime("ROUTE_CLEANUP");
+        setCleanupObserved(true);
+      }
       controller.abort();
       controls.stop();
       disconnectIntersection();
@@ -168,10 +178,6 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
       release=undefined;
       element.style.opacity="1";
       element.style.transform="none";
-      if(reason==="route-change"){
-        setRuntimeState("CLEANED");
-        setCleanupObserved(true);
-      }
     };
     const onRouteChange=()=>{removeRouteListener();cleanupResources("route-change");};
     window.addEventListener("wdc:generated-motion:route-change",onRouteChange);
@@ -181,7 +187,7 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     if(reduced||node.motionHook.engine==="none"||(coarse&&node.motionHook.mobile==="disabled")){
       element.style.opacity="1";
       element.style.transform="none";
-      setRuntimeState("VISIBLE_NO_MOTION");
+      transitionRuntime("SHOW_STATIC");
       return()=>{removeRouteListener();cleanupResources("unmount");};
     }
 
@@ -193,7 +199,7 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     const run=async()=>{
       release=await acquireMotionSlot(controller.signal);
       if(controller.signal.aborted){release();return;}
-      setRuntimeState("ACTIVE");
+      transitionRuntime("ACTIVATE");
       if(node.motionHook.engine==="motion"){
         controls.set({opacity:0.72,y:coarse?4:10});
         await controls.start({opacity:1,y:0,transition:{duration:node.motionHook.durationMs/1000,delay:node.motionHook.delayMs/1000,ease:[0.22,1,0.36,1]}});
@@ -201,14 +207,11 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
         timelineRegistered=true;
         metrics.activeTimelines+=1;
         context=gsap.context(()=>{
-          gsap.fromTo(element,{opacity:0.78,y:coarse?4:12},{opacity:1,y:0,duration:node.motionHook.durationMs/1000,delay:node.motionHook.delayMs/1000,ease:"power2.out",overwrite:"auto",onComplete:()=>{
-            release?.();release=undefined;releaseTimeline();setRuntimeState("SETTLED");
-          }});
+          gsap.fromTo(element,{opacity:0.78,y:coarse?4:12},{opacity:1,y:0,duration:node.motionHook.durationMs/1000,delay:node.motionHook.delayMs/1000,ease:"power2.out",overwrite:"auto",onComplete:settleIfLive});
         },element);
         return;
       }
-      release?.();release=undefined;
-      setRuntimeState("SETTLED");
+      settleIfLive();
     };
     const start=()=>void run().catch((error:unknown)=>{if(!(error instanceof DOMException&&error.name==="AbortError"))throw error;});
     if(node.motionHook.trigger==="scroll-progress"&&"IntersectionObserver" in window){
@@ -260,7 +263,7 @@ export function GeneratedSectionStage({node}:{node:ProjectedNode}){
     data-motion-cleanup-observed={String(cleanupObserved)}
   >
     <div className="wdc-generated-node__content" style={{order:contentOrder}}>
-      <GovernedSection kind={node.kind} variant={node.variant} heading={copy.heading} body={copy.body} items={copy.items} links={copy.links} action={copy.action}/>
+      <GovernedSection kind={node.kind} variant={node.variant} fields={node.section.props}/>
     </div>
     {node.mediaHook.renderer!=="dom"?<div className="wdc-generated-node__media" style={{order:mediaOrder}}><MediaOrchestrationStage sectionId={node.id} decision={node.mediaHook}/></div>:null}
     {node.mediaHook.renderer==="dom"&&selected.mediaPlacement!=="none"?<div className="wdc-generated-node__field" style={{order:mediaOrder}} aria-hidden="true" data-direction-field={node.variant}/>:null}

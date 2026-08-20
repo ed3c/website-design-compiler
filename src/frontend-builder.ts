@@ -1,9 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
+import type { SectionInstance } from "./section-grammar.js";
+import { compileSectionPage } from "./section-page-fixtures.js";
 import { validateAgainstSchema } from "./validate.js";
 
-export const GOVERNED_COMPONENTS = ["button", "status-panel"] as const;
+export const GOVERNED_COMPONENTS = ["button", "status-panel", "rich-section"] as const;
 export type GovernedComponentName = (typeof GOVERNED_COMPONENTS)[number];
 
 type ButtonNode = {
@@ -26,7 +28,13 @@ type StatusPanelNode = {
   };
 };
 
-export type ComponentNode = ButtonNode | StatusPanelNode;
+type RichSectionNode = {
+  id: string;
+  component: "rich-section";
+  props: SectionInstance;
+};
+
+export type ComponentNode = ButtonNode | StatusPanelNode | RichSectionNode;
 
 export interface FrontendPlan {
   schema: "website-design-compiler/frontend-plan/v1";
@@ -37,27 +45,17 @@ export interface FrontendPlan {
 }
 
 export function buildFrontendPlan(input: CompilerInput): FrontendPlan {
+  const page = compileSectionPage(input);
   return {
     schema: "website-design-compiler/frontend-plan/v1",
     project: input.project,
     renderer: "nextjs-registry",
     arbitraryMarkupAllowed: false,
-    components: [
-      {
-        id: "primary-action",
-        component: "button",
-        props: { intent: "primary", children: "Open compiler contract" }
-      },
-      {
-        id: "runtime-status",
-        component: "status-panel",
-        props: {
-          state: "success",
-          title: "Runtime status",
-          message: "Governed component plan emitted"
-        }
-      }
-    ]
+    components: page.sections.map((section) => ({
+      id: section.id,
+      component: "rich-section" as const,
+      props: section
+    }))
   };
 }
 

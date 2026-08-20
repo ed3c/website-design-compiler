@@ -3,7 +3,12 @@ import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildDesignContractBundle } from "./design-contracts.js";
 import { GOVERNED_COMPONENTS } from "./frontend-builder.js";
-import { visualDirectionSha256, type VisualDirectionDimensions, type VisualDirectionSearchReceipt } from "./visual-direction-search.js";
+import {
+  assertVisualDirectionSearchBinding,
+  visualDirectionSha256,
+  type VisualDirectionDimensions,
+  type VisualDirectionSearchReceipt
+} from "./visual-direction-search.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface DesignSystemPlan {
@@ -14,7 +19,8 @@ export interface DesignSystemPlan {
   arbitraryComponentAdmission: false;
   selectedVisualDirection: {
     source: "website-design-compiler/visual-direction-search/v2";
-    receiptSha256:string;
+    searchSeed: string;
+    receiptSha256: string;
     candidateId: string;
     dimensions: VisualDirectionDimensions;
   };
@@ -29,9 +35,9 @@ export interface DesignSystemPlan {
   requiredStateOwnership: Array<{ component: string; states: string[] }>;
 }
 
-export function buildDesignSystemPlan(input: CompilerInput,visualSearch:VisualDirectionSearchReceipt): DesignSystemPlan {
+export function buildDesignSystemPlan(input: CompilerInput, visualSearch: VisualDirectionSearchReceipt): DesignSystemPlan {
   const contract = buildDesignContractBundle();
-  if(visualSearch.project!==input.project||visualSearch.inputSha256!==visualDirectionSha256(input))throw new Error("design system requires the exact visual-direction receipt for this compiler input");
+  assertVisualDirectionSearchBinding(input, visualSearch);
   return {
     schema: "website-design-compiler/design-system-plan/v1",
     project: input.project,
@@ -40,7 +46,8 @@ export function buildDesignSystemPlan(input: CompilerInput,visualSearch:VisualDi
     arbitraryComponentAdmission: false,
     selectedVisualDirection: {
       source: visualSearch.schema,
-      receiptSha256:visualDirectionSha256(visualSearch),
+      searchSeed: visualSearch.seed,
+      receiptSha256: visualDirectionSha256(visualSearch),
       candidateId: visualSearch.selectedCandidateId,
       dimensions: { ...visualSearch.selectedDirection }
     },
@@ -58,8 +65,12 @@ export function buildDesignSystemPlan(input: CompilerInput,visualSearch:VisualDi
   };
 }
 
-export async function writeDesignSystemPlan(input: CompilerInput,visualSearch:VisualDirectionSearchReceipt, outputDirectory: string): Promise<string> {
-  const plan = buildDesignSystemPlan(input,visualSearch);
+export async function writeDesignSystemPlan(
+  input: CompilerInput,
+  outputDirectory: string,
+  visualSearch: VisualDirectionSearchReceipt
+): Promise<string> {
+  const plan = buildDesignSystemPlan(input, visualSearch);
   await validateAgainstSchema(plan, "design-system-plan.schema.json");
   const directory = join(outputDirectory, "design-system-compiler");
   await mkdir(directory, { recursive: true });

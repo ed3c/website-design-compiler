@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
 export const OWNING_CLOSURE_COMMANDS = [
   "pnpm typecheck",
@@ -19,7 +20,7 @@ export const OWNING_CLOSURE_COMMANDS = [
   "pnpm browser:receipt"
 ] as const;
 
-const categories = ["b2b-product", "editorial", "premium-consumer", "motion-heavy", "interactive-2d", "interactive-3d"] as const;
+const categories = ARENA_CATEGORIES;
 const screenshotProjects = ["desktop-chromium", "tablet-chromium", "mobile-chromium"] as const;
 const runtimeProjects = [...screenshotProjects, "reduced-motion-chromium"] as const;
 const commandResultsSchema = "website-design-compiler/issue-35-closure-command-results/v1";

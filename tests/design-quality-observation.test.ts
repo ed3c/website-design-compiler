@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calibratedVisualSimilarity } from "../src/design-quality-calibration.js";
+import { calibratedVisualSimilarity,calibrationReorder } from "../src/design-quality-calibration.js";
 import { qualityObservation } from "./helpers/design-quality.js";
 
 test("visual similarity calibration keeps identical evidence at one",()=>{
@@ -16,6 +16,14 @@ test("visual similarity calibration detects ordered composition changes",()=>{
   reordered.computed.sectionHeights.reverse();
   reordered.computed.sectionWidths.reverse();
   assert.ok(calibratedVisualSimilarity(baseline,reordered)<.9);
+});
+
+test("calibration reorder changes symmetric composition without changing its members",()=>{
+  const symmetric=["stack","stack","grid","grid","stack","stack"];
+  const reordered=calibrationReorder(symmetric);
+  assert.deepEqual(reordered,["grid","stack","stack","stack","stack","grid"]);
+  assert.deepEqual([...reordered].sort(),[...symmetric].sort());
+  assert.deepEqual(symmetric,["stack","stack","grid","grid","stack","stack"]);
 });
 
 test("visual similarity calibration treats palette-only change as finite but not identical",()=>{

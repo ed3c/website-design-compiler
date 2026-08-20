@@ -52,6 +52,33 @@
                 }
               }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "component", "props"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "component": { "const": "rich-section" },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "kind", "variant", "props", "provenance", "tokenRef"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "kind": {
+                    "enum": ["navigation", "hero", "feature-grid", "bento-grid", "proof-cloud", "metrics", "testimonial", "comparison", "pricing", "faq", "cta", "footer", "editorial-prose", "editorial-media", "product-showcase", "media-stage", "graphics-2d-stage", "graphics-3d-stage"]
+                  },
+                  "variant": { "type": "string", "minLength": 1 },
+                  "props": { "type": "object" },
+                  "provenance": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string", "minLength": 1 }
+                  },
+                  "tokenRef": { "const": "semantic-design-tokens/v2" }
+                }
+              }
+            }
           }
         ]
       }

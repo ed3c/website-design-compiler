@@ -67,7 +67,7 @@
       "additionalProperties": false,
       "required": ["ref", "sha", "tree"],
       "properties": {
-        "ref": { "type": "string", "pattern": "^refs/.+" },
+        "ref": { "type": "string", "pattern": "^refs/[A-Za-z0-9._/-]+$" },
         "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
         "tree": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
       }

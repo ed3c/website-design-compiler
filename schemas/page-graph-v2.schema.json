@@ -2,10 +2,10 @@
   "$schema":"https://json-schema.org/draft/2020-12/schema",
   "$id":"website-design-compiler/page-graph/v2",
   "type":"object","additionalProperties":false,
-  "required":["schema","project","category","route","source","readiness","missingEvidence","semanticOrder","conversionPath","nodes","sharedChrome","contracts","signature"],
+  "required":["schema","project","category","route","source","readiness","sourceMissingEvidence","missingEvidence","semanticOrder","conversionPath","nodes","sharedChrome","contracts","signature"],
   "properties":{
     "schema":{"const":"website-design-compiler/page-graph/v2"},"project":{"type":"string","minLength":1},"category":{"type":"string","minLength":1},"route":{"type":"string","pattern":"^/(?:[a-z0-9-]+)?$"},
-    "source":{"$ref":"#/$defs/source"},"readiness":{"enum":["READY","NEEDS_INPUT"]},"missingEvidence":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "source":{"$ref":"#/$defs/source"},"readiness":{"enum":["READY","NEEDS_INPUT"]},"sourceMissingEvidence":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},"missingEvidence":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
     "semanticOrder":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"conversionPath":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
     "nodes":{"type":"array","minItems":5,"items":{"$ref":"#/$defs/node"}},
     "sharedChrome":{"type":"object","additionalProperties":false,"required":["navigationId","footerId","consistencyKey"],"properties":{"navigationId":{"type":"string","minLength":1},"footerId":{"type":"string","minLength":1},"consistencyKey":{"type":"string","minLength":1}}},

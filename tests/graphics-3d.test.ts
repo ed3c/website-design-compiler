@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildGraphics3DPlan, buildProceduralFixtureProvenance } from "../src/graphics-3d.js";
 import { buildLicenseReceipt, loadLicensePolicy } from "../src/license-provenance.js";
+import { validateAgainstSchema } from "../src/validate.js";
 
 test("graphics 3d plan keeps critical content outside WebGL", () => {
   const plan = buildGraphics3DPlan();
@@ -86,4 +87,42 @@ test("procedural fixture enters provenance with exact source byte hash", async (
 
 test("WebGPU TSL path is explicit but not falsely exercised", () => {
   assert.equal(buildGraphics3DPlan().experimental.webgpuTsl, "NOT_EXERCISED");
+});
+
+test("WebGPU runtime schema accepts the adapter identity emitted by the browser producer", async () => {
+  const receipt = {
+    schema: "website-design-compiler/webgpu-runtime-receipt/v1",
+    overall: "PASS",
+    rendererOutcome: "WEBGPU_PASS",
+    git: { sha: "a".repeat(40), ref: "refs/heads/test" },
+    selected: {
+      state: "WEBGPU_PASS",
+      renderer: "webgpu",
+      reason: "webgpu-runtime-observed",
+      capabilities: { webgpu: true, webgl: true },
+      runtime: {
+        state: "WEBGPU_PASS",
+        identity: {
+          adapter: "navigator.gpu",
+          renderer: "three.WebGPURenderer",
+          rendererVersion: "0.184.0",
+          tslModule: "three/tsl@0.184.0",
+          adapterInfo: { state:"REPORTED",sha256:"a".repeat(64) },
+          features: [],
+          limits: { maxTextureDimension2D: 8192, maxBindGroups: 4, maxBufferSize: 268435456 }
+        },
+        budget: {
+          dpr: 1,
+          drawCalls: 1,
+          triangles: 12,
+          textureBytes: 0,
+          framesRendered: 1,
+          frameLoop: "demand"
+        }
+      }
+    },
+    fallbacks: { initializationFailure: "PASS", totalGpuFailure: "PASS", deviceLoss: "PASS" }
+  };
+
+  await validateAgainstSchema(receipt, "webgpu-runtime-receipt.schema.json");
 });

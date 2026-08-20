@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildFrontendPlan, GOVERNED_COMPONENTS } from "../src/frontend-builder.js";
+import { SECTION_KINDS, validateSectionInstance } from "../src/section-grammar.js";
 import type { CompilerInput } from "../src/contracts.js";
 
 const input: CompilerInput = {
@@ -17,6 +18,18 @@ test("frontend plan only emits governed registry components", () => {
   assert.ok(plan.components.length > 0);
   for (const node of plan.components) {
     assert.ok(GOVERNED_COMPONENTS.includes(node.component));
+  }
+});
+
+test("production frontend plan emits compiler-derived rich sections", () => {
+  const plan = buildFrontendPlan(input);
+  assert.ok(plan.components.length >= 5);
+  assert.ok(plan.components.every((node) => node.component === "rich-section"));
+  for (const node of plan.components) {
+    if (node.component !== "rich-section") continue;
+    assert.ok(SECTION_KINDS.includes(node.props.kind));
+    assert.deepEqual(validateSectionInstance(node.props), []);
+    assert.ok(Object.values(node.props.provenance).every((value) => !value.startsWith("fixture:")));
   }
 });
 

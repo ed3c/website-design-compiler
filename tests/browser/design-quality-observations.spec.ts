@@ -4,8 +4,9 @@ import { createHash } from "node:crypto";
 import { mkdir,writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { validateAgainstSchema } from "../../src/validate.js";
+import { cssContrastRatio } from "../../src/css-color.js";
 
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
+const categories=["b2b-product","editorial","premium-consumer-brand","motion-heavy-creative","interactive-2d","interactive-3d"] as const;
 
 for(const category of categories)test(`${category} emits browser-derived visual quality observations`,async({page},testInfo)=>{
   const project=testInfo.project.name;
@@ -20,10 +21,17 @@ for(const category of categories)test(`${category} emits browser-derived visual 
     const media=mediaStages.nth(index);await media.scrollIntoViewIfNeeded();await expect(media).toHaveAttribute("data-media-runtime-state",/ACTIVE|DOM_FALLBACK/);
   }
   await page.evaluate(()=>window.scrollTo(0,0));
-  await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
   const pageNodes=root.locator("[data-page-node]");
   const pageNodeCount=await pageNodes.count();
-  await expect(root.locator("[data-page-node][data-motion-runtime='CLEANED']")).toHaveCount(pageNodeCount);
+  await page.waitForFunction((count)=>{
+    const metrics=(window as typeof window&{__wdcGeneratedMotion?:{mountedEffects:number;routeListeners:number}}).__wdcGeneratedMotion;
+    return metrics?.mountedEffects===count&&metrics.routeListeners===count;
+  },pageNodeCount);
+  await page.evaluate(()=>window.dispatchEvent(new Event("wdc:generated-motion:route-change")));
+  await expect.poll(
+    ()=>pageNodes.evaluateAll((entries)=>entries.flatMap((entry)=>entry.getAttribute("data-motion-runtime")==="CLEANED"?[]:[{id:entry.getAttribute("data-page-node"),engine:entry.getAttribute("data-motion-engine"),trigger:entry.getAttribute("data-motion-trigger"),runtime:entry.getAttribute("data-motion-runtime"),cleanupObserved:entry.getAttribute("data-motion-cleanup-observed")}])),
+    {message:"every route listener must leave a diagnostic-free terminal motion state"}
+  ).toEqual([]);
 
   const outputRoot=join(process.cwd(),"artifacts","design-quality-browser");
   const screenshotDirectory=join(outputRoot,"screenshots");
@@ -63,6 +71,7 @@ for(const category of categories)test(`${category} emits browser-derived visual 
   const computed=await root.evaluate((element)=>{
     const nodes=[...element.querySelectorAll<HTMLElement>("[data-page-node]")];
     const h1=[...element.querySelectorAll<HTMLElement>("h1")];const h2=[...element.querySelectorAll<HTMLElement>("h2")];
+    const textColors=[...element.querySelectorAll<HTMLElement>("h1,h2,h3,p,a,button,li,blockquote,summary,td,th")].map((entry)=>{const backgrounds:string[]=[];let current:HTMLElement|null=entry;while(current){backgrounds.push(getComputedStyle(current).backgroundColor);current=current.parentElement;}return{foreground:getComputedStyle(entry).color,backgrounds};});
     const fontSize=(entry:HTMLElement)=>Number.parseFloat(getComputedStyle(entry).fontSize);
     const h2Sizes=h2.map(fontSize).sort((a,b)=>a-b);
     const sections=nodes.map((node)=>{const rect=node.getBoundingClientRect();const style=getComputedStyle(node);const tracks=style.gridTemplateColumns.trim();const columns=tracks==="none"?1:tracks.split(/\s+/).filter(Boolean).length;const content=node.querySelector<HTMLElement>(".wdc-generated-node__content");const media=node.querySelector<HTMLElement>(".wdc-generated-node__media,.wdc-generated-node__field");const contentRect=content?.getBoundingClientRect();const mediaRect=media?.getBoundingClientRect();const horizontal=Boolean(contentRect&&mediaRect&&Math.abs(contentRect.top-mediaRect.top)<Math.min(contentRect.height,mediaRect.height)*.5);const layout=horizontal?"split":mediaRect&&mediaRect.height>window.innerHeight*.45?"stage":columns>1?"grid":node.querySelectorAll("li").length>=3?"list":"stack";return{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height,columns,layout,background:getComputedStyle(node.querySelector<HTMLElement>("[data-governed-section]")??node).backgroundColor};});
@@ -75,20 +84,24 @@ for(const category of categories)test(`${category} emits browser-derived visual 
     const tokenNames=["--wdc-color-background","--wdc-color-surface","--wdc-color-text-primary","--wdc-color-text-muted","--wdc-color-accent","--wdc-color-on-accent","--wdc-color-focus","--wdc-font-display","--wdc-font-body","--wdc-font-display-weight","--wdc-font-display-line-height","--wdc-font-body-line-height","--wdc-font-body-measure","--wdc-space-sm","--wdc-space-md","--wdc-space-lg","--wdc-radius-lg","--wdc-border-color","--wdc-elevation-high","--wdc-media-treatment","--wdc-media-gradient-policy","--wdc-motion-fast","--wdc-motion-base","--wdc-container-max","--wdc-gutter"];
     return{
       viewport:{width:window.innerWidth,height:window.innerHeight},h1Count:h1.length,h2Count:h2.length,h1Px:h1[0]?fontSize(h1[0]):0,medianH2Px:h2Sizes[Math.floor(h2Sizes.length/2)]??0,
-      fontFamilies:[...new Set([...h1,...h2].map((entry)=>getComputedStyle(entry).fontFamily))],sectionCount:sections.length,sectionHeights:sections.map((section)=>section.height),sectionWidths:sections.map((section)=>section.width),renderedColumns:sections.map((section)=>section.columns),layouts:sections.map((section)=>section.layout),
+      fontFamilies:[...new Set([...h1,...h2].map((entry)=>getComputedStyle(entry).fontFamily))],textColors,sectionCount:sections.length,sectionHeights:sections.map((section)=>section.height),sectionWidths:sections.map((section)=>section.width),renderedColumns:sections.map((section)=>section.columns),layouts:sections.map((section)=>section.layout),
       distinctSectionBackgrounds:new Set(sections.map((section)=>section.background)).size,spacingGapMean:gapMean,spacingGapStdDev:Math.sqrt(gapVariance),pageWidth:element.getBoundingClientRect().width,pageHeight:element.getBoundingClientRect().height,
       overflowX:document.documentElement.scrollWidth>window.innerWidth+1,ctaSectionCount:element.querySelectorAll("[data-governed-section='cta']").length,actionTargets,
       mediaStages:element.querySelectorAll("[data-orchestrated-media]").length,motionStates:nodes.map((node)=>node.dataset.motionRuntime??"missing"),contentBudgetPass:nodes.every((node)=>node.dataset.contentBudgetState==="PASS"),
       cssTokens:Object.fromEntries(tokenNames.map((name)=>[name,styles.getPropertyValue(name).trim()]))
     };
   });
+  const {textColors,...measured}=computed;
+  const textContrast=textColors.map((entry)=>cssContrastRatio(entry.foreground,entry.backgrounds)).filter((value):value is number=>value!==null);
+  const measuredWithContrast={...measured,minimumTextContrastRatio:textContrast.length>0?Math.min(...textContrast):0};
   const axe=await new AxeBuilder({page}).analyze();
   const seriousCritical=axe.violations.filter((violation)=>violation.impact==="serious"||violation.impact==="critical");
-  const observation={schema:"website-design-compiler/design-quality-browser-observation/v1",category,project,viewport,git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"},screenshot:{path:`artifacts/design-quality-browser/screenshots/${screenshotName}`,sha256:screenshotSha256,bytes:screenshot.byteLength},pixels,computed,accessibility:{seriousCriticalViolationCount:seriousCritical.length,ruleIds:seriousCritical.map((violation)=>violation.id)}};
+  const observation={schema:"website-design-compiler/design-quality-browser-observation/v1",category,project,viewport,git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"},screenshot:{path:`artifacts/design-quality-browser/screenshots/${screenshotName}`,sha256:screenshotSha256,bytes:screenshot.byteLength},pixels,computed:measuredWithContrast,accessibility:{seriousCriticalViolationCount:seriousCritical.length,ruleIds:seriousCritical.map((violation)=>violation.id)}};
   await validateAgainstSchema(observation,"design-quality-browser-observation.schema.json");
   await writeFile(join(outputRoot,`${project}--${category}.json`),`${JSON.stringify(observation,null,2)}\n`,`utf8`);
-  expect(computed.overflowX).toBe(false);
-  expect(computed.h1Count).toBe(1);
+  expect(measuredWithContrast.overflowX).toBe(false);
+  expect(measuredWithContrast.h1Count).toBe(1);
   expect(pixels.sampledPixels).toBeGreaterThan(1000);
   expect(pixels.quantizedUniqueColors).toBeGreaterThan(4);
+  expect(seriousCritical.map((violation)=>({id:violation.id,targets:violation.nodes.map((node)=>node.target)})),"serious or critical accessibility violations").toEqual([]);
 });

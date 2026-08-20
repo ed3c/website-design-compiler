@@ -45,6 +45,7 @@ export interface BindingReceipt {
   sourceRepository: string;
   sourceIdentity: string;
   consumerIdentity: string;
+  git?: { sha: string; ref: string };
   overall: BindingState;
   resolutions: BindingResolution[];
 }

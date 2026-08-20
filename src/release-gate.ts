@@ -1,4 +1,5 @@
-export type ReleaseInputState = "PASS" | "FAIL" | "NOT_IMPLEMENTED" | "NOT_EXERCISED" | "ABSENT" | "SKIPPED_BY_POLICY";
+export { bindReleaseEvidence, type ReleaseEvidenceBinding, type ReleaseInputState } from "./release-evidence.js";
+import type { ReleaseInputState } from "./release-evidence.js";
 
 export interface ReleaseGateInputs {
   runtime: ReleaseInputState;

@@ -1,18 +1,26 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const storybookPort = process.env.WDC_STORYBOOK_PORT ?? "6106";
+if (!/^\d{1,5}$/.test(storybookPort) || Number(storybookPort) < 1024 || Number(storybookPort) > 65_535) {
+  throw new Error("WDC_STORYBOOK_PORT must be an unprivileged TCP port");
+}
+const storybookBaseUrl = `http://127.0.0.1:${storybookPort}`;
+const nodeExecutable = JSON.stringify(process.execPath);
+const storybookDispatcher = JSON.stringify("apps/site/node_modules/storybook/dist/bin/dispatcher.js");
+
 export default defineConfig({
   testDir: "./tests/storybook",
   outputDir: "artifacts/storybook/test-results",
   reporter: [["json", { outputFile: "artifacts/storybook/playwright-report.json" }], ["line"]],
   retries: 0,
   use: {
-    baseURL: "http://127.0.0.1:6006",
+    baseURL: storybookBaseUrl,
     trace: "on",
     screenshot: "off"
   },
   webServer: {
-    command: "pnpm --filter @website-design-compiler/site storybook",
-    url: "http://127.0.0.1:6006",
+    command: `${nodeExecutable} ${storybookDispatcher} dev --ci -c apps/site/.storybook --host 127.0.0.1 --port ${storybookPort}`,
+    url: storybookBaseUrl,
     reuseExistingServer: false,
     timeout: 120_000,
     stdout: "ignore",

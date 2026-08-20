@@ -7,36 +7,96 @@ import type { CompilerReference, EvidenceState } from "./contracts.js";
 import {
   injectedFetchTransport,
   productionPinnedTransport,
-  sameNetworkAddress,
-  type PinnedTransport
+  sameNetworkAddress
 } from "./pinned-http-transport.js";
 
 export interface CaptureProvenance {
   adapter: string;
   sourceKind: CompilerReference["kind"];
   sourceMode: "INLINE" | "FILE" | "REMOTE" | "UNEXERCISED";
+  requestedUrl?: string;
   finalUrl?: string;
   httpStatus?: number;
   contentType?: string;
+  responseBytes?: number;
   responseSha256?: string;
+  artifactIdentity?: string;
+  capturedAt?: string;
+  dnsResolutions?: RemoteDnsResolution[];
+  redirectChain?: RemoteRedirectEvidence[];
+  attemptCount?: number;
+  maxAttempts?: number;
+  timeoutMs?: number;
+  startedAt?: string;
+  completedAt?: string;
+  transportMode?: "PINNED_NETWORK" | "INJECTED_TEST";
   connectedAddress?: string;
-  transportMode?: "PRODUCTION" | "INJECTED";
+}
+
+export interface RemoteDnsResolution {
+  attempt: number;
+  hostname: string;
+  addresses: string[];
+  observedAt: string;
+}
+
+export interface RemoteRedirectEvidence {
+  attempt: number;
+  fromUrl: string;
+  status: number;
+  toUrl: string;
 }
 
 export interface CapturedReference {
   state: EvidenceState;
   facts: string[];
   provenance: CaptureProvenance;
+  availability?: "AVAILABLE" | "UNAVAILABLE" | "NOT_ASSESSED";
+  failureKind?: "AVAILABILITY" | "POLICY" | "COMPILER";
   reason?: string;
 }
 
 export interface RemoteCaptureDependencies {
   resolveHost?: (hostname: string) => Promise<string[]>;
   fetchImpl?: typeof globalThis.fetch;
-  transport?: PinnedTransport;
   maxRedirects?: number;
   maxBytes?: number;
+  now?: () => Date;
+  maxAttempts?: number;
+  retryBackoffMs?: number;
+  sleep?: (milliseconds: number) => Promise<void>;
   timeoutMs?: number;
+  transport?: RemoteTransport;
+}
+
+export interface RemoteTransportRequest {
+  url: URL;
+  addresses: string[];
+  deadlineAt: number;
+  timeoutMs: number;
+  maxBytes: number;
+}
+
+export interface RemoteTransportResponse {
+  status: number;
+  headers: Headers;
+  body: Uint8Array;
+  connectedAddress?: string;
+  mode: "PINNED_NETWORK" | "INJECTED_TEST";
+}
+
+export type RemoteTransport = (request: RemoteTransportRequest) => Promise<RemoteTransportResponse>;
+
+type RemoteFailureKind = NonNullable<CapturedReference["failureKind"]>;
+
+class RemoteCaptureError extends Error {
+  constructor(
+    readonly kind: RemoteFailureKind,
+    message: string
+  ) {
+    super(message);
+    this.name = "RemoteCaptureError";
+  }
 }
 
 function decodeEntities(value: string): string {
@@ -130,7 +190,8 @@ function isPublicIpv6(address: string): boolean {
   if (!firstHextet) return false;
   const prefix = Number.parseInt(firstHextet, 16);
   if (!Number.isInteger(prefix) || prefix < 0x2000 || prefix > 0x3fff) return false;
-  return !/^2001:db8(?:$|:)/.test(normalized);
+  if (/^2001:db8(?:$|:)/.test(normalized)) return false;
+  return true;
 }
 
 export function isPublicIpAddress(address: string): boolean {
@@ -145,13 +206,13 @@ async function defaultResolveHost(hostname: string): Promise<string[]> {
   return records.map((record) => record.address);
 }
 
-async function withDeadline<T>(operation: Promise<T>, deadlineAt: number, label: string): Promise<T> {
-  const remaining = Math.max(0, Math.ceil(deadlineAt - Date.now()));
-  if (remaining === 0) throw new Error(`remote reference total deadline exceeded before ${label}`);
+async function withAvailabilityTimeout<T>(operation: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await new Promise<T>((resolveOperation, rejectOperation) => {
-      timer = setTimeout(() => rejectOperation(new Error(`remote reference total deadline exceeded during ${label}`)), remaining);
+      timer = setTimeout(() => {
+        rejectOperation(new RemoteCaptureError("AVAILABILITY", `${label} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
       void operation.then(resolveOperation, rejectOperation);
     });
   } finally {
@@ -159,81 +220,253 @@ async function withDeadline<T>(operation: Promise<T>, deadlineAt: number, label:
   }
 }
 
-async function validateRemoteTarget(url: URL, resolveHost: (hostname: string) => Promise<string[]>, deadlineAt: number): Promise<string[]> {
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("remote reference protocol must be http or https");
-  if (url.username || url.password) throw new Error("remote reference URL credentials are forbidden");
-  if (url.port && url.port !== "80" && url.port !== "443") throw new Error("remote reference non-standard ports are forbidden");
-  const addresses = isIP(url.hostname) ? [url.hostname] : await withDeadline(resolveHost(url.hostname), deadlineAt, "DNS resolution");
-  if (addresses.length === 0) throw new Error("remote reference hostname resolved to no addresses");
-  if (addresses.some((address) => !isPublicIpAddress(address))) throw new Error("remote reference resolved to a non-public address");
+async function validateRemoteTarget(
+  url: URL,
+  resolveHost: (hostname: string) => Promise<string[]>,
+  timeoutMs: number
+): Promise<string[]> {
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new RemoteCaptureError("POLICY", "remote reference protocol must be http or https");
+  }
+  if (url.username || url.password) throw new RemoteCaptureError("POLICY", "remote reference URL credentials are forbidden");
+  if (url.search || url.hash) {
+    throw new RemoteCaptureError("POLICY", "remote reference URL query and fragment are forbidden in public evidence");
+  }
+  if (url.port && url.port !== "80" && url.port !== "443") {
+    throw new RemoteCaptureError("POLICY", "remote reference non-standard ports are forbidden");
+  }
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local") || hostname.endsWith(".internal")) {
+    throw new RemoteCaptureError("POLICY", "remote reference resolved to a non-public address (private hostname forbidden)");
+  }
+  let addresses: string[];
+  try {
+    addresses = isIP(hostname)
+      ? [hostname]
+      : await withAvailabilityTimeout(resolveHost(hostname), timeoutMs, "remote reference DNS resolution");
+  } catch (error) {
+    if (error instanceof RemoteCaptureError) throw error;
+    throw new RemoteCaptureError("AVAILABILITY", "remote reference DNS resolution unavailable");
+  }
+  if (addresses.length === 0) throw new RemoteCaptureError("AVAILABILITY", "remote reference hostname resolved to no addresses");
+  if (addresses.some((address) => !isPublicIpAddress(address))) {
+    throw new RemoteCaptureError("POLICY", "remote reference resolved to a non-public address");
+  }
   return addresses;
+}
+
+function remoteError(error: unknown): RemoteCaptureError {
+  if (error instanceof RemoteCaptureError) return error;
+  return new RemoteCaptureError("AVAILABILITY", "remote reference transport unavailable");
+}
+
+function defaultSleep(milliseconds: number): Promise<void> {
+  return new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds));
+}
+
+function boundedInteger(value: number | undefined, fallback: number, minimum: number, maximum: number): number {
+  if (value === undefined || !Number.isFinite(value)) return fallback;
+  return Math.max(minimum, Math.min(Math.trunc(value), maximum));
+}
+
+function headersFromRecord(headers: Record<string, string>): Headers {
+  const result = new Headers();
+  for (const [name, value] of Object.entries(headers)) {
+    result.set(name, value);
+  }
+  return result;
+}
+
+function sharedTransport(fetchImpl?: typeof globalThis.fetch): RemoteTransport {
+  const transport = fetchImpl ? injectedFetchTransport(fetchImpl) : productionPinnedTransport;
+  return async (request) => {
+    const selectedAddress = request.addresses[0];
+    if (!selectedAddress) throw new RemoteCaptureError("POLICY", "remote reference has no valid pinned public address");
+    const response = await transport({
+      url: request.url,
+      resolvedAddress: selectedAddress,
+      deadlineAt: request.deadlineAt,
+      maxBytes: request.maxBytes
+    });
+    if (!sameNetworkAddress(response.connectedAddress, selectedAddress)) {
+      throw new RemoteCaptureError("POLICY", "remote reference connected address did not match pinned DNS evidence");
+    }
+    return {
+      status: response.status,
+      headers: headersFromRecord(response.headers),
+      body: response.body,
+      connectedAddress: response.connectedAddress,
+      mode: response.mode === "PRODUCTION" ? "PINNED_NETWORK" : "INJECTED_TEST"
+    };
+  };
 }
 
 export async function captureRemoteUrl(value: string, dependencies: RemoteCaptureDependencies = {}): Promise<CapturedReference> {
   const resolveHost = dependencies.resolveHost ?? defaultResolveHost;
-  if (dependencies.fetchImpl && dependencies.transport) throw new Error("remote reference accepts either fetchImpl or transport, not both");
-  const transport = dependencies.transport ?? (dependencies.fetchImpl ? injectedFetchTransport(dependencies.fetchImpl) : productionPinnedTransport);
-  const maxRedirects = dependencies.maxRedirects ?? 3;
-  const maxBytes = dependencies.maxBytes ?? 2 * 1024 * 1024;
-  const timeoutMs = dependencies.timeoutMs ?? 10_000;
+  const transport = dependencies.transport
+    ?? sharedTransport(dependencies.fetchImpl);
+  const maxRedirects = boundedInteger(dependencies.maxRedirects, 3, 0, 10);
+  const maxBytes = boundedInteger(dependencies.maxBytes, 2 * 1024 * 1024, 1, 8 * 1024 * 1024);
+  const now = dependencies.now ?? (() => new Date());
+  const maxAttempts = boundedInteger(dependencies.maxAttempts, 3, 1, 5);
+  const retryBackoffMs = boundedInteger(dependencies.retryBackoffMs, 250, 0, 5_000);
+  const sleep = dependencies.sleep ?? defaultSleep;
+  const timeoutMs = boundedInteger(dependencies.timeoutMs, 10_000, 1, 30_000);
   const deadlineAt = Date.now() + timeoutMs;
-  let current = new URL(value);
-
+  const startedAt = now().toISOString();
+  let requested: URL;
   try {
-    for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
-      const addresses = await validateRemoteTarget(current, resolveHost, deadlineAt);
-      const selectedAddress = addresses[0]!;
-      const response = await withDeadline(
-        transport({ url: current, resolvedAddress: selectedAddress, deadlineAt, maxBytes }),
-        deadlineAt,
-        "transport"
-      );
-      if (!sameNetworkAddress(response.connectedAddress, selectedAddress)) {
-        throw new Error("connected peer address does not match pinned DNS resolution");
-      }
-
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.location;
-        if (!location) throw new Error("remote reference redirect missing Location header");
-        if (redirectCount === maxRedirects) throw new Error("remote reference redirect limit exceeded");
-        current = new URL(location, current);
-        continue;
-      }
-
-      if (response.status < 200 || response.status >= 300) throw new Error(`remote reference returned HTTP ${response.status}`);
-      const contentType = (response.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
-      if (contentType !== "text/html" && contentType !== "application/xhtml+xml") {
-        throw new Error(`remote reference content type is not HTML: ${contentType || "missing"}`);
-      }
-      const body = response.body;
-      if (body.byteLength > maxBytes) throw new Error(`remote reference exceeds ${maxBytes} byte limit`);
-      const html = new TextDecoder("utf-8", { fatal: false }).decode(body);
-      return {
-        state: response.mode === "PRODUCTION" ? "PASS" : "NOT_EXERCISED",
-        facts: observeHtml(html),
-        provenance: {
-          adapter: "remote-url-observer/v2",
-          sourceKind: "url",
-          sourceMode: "REMOTE",
-          finalUrl: current.toString(),
-          httpStatus: response.status,
-          contentType,
-          responseSha256: createHash("sha256").update(body).digest("hex"),
-          connectedAddress: response.connectedAddress,
-          transportMode: response.mode
-        },
-        ...(response.mode === "INJECTED" ? { reason: "Injected transport exercises deterministic controls but cannot promote production remote evidence to PASS." } : {})
-      };
-    }
-    throw new Error("remote reference redirect state exhausted");
-  } catch (error) {
+    requested = new URL(value);
+  } catch {
     return {
       state: "FAIL",
+      availability: "NOT_ASSESSED",
+      failureKind: "POLICY",
       facts: [],
-      provenance: { adapter: "remote-url-observer/v2", sourceKind: "url", sourceMode: "REMOTE", finalUrl: current.toString() },
-      reason: error instanceof Error ? error.message : "remote URL capture failed"
+      provenance: {
+        adapter: "remote-url-observer/v1",
+        sourceKind: "url",
+        sourceMode: "REMOTE",
+        maxAttempts,
+        timeoutMs,
+        startedAt,
+        completedAt: now().toISOString()
+      },
+      reason: "remote reference URL is invalid"
     };
   }
+  let current = new URL(requested);
+  const dnsResolutions: RemoteDnsResolution[] = [];
+  const redirectChain: RemoteRedirectEvidence[] = [];
+  let receiptRequestedUrl: string | undefined;
+  let receiptCurrentUrl: string | undefined;
+  let lastHttpStatus: number | undefined;
+
+  for (let attemptCount = 1; attemptCount <= maxAttempts; attemptCount += 1) {
+    current = new URL(requested);
+    let preparedAddresses: string[] | undefined;
+    try {
+      for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
+        const remainingMs = Math.max(1, deadlineAt - Date.now());
+        const addresses = preparedAddresses ?? await validateRemoteTarget(current, resolveHost, remainingMs);
+        if (!preparedAddresses) {
+          dnsResolutions.push({ attempt: attemptCount, hostname: current.hostname, addresses, observedAt: now().toISOString() });
+        }
+        preparedAddresses = undefined;
+        receiptRequestedUrl ??= requested.toString();
+        receiptCurrentUrl = current.toString();
+        let response: RemoteTransportResponse;
+        try {
+          response = await withAvailabilityTimeout(
+            transport({ url: current, addresses, deadlineAt, timeoutMs: remainingMs, maxBytes }),
+            remainingMs,
+            "remote reference total deadline exceeded during transport"
+          );
+        } catch (error) {
+          throw remoteError(error);
+        }
+        lastHttpStatus = response.status;
+        if ((response.mode === "PINNED_NETWORK" && !response.connectedAddress) || (response.connectedAddress && !addresses.some((address)=>sameNetworkAddress(response.connectedAddress!,address)))) {
+          throw new RemoteCaptureError("POLICY", "remote reference connected address did not match pinned DNS evidence");
+        }
+
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get("location");
+          if (!location) throw new RemoteCaptureError("COMPILER", "remote reference redirect missing Location header");
+          if (redirectCount === maxRedirects) throw new RemoteCaptureError("COMPILER", "remote reference redirect limit exceeded");
+          let next: URL;
+          try {
+            next = new URL(location, current);
+          } catch {
+            throw new RemoteCaptureError("COMPILER", "remote reference redirect Location is invalid");
+          }
+          const nextAddresses = await validateRemoteTarget(next, resolveHost, Math.max(1, deadlineAt - Date.now()));
+          dnsResolutions.push({ attempt: attemptCount, hostname: next.hostname, addresses: nextAddresses, observedAt: now().toISOString() });
+          redirectChain.push({ attempt: attemptCount, fromUrl: current.toString(), status: response.status, toUrl: next.toString() });
+          current = next;
+          receiptCurrentUrl = current.toString();
+          preparedAddresses = nextAddresses;
+          continue;
+        }
+
+        if (response.status < 200 || response.status >= 300) {
+          const kind: RemoteFailureKind = response.status === 408 || response.status === 425 || response.status === 429 || response.status >= 500
+            ? "AVAILABILITY"
+            : "COMPILER";
+          throw new RemoteCaptureError(kind, `remote reference returned HTTP ${response.status}`);
+        }
+        const contentType = (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+        if (contentType !== "text/html" && contentType !== "application/xhtml+xml") {
+          throw new RemoteCaptureError("COMPILER", `remote reference content type is not HTML: ${contentType || "missing"}`);
+        }
+        const body = response.body;
+        if (body.byteLength > maxBytes) {
+          throw new RemoteCaptureError("COMPILER", `remote reference exceeds ${maxBytes} byte limit`);
+        }
+        const html = new TextDecoder("utf-8", { fatal: false }).decode(body);
+        const responseSha256 = createHash("sha256").update(body).digest("hex");
+        const completedAt = now().toISOString();
+        return {
+          state: "PASS",
+          availability: "AVAILABLE",
+          facts: observeHtml(html),
+          provenance: {
+            adapter: "remote-url-observer/v1",
+            sourceKind: "url",
+            sourceMode: "REMOTE",
+            requestedUrl: receiptRequestedUrl,
+            finalUrl: receiptCurrentUrl,
+            httpStatus: response.status,
+            contentType,
+            responseBytes: body.byteLength,
+            responseSha256,
+            artifactIdentity: `sha256:${responseSha256}`,
+            capturedAt: completedAt,
+            dnsResolutions,
+            redirectChain,
+            attemptCount,
+            maxAttempts,
+            timeoutMs,
+            startedAt,
+            completedAt,
+            transportMode: response.mode,
+            ...(response.connectedAddress ? { connectedAddress: response.connectedAddress } : {})
+          }
+        };
+      }
+      throw new RemoteCaptureError("COMPILER", "remote reference redirect state exhausted");
+    } catch (error) {
+      const failure = remoteError(error);
+      if (failure.kind === "AVAILABILITY" && attemptCount < maxAttempts && Date.now() < deadlineAt) {
+        await sleep(retryBackoffMs * 2 ** (attemptCount - 1));
+        continue;
+      }
+      return {
+        state: failure.kind === "AVAILABILITY" ? "NOT_EXERCISED" : "FAIL",
+        availability: failure.kind === "AVAILABILITY" ? "UNAVAILABLE" : failure.kind === "COMPILER" ? "AVAILABLE" : "NOT_ASSESSED",
+        failureKind: failure.kind,
+        facts: [],
+        provenance: {
+          adapter: "remote-url-observer/v1",
+          sourceKind: "url",
+          sourceMode: "REMOTE",
+          ...(receiptRequestedUrl ? { requestedUrl: receiptRequestedUrl } : {}),
+          ...(receiptCurrentUrl ? { finalUrl: receiptCurrentUrl } : {}),
+          ...(lastHttpStatus ? { httpStatus: lastHttpStatus } : {}),
+          dnsResolutions,
+          redirectChain,
+          attemptCount,
+          maxAttempts,
+          timeoutMs,
+          startedAt,
+          completedAt: now().toISOString()
+        },
+        reason: failure.message
+      };
+    }
+  }
+
+  throw new Error("remote reference attempt state exhausted");
 }
 
 export async function captureReference(reference: CompilerReference): Promise<CapturedReference> {
@@ -260,7 +493,7 @@ export async function captureReference(reference: CompilerReference): Promise<Ca
       return {
         state: "NOT_EXERCISED",
         facts: [],
-        provenance: { adapter: "remote-url-observer/v2", sourceKind: reference.kind, sourceMode: "UNEXERCISED" },
+        provenance: { adapter: "remote-url-observer/v1", sourceKind: reference.kind, sourceMode: "UNEXERCISED" },
         reason: "Remote URL capture is implemented but disabled unless WDC_REFERENCE_NETWORK=1; deterministic release fixtures do not depend on external network state."
       };
     }

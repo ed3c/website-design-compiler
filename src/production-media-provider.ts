@@ -1,6 +1,6 @@
 import type { MediaAdapter, MediaAsset, MediaKind, SignedMediaRequest } from "./media-router.js";
 import { canonicalMediaValue, sha256, verifyMediaRequest } from "./media-router.js";
-import type { RepositoryClearanceReceipt } from "./repository-rights-clearance.js";
+import { validateRepositoryClearanceReceipt, type RepositoryClearanceReceipt } from "./repository-rights-clearance.js";
 import { MediaAssetContentError, validateProductionMediaAssetContent } from "./media-asset-validation.js";
 import {
   productionAdmissionPacketSha256,
@@ -99,6 +99,7 @@ export interface ProductionProviderReceipt {
   requestSha256: string;
   promptSha256: string;
   configurationSha256: string;
+  executionInputSha256: string | "ABSENT";
   attempts: number;
   admissionEvidence: {
     humanAdmissionReceiptId: string | "ABSENT";
@@ -142,7 +143,7 @@ export interface ProductionProviderReceipt {
 }
 
 export interface ProductionProviderStatusReceipt {
-  schema: "website-design-compiler/production-provider-status/v2";
+  schema: "website-design-compiler/production-provider-status/v3";
   gate: "PRODUCTION_PROVIDER";
   overall: "PASS" | "FAIL" | "NOT_EXERCISED";
   admissionState: "ADMITTED" | "NEEDS_HUMAN_ADMIT" | "DENIED" | "REVOKED";
@@ -161,7 +162,7 @@ export interface ProductionProviderStatusReceipt {
 
 export function buildUnconfiguredProductionProviderStatus(reason?: string): ProductionProviderStatusReceipt {
   return {
-    schema: "website-design-compiler/production-provider-status/v2",
+    schema: "website-design-compiler/production-provider-status/v3",
     gate: "PRODUCTION_PROVIDER",
     overall: "NOT_EXERCISED",
     admissionState: "NEEDS_HUMAN_ADMIT",
@@ -190,7 +191,7 @@ export function buildConfiguredProductionProviderStatus(args: {
     kind: args.receipt.provider.kind
   };
   return {
-    schema: "website-design-compiler/production-provider-status/v2",
+    schema: "website-design-compiler/production-provider-status/v3",
     gate: "PRODUCTION_PROVIDER",
     overall: args.receipt.overall,
     admissionState: args.receipt.admissionState,
@@ -225,7 +226,7 @@ function isVersionRevision(value: string): boolean {
 }
 
 function isDigestOrCommitRevision(value: string): boolean {
-  return /^sha256:[a-f0-9]{64}$/i.test(value) || /^commit:[a-f0-9]{7,64}$/i.test(value);
+  return /^sha256:[a-f0-9]{64}$/i.test(value) || /^commit:[a-f0-9]{40}$/i.test(value);
 }
 
 function isDateRevision(value: string): boolean {
@@ -326,6 +327,40 @@ export function productionRightsIdentities(identity: ProductionProviderIdentity)
   };
 }
 
+export function productionRightsAdmissionSha256(
+  receipt: RepositoryClearanceReceipt,
+  policy: ProductionProviderPolicy
+): string {
+  const projection = (["modelWeight", "generatedOutput", "hostedService"] as const).map((role) => {
+    const binding = policy.rights[role];
+    const subject = receipt.subjects.find((candidate) => candidate.id === binding.subjectId);
+    return {
+      role,
+      subjectId: binding.subjectId,
+      expectedIdentity: binding.expectedIdentity,
+      subject: subject
+        ? {
+            id: subject.id,
+            kind: subject.kind,
+            name: subject.name,
+            versionOrIdentity: subject.versionOrIdentity,
+            licenseExpression: subject.licenseExpression,
+            state: subject.state,
+            evidence: [...subject.evidence].sort(),
+            attributionRequired: subject.attributionRequired,
+            distributed: subject.distributed,
+            geographicRestrictions: [...(subject.geographicRestrictions ?? [])].sort(),
+            usageRestrictions: [...(subject.usageRestrictions ?? [])].sort()
+          }
+        : null
+    };
+  });
+  return sha256(canonicalMediaValue({
+    schema: "website-design-compiler/production-rights-admission-projection/v1",
+    subjects: projection
+  }));
+}
+
 export function validateProductionProviderPolicy(policy: ProductionProviderPolicy): string[] {
   const errors: string[] = [];
   if (!isSafeOpaqueId(policy.identity.providerId)) errors.push("providerId must be a safe opaque identity");
@@ -369,6 +404,36 @@ export function validateProductionProviderPolicy(policy: ProductionProviderPolic
   return errors;
 }
 
+function productionRightsDenialReasons(
+  policy: ProductionProviderPolicy,
+  receipt: RepositoryClearanceReceipt
+): string[] {
+  const reasons: string[] = [];
+  const bindings = [
+    { label: "model-weight", kind: "model", ...policy.rights.modelWeight },
+    { label: "generated-output", kind: "generated-output", ...policy.rights.generatedOutput },
+    { label: "hosted-service", kind: "service", ...policy.rights.hostedService }
+  ] as const;
+  for (const binding of bindings) {
+    const subject = receipt.subjects.find((entry) => entry.id === binding.subjectId);
+    if (!subject) {
+      reasons.push(`${binding.label} rights subject ${binding.subjectId} is ABSENT`);
+      continue;
+    }
+    if (subject.kind !== binding.kind || subject.versionOrIdentity !== binding.expectedIdentity) {
+      reasons.push(`${binding.label} rights subject ${binding.subjectId} does not match the admitted identity`);
+    }
+    if (!Array.isArray(subject.geographicRestrictions) || !Array.isArray(subject.usageRestrictions)) {
+      reasons.push(`${binding.subjectId} geographic and usage restriction declarations are ABSENT`);
+    }
+    if (subject.state !== "ALLOW") {
+      reasons.push(`${binding.subjectId} rights state is ${subject.state}`);
+    }
+  }
+  if (receipt.overall !== "PASS") reasons.push("repository-wide rights clearance is not PASS");
+  return reasons;
+}
+
 export async function routeProductionMediaGeneration(args: {
   signed: SignedMediaRequest;
   secret: string;
@@ -381,6 +446,7 @@ export async function routeProductionMediaGeneration(args: {
   sleep?: (milliseconds: number) => Promise<void>;
   cancelled?: () => boolean;
   signal?: AbortSignal;
+  executionInputSha256?: string;
 }): Promise<{ receipt: ProductionProviderReceipt; asset?: MediaAsset }> {
   const request = args.signed.request;
   const receiptProvider: ProductionProviderIdentity = {
@@ -407,7 +473,7 @@ export async function routeProductionMediaGeneration(args: {
     kind: args.policy.identity.kind
   }));
   const policySha256 = sha256(canonicalMediaValue(args.policy));
-  const rightsReceiptSha256 = sha256(canonicalMediaValue(args.rightsReceipt));
+  const rightsReceiptSha256 = productionRightsAdmissionSha256(args.rightsReceipt, args.policy);
   const base: ProductionProviderReceipt = {
     schema: "website-design-compiler/production-provider-receipt/v2",
     gate: "PRODUCTION_PROVIDER",
@@ -419,6 +485,7 @@ export async function routeProductionMediaGeneration(args: {
     requestSha256,
     promptSha256: sha256(typeof request.prompt === "string" ? request.prompt : canonicalMediaValue(request.prompt)),
     configurationSha256: sha256(canonicalMediaValue({ prompt: request.prompt, parameters: request.parameters })),
+    executionInputSha256: args.executionInputSha256 && /^[a-f0-9]{64}$/.test(args.executionInputSha256) ? args.executionInputSha256 : "ABSENT",
     attempts: 0,
     admissionEvidence: {
       humanAdmissionReceiptId: args.executionAdmission?.admissionId
@@ -482,6 +549,40 @@ export async function routeProductionMediaGeneration(args: {
     };
   }
 
+  const rightsErrors = validateRepositoryClearanceReceipt(args.rightsReceipt);
+  if (rightsErrors.length > 0) {
+    return {
+      receipt: {
+        ...base,
+        overall: "FAIL",
+        admissionState: "DENIED",
+        reason: `repository rights receipt is invalid: ${rightsErrors.join("; ")}`
+      }
+    };
+  }
+
+  if (!verifyMediaRequest(args.signed, args.secret)) {
+    return {
+      receipt: {
+        ...base,
+        overall: "FAIL",
+        admissionState: "DENIED",
+        reason: "production media request authentication failed"
+      }
+    };
+  }
+
+  const rightsDenialReasons = productionRightsDenialReasons(args.policy, args.rightsReceipt);
+  if (rightsDenialReasons.length > 0) {
+    return {
+      receipt: {
+        ...base,
+        admissionState: "DENIED",
+        reason: rightsDenialReasons.join("; ")
+      }
+    };
+  }
+
   const admission = args.executionAdmission;
   if (!admission) {
     return { receipt: base };
@@ -510,17 +611,6 @@ export async function routeProductionMediaGeneration(args: {
     };
   }
 
-  if (!verifyMediaRequest(args.signed, args.secret)) {
-    return {
-      receipt: {
-        ...base,
-        overall: "FAIL",
-        admissionState: "DENIED",
-        reason: "production media request authentication failed"
-      }
-    };
-  }
-
   const revocation = args.policy.revocations.find((entry) =>
     entry.providerId === args.policy.identity.providerId &&
     entry.modelId === args.policy.identity.modelId &&
@@ -537,60 +627,6 @@ export async function routeProductionMediaGeneration(args: {
           effectiveAt: revocation.effectiveAt,
           reasonSha256: sha256(revocation.reason)
         }
-      }
-    };
-  }
-
-  const rightsBindings = [
-    { label: "model-weight", kind: "model", ...args.policy.rights.modelWeight },
-    { label: "generated-output", kind: "generated-output", ...args.policy.rights.generatedOutput },
-    { label: "hosted-service", kind: "service", ...args.policy.rights.hostedService }
-  ] as const;
-  for (const binding of rightsBindings) {
-    const subject = args.rightsReceipt.subjects.find((entry) => entry.id === binding.subjectId);
-    if (!subject) {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.label} rights subject ${binding.subjectId} is ABSENT`
-        }
-      };
-    }
-    if (subject.kind !== binding.kind || subject.versionOrIdentity !== binding.expectedIdentity) {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.label} rights subject ${binding.subjectId} does not match the admitted identity`
-        }
-      };
-    }
-    if (!Array.isArray(subject.geographicRestrictions) || !Array.isArray(subject.usageRestrictions)) {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.subjectId} geographic and usage restriction declarations are ABSENT`
-        }
-      };
-    }
-    if (subject.state !== "ALLOW") {
-      return {
-        receipt: {
-          ...base,
-          admissionState: "DENIED",
-          reason: `${binding.subjectId} rights state is ${subject.state}`
-        }
-      };
-    }
-  }
-  if (args.rightsReceipt.overall !== "PASS") {
-    return {
-      receipt: {
-        ...base,
-        admissionState: "DENIED",
-        reason: "repository-wide rights clearance is not PASS"
       }
     };
   }

@@ -2,16 +2,17 @@ import { createHash } from "node:crypto";
 import { mkdir,readFile,readdir,writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CompletePageGraph } from "../src/complete-page-graph.js";
-import { calibratedVisualSimilarity,orderedTokenSimilarity,pageGraphStructureSignature } from "../src/design-quality-calibration.js";
+import { calibratedVisualSimilarity,calibrationReorder,orderedTokenSimilarity,pageGraphStructureSignature } from "../src/design-quality-calibration.js";
 import type { DesignQualityBrowserObservation } from "../src/design-quality-observation.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
 const sha256=(value:Buffer|string)=>createHash("sha256").update(value).digest("hex");
 const v3Mode=process.env.DESIGN_QUALITY_CALIBRATION_VERSION==="v3";
 const gitSha=process.env.GITHUB_SHA??"UNBOUND";
 const gitRef=process.env.GITHUB_REF??"UNBOUND";
 const threshold=.82;
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
+const categories=ARENA_CATEGORIES;
 const observationDirectory=join(process.cwd(),"artifacts","design-quality-browser");
 const projectionPath=join(process.cwd(),"apps","site","generated","benchmark-page-graphs.json");
 const projectionBytes=await readFile(projectionPath);
@@ -34,7 +35,7 @@ for(const name of (await readdir(observationDirectory)).filter((entry)=>entry.en
 if(observations.length!==12||new Set(observations.map((entry)=>`${entry.category}:${entry.viewport}`)).size!==12)throw new Error("calibration requires exactly six categories across desktop and mobile");
 
 const baseline=observations.find((entry)=>entry.viewport==="desktop")!;
-const reordered=structuredClone(baseline);reordered.computed.layouts.reverse();reordered.computed.renderedColumns.reverse();reordered.computed.sectionHeights.reverse();reordered.computed.sectionWidths.reverse();
+const reordered=structuredClone(baseline);reordered.computed.layouts=calibrationReorder(baseline.computed.layouts);reordered.computed.renderedColumns=calibrationReorder(baseline.computed.renderedColumns);reordered.computed.sectionHeights=calibrationReorder(baseline.computed.sectionHeights);reordered.computed.sectionWidths=calibrationReorder(baseline.computed.sectionWidths);
 const paletteOnly=structuredClone(baseline);paletteOnly.computed.cssTokens["--wdc-color-background"]="oklch(0.92 0.04 120)";paletteOnly.computed.cssTokens["--wdc-color-surface"]="oklch(0.84 0.08 120)";paletteOnly.computed.cssTokens["--wdc-color-accent"]="oklch(0.38 0.18 140)";
 const distant=structuredClone(baseline);distant.pixels={...distant.pixels,quantizedUniqueColors:5,luminanceMean:.98,luminanceStdDev:.01,luminanceSpan:.03,edgeContrastMean:.002,colorEntropy:.15,channels:{red:{mean:.98,stdDev:.01},green:{mean:.98,stdDev:.01},blue:{mean:.98,stdDev:.01}}};distant.computed.layouts=distant.computed.layouts.map(()=>"stack");distant.computed.renderedColumns=distant.computed.renderedColumns.map(()=>1);distant.computed.sectionWidths=distant.computed.sectionWidths.map(()=>distant.computed.pageWidth);distant.computed.mediaStages=0;
 const controls={identical:calibratedVisualSimilarity(baseline,structuredClone(baseline)),reordered:calibratedVisualSimilarity(baseline,reordered),paletteOnly:calibratedVisualSimilarity(baseline,paletteOnly),distant:calibratedVisualSimilarity(baseline,distant)};

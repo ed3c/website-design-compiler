@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type { CompilerInput } from "../src/contracts.js";
-import { compileContentArchitecture } from "../src/content-architecture.js";
+import { compileContentArchitecture, writeContentArchitecturePlan } from "../src/content-architecture.js";
 import { compileInformationArchitecture } from "../src/information-architecture.js";
 import { buildPageArchitecturePlan } from "../src/page-architect.js";
 
@@ -14,12 +19,35 @@ const families = [
   ["3d", "interactive-3d"]
 ] as const;
 
+const PROOF_SOURCE = "fixtures/content/proof-evidence.txt";
+const PROOF_SOURCE_SHA256 = createHash("sha256").update(readFileSync(PROOF_SOURCE)).digest("hex");
+
 function input(pageType: string, objective = "explain the governed product and provide a clear next action"): CompilerInput {
   return {
     schema: "website-design-compiler/input/v1",
     project: `content-${pageType}`,
     brief: { pageType, audience: "evaluation teams", objective },
     requestedStages: ["information-architecture", "content-architecture", "page-architect"]
+  };
+}
+
+function authored(slot: string, withEvidence = slot === "proof-items") {
+  const source = withEvidence ? PROOF_SOURCE : `fixture://content/${slot}`;
+  const value = ["feature-items","proof-items","related-items","story-beats"].includes(slot)?[`Approved ${slot}`]:`Approved ${slot}`;
+  const valueText=Array.isArray(value)?value.join("; "):value;
+  const excerpt = `Evidence states: ${valueText}`;
+  return {
+    value,
+    source: { kind: "benchmark-fixture" as const, uri: source },
+    ...(withEvidence ? {
+      evidence: {
+        kind: "source-excerpt" as const,
+        source,
+        sourceSha256: PROOF_SOURCE_SHA256,
+        excerpt,
+        sha256: createHash("sha256").update(`${source}\0${PROOF_SOURCE_SHA256}\0${excerpt}\0${valueText}`).digest("hex")
+      }
+    } : {})
   };
 }
 
@@ -86,12 +114,133 @@ test("copy longer than its responsive budget becomes NEEDS_INPUT rather than ove
   assert.equal(headline?.publishable, false);
 });
 
-test("page architect directly carries content contract readiness and fields", () => {
-  const plan = buildPageArchitecturePlan(input("product-landing"));
+test("a planning objective never becomes publishable headline, product, task, or CTA copy", () => {
+  const objective = "increase qualified demo requests by explaining governed compilation";
+  const content = compileContentArchitecture(input("product-landing", objective));
+  const objectiveBackedSlots = new Set([
+    "headline",
+    "value-proposition",
+    "product-description",
+    "task",
+    "primary-action",
+    "primary-action-label",
+    "cta-label",
+    "scene-purpose",
+    "interaction-purpose"
+  ]);
+  const fields = content.sections.flatMap((section) => section.fields).filter((field) => objectiveBackedSlots.has(field.slot));
+
+  assert.ok(fields.length > 0);
+  assert.ok(fields.every((field) => field.state === "NEEDS_INPUT"));
+  assert.ok(fields.every((field) => field.value === null && !field.publishable));
+  assert.ok(fields.every((field) => field.sourceType === "placeholder_required"));
+  assert.equal(content.sections.flatMap((section) => section.fields).some((field) => field.value === "Explore the product"), false);
+});
+
+test("writer classifies missing authoring inputs as ABSENT runtime evidence", async () => {
+  const outputDirectory = await mkdtemp(join(tmpdir(), "wdc-content-architecture-"));
+  try {
+    const result = await writeContentArchitecturePlan(input("product-landing"), outputDirectory);
+    assert.equal(result.state, "ABSENT");
+    assert.match(result.reason, /authoring inputs/i);
+    assert.equal(result.artifacts.length, 1);
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
+  }
+});
+
+test("explicit authored content makes every required field provenance-bound and executable", async () => {
+  const compilerInput = input("product-landing");
+  const requiredSlots = compileInformationArchitecture(compilerInput).sections.flatMap((section) => section.requiredContent);
+  const authoredContent = Object.fromEntries(requiredSlots.map((slot) => [slot, authored(slot)]));
+  const authoredInput = { ...compilerInput, authoredContent };
+  const content = compileContentArchitecture(authoredInput);
+
+  assert.equal(content.overall, "READY");
+  assert.ok(content.sections.flatMap((section) => section.fields).every((field) => field.state === "READY"));
+  assert.ok(content.sections.flatMap((section) => section.fields).every((field) =>
+    field.provenance.includes(`compiler.authoredContent:${field.slot}`)
+  ));
+
+  const outputDirectory = await mkdtemp(join(tmpdir(), "wdc-authored-content-"));
+  try {
+    const result = await writeContentArchitecturePlan(authoredInput, outputDirectory);
+    assert.equal(result.state, "PASS");
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
+  }
+});
+
+test("authored content with no matching IA slot fails fast", () => {
+  const compilerInput = { ...input("product-landing"), authoredContent: { "unowned-copy": authored("unowned-copy") } };
+  assert.throws(() => compileContentArchitecture(compilerInput), /not owned by this page architecture.*unowned-copy/i);
+});
+
+test("proof copy without source evidence cannot self-promote to publishable", () => {
+  const compilerInput = input("product-landing");
+  const content = compileContentArchitecture({
+    ...compilerInput,
+    authoredContent: { "proof-items": authored("proof-items", false) }
+  });
+  const proof = content.sections.find((section) => section.sectionId === "proof")?.fields[0];
+  assert.equal(proof?.state, "NEEDS_INPUT");
+  assert.equal(proof?.publishable, false);
+  assert.deepEqual(proof?.provenance, ["policy.evidence-required:proof-items"]);
+});
+
+test("proof evidence must bind the exact claim, source URI, and excerpt bytes", () => {
+  const compilerInput = input("product-landing");
+  const valid = authored("proof-items");
+  const cases = [
+    { ...valid, value: "Unrelated 99% growth claim" },
+    { ...valid, evidence: { ...valid.evidence!, source: "fixture://content/unrelated" } },
+    { ...valid, evidence: { ...valid.evidence!, excerpt: "Evidence for an unrelated claim" } }
+  ];
+  for (const proofEntry of cases) {
+    const content = compileContentArchitecture({
+      ...compilerInput,
+      authoredContent: { "proof-items": proofEntry }
+    });
+    const proof = content.sections.find((section) => section.sectionId === "proof")?.fields[0];
+    assert.equal(proof?.state, "NEEDS_INPUT");
+    assert.equal(proof?.publishable, false);
+  }
+});
+
+test("self-consistent proof claims cannot cite an unreadable caller-authored URI", () => {
+  const compilerInput = input("product-landing");
+  const source = "fixture://attacker";
+  const value = "99% verified growth";
+  const excerpt = `Attacker says ${value}`;
+  const sourceSha256 = createHash("sha256").update(excerpt).digest("hex");
+  const sha256 = createHash("sha256").update(`${source}\0${sourceSha256}\0${excerpt}\0${value}`).digest("hex");
+  const content = compileContentArchitecture({
+    ...compilerInput,
+    authoredContent: {
+      "proof-items": {
+        value,
+        source: { kind: "benchmark-fixture", uri: source },
+        evidence: { kind: "source-excerpt", source, sourceSha256, excerpt, sha256 }
+      }
+    }
+  });
+  const proof = content.sections.find((section) => section.sectionId === "proof")?.fields[0];
+  assert.equal(proof?.state, "NEEDS_INPUT");
+  assert.equal(proof?.publishable, false);
+});
+
+test("page architect carries the full content contract without dropping provenance or policy", () => {
+  const compilerInput = input("product-landing");
+  const content = compileContentArchitecture(compilerInput);
+  const plan = buildPageArchitecturePlan(compilerInput);
   const proof = plan.sectionIntents.find((section) => section.id === "proof");
   const hero = plan.sectionIntents.find((section) => section.id === "hero");
+  const contentHero = content.sections.find((section) => section.sectionId === "hero");
+  const { state: heroState, ...projectedHero } = hero?.contentContract ?? { state: "NEEDS_INPUT" as const };
   assert.equal(proof?.contentContract.state, "NEEDS_INPUT");
   assert.equal(proof?.contentContract.fields[0]?.publishable, false);
+  assert.equal(heroState, "NEEDS_INPUT");
+  assert.deepEqual(projectedHero, contentHero);
   assert.equal(hero?.contentContract.fields.some((field) => field.publishable), false);
   assert.deepEqual(proof?.contentContract.localePolicy,{sourceLocale:"en",localizationReady:true});
   assert.deepEqual(proof?.contentContract.fields[0]?.lengthBudget,{maxCharacters:280});
@@ -101,7 +250,8 @@ test("page architect directly carries content contract readiness and fields", ()
 test("user-supplied section content makes required slots ready with exact provenance",()=>{
   const compilerInput=input("product-landing");
   compilerInput.briefSourceEvidence={inputSha256:"b".repeat(64),fields:{pageType:{state:"EXPLICIT",sourceExcerpt:"Page type: product-landing"},audience:{state:"EXPLICIT",sourceExcerpt:"Audience: evaluation teams"},objective:{state:"EXPLICIT",sourceExcerpt:`Objective: ${compilerInput.brief.objective}`}}};
-  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{navigation:{"primary-action-label":"Inspect evidence"},hero:{headline:"Evidence before pixels","value-proposition":"Compile governed sites from traceable inputs","primary-action":"Review the compiler"},features:{headline:"Auditable capabilities","feature-items":["Exact runtime receipts","Bounded media fallbacks"]},proof:{"proof-items":["Artifacts bind to an exact commit","Unknown rights fail closed"]},conversion:{"cta-headline":"Inspect the full evidence chain","cta-label":"Inspect evidence"}}};
+  compilerInput.authoredContent={"proof-items":authored("proof-items")};
+  compilerInput.contentEvidence={schema:"website-design-compiler/content-evidence/v1",source:"USER_SUPPLIED",sections:{navigation:{"primary-action-label":"Inspect evidence"},hero:{headline:"Evidence before pixels","value-proposition":"Compile governed sites from traceable inputs","primary-action":"Review the compiler"},features:{headline:"Auditable capabilities","feature-items":["Exact runtime receipts","Bounded media fallbacks"]},proof:{"proof-items":["Approved proof-items"]},conversion:{"cta-headline":"Inspect the full evidence chain","cta-label":"Inspect evidence"}}};
   const content=compileContentArchitecture(compilerInput);
   assert.equal(content.overall,"READY");
   assert.deepEqual(content.sections.find((section)=>section.sectionId==="features")?.fields.find((field)=>field.slot==="feature-items")?.value,["Exact runtime receipts","Bounded media fallbacks"]);

@@ -23,7 +23,7 @@ test("B2B and editorial graphs preserve distinct information architecture",()=>{
   const editorial=graphs.find((graph)=>graph.category==="editorial")!;
   for(const kind of ["navigation","hero","feature-grid","proof-cloud","cta","footer"]) assert.ok(b2b.nodes.some((node)=>node.kind===kind));
   assert.ok(editorial.nodes.some((node)=>node.kind==="editorial-prose"));
-  assert.ok(editorial.nodes.some((node)=>node.kind==="editorial-media"));
+  assert.ok(editorial.nodes.some((node)=>node.kind==="faq"));
   assert.ok(!editorial.nodes.some((node)=>node.kind==="comparison"));
 });
 

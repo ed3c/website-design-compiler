@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { normalizeBrief, type NaturalLanguageBriefInput } from "./brief-normalizer.js";
+import { ContractValidationError, validateAgainstSchema, validateCompilerInput } from "./validate.js";
 
 async function main(): Promise<void> {
   const [inputPath, outputPath] = process.argv.slice(2);
@@ -11,13 +12,30 @@ async function main(): Promise<void> {
     return;
   }
 
-  const raw = JSON.parse(await readFile(resolve(inputPath), "utf8")) as NaturalLanguageBriefInput;
+  const parsed = JSON.parse(await readFile(resolve(inputPath), "utf8")) as unknown;
+  const raw = await validateAgainstSchema<NaturalLanguageBriefInput>(parsed, "brief-input-v2.schema.json");
   const receipt = normalizeBrief(raw);
+  await validateAgainstSchema(receipt, "brief-normalization-v2.schema.json");
   const target = resolve(outputPath);
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify({ outputPath: target, state: receipt.state, compilerReady: receipt.compilerInput !== null }));
+  let compilerInputPath: string | null = null;
+  if (receipt.compilerInput) {
+    await validateCompilerInput(receipt.compilerInput);
+    compilerInputPath = join(dirname(target), `${basename(target, ".json")}.compiler-input.json`);
+    await writeFile(compilerInputPath, `${JSON.stringify(receipt.compilerInput, null, 2)}\n`, "utf8");
+  }
+  console.log(JSON.stringify({ outputPath: target, compilerInputPath, state: receipt.state, compilerReady: compilerInputPath !== null }));
   process.exitCode = receipt.state === "READY" ? 0 : 3;
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  if (error instanceof ContractValidationError) {
+    console.error(JSON.stringify({ state: "FAIL", kind: "CONTRACT_VALIDATION", errors: error.validationErrors }));
+    process.exitCode = 1;
+  } else {
+    throw error;
+  }
+}

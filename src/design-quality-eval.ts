@@ -3,7 +3,7 @@ import { visualObservationSimilarity,type DesignQualityBrowserObservation,type R
 import { calibratedVisualSimilarity,orderedTokenSimilarity,pageGraphStructureSignature } from "./design-quality-calibration.js";
 
 export type QualityViewport="mobile"|"desktop";
-export interface DesignQualityDimensions { hierarchy:number; composition:number; rhythm:number; density:number; ctaClarity:number; responsiveCoherence:number; mediaRestraint:number; motionRestraint:number; differentiation:number; originality:number; }
+export interface DesignQualityDimensions { hierarchy:number; typography:number; composition:number; rhythm:number; sectionTransitions:number; density:number; contrast:number; ctaClarity:number; responsiveCoherence:number; mediaRestraint:number; motionRestraint:number; differentiation:number; originality:number; }
 export interface OriginalityAudit {
   state:"PASS"|"FAIL";
   threshold:number;
@@ -51,8 +51,8 @@ interface QualityIntent { mode:"CONVERSION"|"INFORMATION"; requiredConversionSte
 const CATEGORY_QUALITY_INTENTS:Record<string,QualityIntent>={
   "b2b-product":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
   editorial:{mode:"INFORMATION",requiredConversionSteps:0,ctaRequired:false},
-  "premium-consumer":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
-  "motion-heavy":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
+  "premium-consumer-brand":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
+  "motion-heavy-creative":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
   "interactive-2d":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true},
   "interactive-3d":{mode:"CONVERSION",requiredConversionSteps:2,ctaRequired:true}
 };
@@ -133,11 +133,17 @@ function evaluateDesignQualityModel(graph:CompletePageGraph,viewport:QualityView
   const ctaClarity=intent.ctaRequired?clamp((validAction?65:10)+Math.min(25,graph.conversionPath.length*8)):clamp(82+Math.min(12,progression*2));
   const observedLayoutVariety=observation?new Set(observation.computed.layouts).size:0;
   const maxVisualSimilarity=Math.max(originalityAudit.maxVisualReferenceSimilarity,originalityAudit.maxVisualCorpusSimilarity);
+  const typography=observation?clamp((headingRatio>=1.35&&headingRatio<=4?50:15)+Math.min(25,observation.computed.fontFamilies.length*8)+(observation.computed.h1Count===1?25:0)):0;
+  const contrast=observation?clamp(observation.accessibility.ruleIds.includes("color-contrast")?20:observation.computed.minimumTextContrastRatio>=7?96:88):0;
+  const sectionTransitions=observation?clamp(45+Math.min(30,observation.computed.distinctSectionBackgrounds*8)+Math.min(25,observedLayoutVariety*7)):0;
   const dimensions:DesignQualityDimensions={
     hierarchy:observation?clamp((observation.computed.h1Count===1?45:0)+(observation.computed.h2Count>=Math.max(1,observation.computed.sectionCount-2)?25:10)+(headingRatio>=1.35&&headingRatio<=4?25:5)):0,
+    typography,
     composition:observation?clamp((observation.computed.overflowX?0:30)+Math.min(20,observation.computed.distinctSectionBackgrounds*10)+Math.min(20,observedLayoutVariety*7)+Math.min(15,observation.pixels.luminanceSpan*100)+Math.min(15,observation.pixels.colorEntropy*8)-repeatedKinds*5):0,
     rhythm:observation?clamp(72+Math.min(18,sectionVariety*2)+(heightCv>=0.08&&heightCv<=1.2?10:-15)):0,
+    sectionTransitions,
     density:observation?clamp((observation.computed.contentBudgetPass?50:0)+(heightMean>=180&&heightMean<=900?25:10)+(viewport==="mobile"?observation.computed.renderedColumns.every((columns)=>columns===1)?25:0:25)):0,
+    contrast,
     ctaClarity,
     responsiveCoherence:observation?clamp((graph.nodes.every((node)=>node.responsive.semanticOrder==="DOM_STABLE")?40:0)+(observation.computed.overflowX?0:30)+(viewport==="mobile"?observation.computed.renderedColumns.every((columns)=>columns===1)?30:0:Math.max(...observation.computed.renderedColumns)>=2?30:15)):0,
     mediaRestraint:observation?clamp(94-gpuCount*8-Math.max(0,observation.computed.mediaStages-Math.ceil(graph.nodes.length*.6))*8):0,

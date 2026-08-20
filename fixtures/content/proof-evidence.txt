@@ -1,0 +1,10 @@
+Evidence states: Approved proof-items
+Synthetic Arena evidence states: Benchmark proof-items
+Synthetic section-page evidence states: Supplied proof-items A for b2b-product; Supplied proof-items B for b2b-product
+Synthetic section-page evidence states: Supplied proof-items A for editorial; Supplied proof-items B for editorial
+Synthetic section-page evidence states: Supplied proof-items A for premium-consumer-brand; Supplied proof-items B for premium-consumer-brand
+Synthetic section-page evidence states: Supplied proof-items A for motion-heavy-creative; Supplied proof-items B for motion-heavy-creative
+Synthetic section-page evidence states: Supplied proof-items A for interactive-2d; Supplied proof-items B for interactive-2d
+Synthetic section-page evidence states: Supplied proof-items A for interactive-3d; Supplied proof-items B for interactive-3d
+Quality B2B evidence states: Runtime receipts bind results to an exact commit; Browser observations record the rendered output; Release profiles expose every unmet capability
+Quality premium evidence states: Material specifications accompany every object; Care and repair guidance remains available after purchase; Packaging decisions are documented by product

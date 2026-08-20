@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { CompilerInput } from "./contracts.js";
 import { buildFrontendPlan } from "./frontend-builder.js";
 import { compileInformationArchitecture, type IaSectionStatus, type IaPriority } from "./information-architecture.js";
-import { compileContentArchitecture, type ContentFieldContract } from "./content-architecture.js";
+import { compileContentArchitecture, type SectionContentContract } from "./content-architecture.js";
 import { validateAgainstSchema } from "./validate.js";
 
 export interface PageArchitecturePlan {
@@ -24,14 +24,11 @@ export interface PageArchitecturePlan {
     purpose: string;
     priority: IaPriority;
     status: IaSectionStatus;
+    evidence: string[];
     requiredContent: string[];
+    missingContent: string[];
     fallback: string;
-    contentContract: {
-      state: "READY" | "NEEDS_INPUT";
-      localePolicy: { sourceLocale: "en"; localizationReady: true };
-      fields: ContentFieldContract[];
-      quality: { forbiddenPhraseHits: string[]; repeatedPublishableValues: string[] };
-    };
+    contentContract: SectionContentContract & { state: "READY" | "NEEDS_INPUT" };
   }>;
   optionalEnhancements: Array<{
     capability: "motion" | "graphics-2d" | "graphics-3d";
@@ -73,22 +70,25 @@ export function buildPageArchitecturePlan(input: CompilerInput): PageArchitectur
     ],
     sectionIntents: ia.sections.map((section) => {
       const contentSection = contentBySection.get(section.id);
-      const fields = structuredClone(contentSection?.fields ?? []);
-      const quality=structuredClone(contentSection?.quality ?? { forbiddenPhraseHits: [], repeatedPublishableValues: [] });
-      const contentState = fields.some((field) => field.state === "NEEDS_INPUT")||quality.forbiddenPhraseHits.length>0||quality.repeatedPublishableValues.length>0 ? "NEEDS_INPUT" : "READY";
+      if (!contentSection) throw new Error(`content contract missing for IA section: ${section.id}`);
+      const contentState = contentSection.fields.some((field) => field.state === "NEEDS_INPUT") ||
+        contentSection.quality.forbiddenPhraseHits.length > 0 ||
+        contentSection.quality.repeatedPublishableValues.length > 0
+        ? "NEEDS_INPUT"
+        : "READY";
       return {
         id: section.id,
         type: section.type,
         purpose: section.purpose,
         priority: section.priority,
         status: contentState,
+        evidence: section.evidence,
         requiredContent: section.requiredContent,
+        missingContent: section.missingContent,
         fallback: section.fallback,
         contentContract: {
           state: contentState,
-          localePolicy: structuredClone(contentSection?.localePolicy ?? { sourceLocale: "en", localizationReady: true }),
-          fields,
-          quality
+          ...contentSection
         }
       };
     }),

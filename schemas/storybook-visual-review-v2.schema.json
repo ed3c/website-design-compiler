@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/storybook-visual-review/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "subject", "reviewer", "screenshots"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/storybook-visual-review/v2" },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree", "sourceFilesSha256", "screenshotSetSha256", "authorContextId"],
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "tree": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "screenshotSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "authorContextId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identity", "runtime", "contextId", "independence", "wroteSubject", "startedAt", "completedAt"],
+      "properties": {
+        "kind": { "enum": ["agent", "human"] },
+        "identity": { "type": "string", "minLength": 1 },
+        "runtime": { "type": "string", "minLength": 1 },
+        "contextId": { "type": "string", "minLength": 1 },
+        "independence": { "const": "SEPARATE_CONTEXT" },
+        "wroteSubject": { "const": false },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "screenshots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256", "verdict", "observations"],
+        "properties": {
+          "name": { "type": "string", "pattern": "\\.png$" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "verdict": { "enum": ["PASS", "FAIL"] },
+          "observations": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 24 }
+          }
+        }
+      }
+    }
+  }
+}

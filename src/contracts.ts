@@ -28,7 +28,41 @@ export const PIPELINE_STAGES = [
 export type PipelineStageName = (typeof PIPELINE_STAGES)[number];
 export type ArtDirectorAuthority = "anthropic-frontend-design" | "google-stitch" | "taste-skill" | "repo-native";
 
-export interface CompilerReference { kind: "url" | "image" | "video" | "html"; value: string; }
+export interface VisualDirectionDimensions {
+  typography: "neo-grotesk" | "editorial-serif" | "humanist-sans" | "display-contrast";
+  typeContrast: "restrained" | "balanced" | "dramatic";
+  density: "airy" | "balanced" | "dense";
+  grid: "strict" | "asymmetric" | "modular" | "editorial";
+  surface: "flat" | "layered" | "bordered" | "tonal";
+  colorStrategy: "neutral-accent" | "warm-editorial" | "high-contrast" | "tonal-brand" | "spatial-dark";
+  mediaStrategy: "text-first" | "product-media" | "editorial-media" | "interactive-stage";
+  motionIntensity: "minimal" | "moderate" | "expressive";
+  signatureInteraction: "none" | "progressive-reveal" | "spatial-focus" | "direct-manipulation";
+}
+
+export interface CompilerReference {
+  kind: "url" | "image" | "video" | "html";
+  value: string;
+  visualEvidence?: {
+    receiptPath: string;
+    receiptSha256: string;
+  };
+}
+
+export interface AuthoredContentEntry {
+  value: CompilerContentValue;
+  source: {
+    kind: "user-supplied" | "benchmark-fixture";
+    uri: string;
+  };
+  evidence?: {
+    kind: "source-excerpt";
+    source: string;
+    sourceSha256: string;
+    excerpt: string;
+    sha256: string;
+  };
+}
 
 export interface CompilerBriefSourceEvidence {
   inputSha256: string;
@@ -49,8 +83,13 @@ export interface CompilerContentEvidence {
 export interface CompilerInput {
   schema: "website-design-compiler/input/v1";
   project: string;
-  brief: { pageType: string; audience: string; objective: string; };
+  brief: {
+    pageType: string;
+    audience: string;
+    objective: string;
+  };
   hardConstraints?: string[];
+  authoredContent?: Record<string, AuthoredContentEntry>;
   briefSourceEvidence?: CompilerBriefSourceEvidence;
   contentEvidence?: CompilerContentEvidence;
   references?: CompilerReference[];
@@ -60,12 +99,19 @@ export interface CompilerInput {
 
 export interface StageEvidence { stage: string; state: EvidenceState; reason: string; artifacts: string[]; }
 
+export interface StageExecutionEvidence {
+  state: EvidenceState;
+  reason: string;
+  artifacts: string[];
+}
+
 export interface RuntimeReceipt {
   schema: "website-design-compiler/runtime-receipt/v1";
   project: string;
   generatedAt: string;
   inputSha256: string;
   runtime: { node: string; platform: string; arch: string; };
+  git?: { sha: string; ref: string };
   stages: StageEvidence[];
   overall: EvidenceState;
 }

@@ -14,6 +14,8 @@ const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 type CandidateEnvironment = {
   gitSha: string;
   gitRef: string;
+  runtimeGitSha: string;
+  runtimeGitRef: string;
   repository: string;
   workflow: string;
   runId: number;
@@ -42,6 +44,7 @@ export type StorybookGoldenCandidate = {
   promotion: "HUMAN_REVIEW_REQUIRED";
   source: {
     git: { sha: string; ref: string };
+    runtimeGit: { sha: string; ref: string };
     workflow: { repository: string; name: string; runId: number; runAttempt: number };
     screenshotArtifact: { id: number; name: string };
     runnerImage: RuntimeMetadata["runnerImage"];
@@ -103,8 +106,10 @@ async function writeAtomically(path: string, contents: string): Promise<void> {
 
 export function candidateEnvironmentFromProcess(environment: EnvironmentValues): CandidateEnvironment {
   return {
-    gitSha: requireString(environment, "GITHUB_SHA"),
-    gitRef: requireString(environment, "GITHUB_REF"),
+    gitSha: requireString(environment, "WDC_STORYBOOK_CANDIDATE_GIT_SHA"),
+    gitRef: requireString(environment, "WDC_STORYBOOK_CANDIDATE_GIT_REF"),
+    runtimeGitSha: requireString(environment, "WDC_STORYBOOK_RUNTIME_GIT_SHA"),
+    runtimeGitRef: requireString(environment, "WDC_STORYBOOK_RUNTIME_GIT_REF"),
     repository: requireString(environment, "GITHUB_REPOSITORY"),
     workflow: requireString(environment, "GITHUB_WORKFLOW"),
     runId: requirePositiveInteger(environment, "GITHUB_RUN_ID"),
@@ -205,6 +210,7 @@ export async function writeStorybookGoldenCandidate(options: {
     promotion: "HUMAN_REVIEW_REQUIRED",
     source: {
       git: { sha: options.environment.gitSha, ref: options.environment.gitRef },
+      runtimeGit: { sha: options.environment.runtimeGitSha, ref: options.environment.runtimeGitRef },
       workflow: {
         repository: options.environment.repository,
         name: options.environment.workflow,

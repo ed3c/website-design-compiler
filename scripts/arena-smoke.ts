@@ -1,13 +1,18 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { evaluateArena, type ArenaMatrix } from "../src/arena.js";
 import { evaluateArenaV2Metrics } from "../src/arena-v2-metrics.js";
 import type { CompilerInput, EvidenceState, RuntimeReceipt } from "../src/contracts.js";
+import { compileInformationArchitecture } from "../src/information-architecture.js";
+import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observation-fixture.js";
 
 const root = process.cwd();
 const matrixPath = join(root, "fixtures", "arena", "benchmark-matrix.json");
 const outputRoot = join(root, "artifacts", "arena");
+const proofSource = "fixtures/content/proof-evidence.txt";
+const proofSourceSha256 = createHash("sha256").update(await readFile(join(root, proofSource))).digest("hex");
 
 async function readJson<T>(path: string): Promise<T | null> {
   try {
@@ -28,6 +33,26 @@ function passIf(condition: boolean, absent = false): EvidenceState {
   return condition ? "PASS" : "FAIL";
 }
 
+function benchmarkAuthoredContent(slot: string, benchmarkId: string) {
+  const source = slot === "proof-items" ? proofSource : `fixture://arena/${benchmarkId}/${slot}`;
+  const value = `Benchmark ${slot}`;
+  const excerpt = `Synthetic Arena evidence states: ${value}`;
+  const needsEvidence = slot === "proof-items";
+  return {
+    value,
+    source: { kind: "benchmark-fixture" as const, uri: source },
+    ...(needsEvidence ? {
+      evidence: {
+        kind: "source-excerpt" as const,
+        source,
+        sourceSha256: proofSourceSha256,
+        excerpt,
+        sha256: createHash("sha256").update(`${source}\0${proofSourceSha256}\0${excerpt}\0${value}`).digest("hex")
+      }
+    } : {})
+  };
+}
+
 await mkdir(outputRoot, { recursive: true });
 const matrix = await readJson<ArenaMatrix>(matrixPath);
 if (!matrix || matrix.schema !== "website-design-compiler/arena-benchmark-matrix/v1") {
@@ -36,13 +61,32 @@ if (!matrix || matrix.schema !== "website-design-compiler/arena-benchmark-matrix
 
 const receipts = new Map<string, RuntimeReceipt>();
 const benchmarkArtifacts: Array<{ id: string; input: string; runtimeReceipt: string }> = [];
+const diagnostics: string[] = [];
+const visualDirectionReceipt = await readJson<{ overall?: unknown }>(join(root, "artifacts", "v2", "visual-direction-search", "receipt.json"));
+const visualEvidenceReceiptPath = join(root, "artifacts", "reference-browser", "observed-visual-fingerprint.json");
+const visualEvidenceReceiptSha256 = visualDirectionReceipt?.overall === "PASS"
+  ? await readFile(visualEvidenceReceiptPath).then((bytes) => createHash("sha256").update(bytes).digest("hex")).catch(() => null)
+  : null;
 
 for (const benchmark of matrix.categories) {
   const benchmarkDirectory = join(outputRoot, benchmark.id);
   await mkdir(benchmarkDirectory, { recursive: true });
   const inputPath = join(benchmarkDirectory, "compiler-input.json");
   const compilerOutput = join(benchmarkDirectory, "compiler-output");
-  const input: CompilerInput = {
+  if (visualDirectionReceipt?.overall !== "PASS" || !visualEvidenceReceiptSha256) {
+    diagnostics.push(
+      visualDirectionReceipt?.overall !== "PASS"
+        ? `${benchmark.id}: visual-direction benchmark receipt is ${evidenceState(visualDirectionReceipt?.overall)}`
+        : `${benchmark.id}: observed visual fingerprint is absent`
+    );
+    benchmarkArtifacts.push({
+      id: benchmark.id,
+      input: `artifacts/arena/${benchmark.id}/compiler-input.json`,
+      runtimeReceipt: `artifacts/arena/${benchmark.id}/compiler-output/runtime-receipt.json`
+    });
+    continue;
+  }
+  const baseInput: CompilerInput = {
     schema: "website-design-compiler/input/v1",
     project: `arena-${benchmark.id}`,
     brief: {
@@ -52,7 +96,11 @@ for (const benchmark of matrix.categories) {
     },
     references: [{
       kind: "html",
-      value: `<!doctype html><html><head><title>${benchmark.id}</title></head><body><nav><a href='/evidence'>Evidence</a></nav><main><h1>${benchmark.id}</h1><section><h2>Original benchmark fixture</h2></section></main></body></html>`
+      value: OBSERVED_VISUAL_FIXTURE_HTML,
+      visualEvidence: {
+        receiptPath: "artifacts/reference-browser/observed-visual-fingerprint.json",
+        receiptSha256: visualEvidenceReceiptSha256
+      }
     }],
     artDirection: {
       primary: ["repo-native"],
@@ -60,8 +108,23 @@ for (const benchmark of matrix.categories) {
     },
     requestedStages: [...matrix.requiredCompilerStages]
   };
+  const requiredSlots = compileInformationArchitecture(baseInput).sections.flatMap((section) => section.requiredContent);
+  const input: CompilerInput = {
+    ...baseInput,
+    authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, benchmarkAuthoredContent(slot, benchmark.id)]))
+  };
   await writeFile(inputPath, `${JSON.stringify(input, null, 2)}\n`, "utf8");
-  execFileSync("pnpm", ["exec", "tsx", "src/cli.ts", inputPath, compilerOutput], { cwd: root, stdio: "pipe" });
+  try {
+    execFileSync("pnpm", ["exec", "tsx", "src/cli.ts", inputPath, compilerOutput], { cwd: root, stdio: "pipe" });
+  } catch {
+    diagnostics.push(`${benchmark.id}: compiler execution failed for the current subject`);
+    benchmarkArtifacts.push({
+      id: benchmark.id,
+      input: `artifacts/arena/${benchmark.id}/compiler-input.json`,
+      runtimeReceipt: `artifacts/arena/${benchmark.id}/compiler-output/runtime-receipt.json`
+    });
+    continue;
+  }
   const receiptPath = join(compilerOutput, "runtime-receipt.json");
   const runtimeReceipt = await readJson<RuntimeReceipt>(receiptPath);
   if (runtimeReceipt) receipts.set(benchmark.id, runtimeReceipt);
@@ -243,9 +306,10 @@ const receipt = {
     benchmarkProvenanceCompleteness: "PASS applies to the deterministic Arena provenance fixture only; repository-wide rights clearance remains outside this claim.",
     keyboardCompletion: "The browser runtime test contract explicitly exercises Tab focus followed by the primary button action; project PASS plus retained Playwright report/trace is the runtime evidence boundary.",
     motionChoreography: "Coherence and accessibility are scored independently; generic browser PASS cannot substitute for either scoped gate set.",
-    mediaStrategyFit: "Fit requires strategy diversity plus observed lazy, Resource Timing, budget and fallback evidence; it is independent from necessity.",
+    mediaStrategyFit: "The Arena metric requires both the compiler strategy receipt and a separate browser receipt proving lazy activation, bounded Pixi/Three execution, provider fallback and forced media-off behavior.",
     mediaNecessity: "Necessity requires deliberate no-media coverage and semantic DOM ownership rather than rewarding maximal rich-media use."
-  }
+  },
+  diagnostics
 };
 
 const receiptPath = join(outputRoot, "arena-score.json");

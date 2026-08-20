@@ -3,12 +3,22 @@
   "$id": "website-design-compiler/semantic-design-tokens/v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "project", "sourceVisualDirection", "sourceVisualDirectionReceiptSha256", "color", "typography", "layout", "spacingPx", "radiiPx", "border", "elevation", "motionMs", "media", "interaction"],
+  "required": ["schema", "project", "sourceVisualDirection", "color", "typography", "layout", "spacingPx", "radiiPx", "border", "elevation", "motionMs", "media", "interaction"],
   "properties": {
     "schema": { "const": "website-design-compiler/semantic-design-tokens/v2" },
     "project": { "type": "string", "minLength": 1 },
-    "sourceVisualDirection": { "type": "string", "minLength": 1 },
-    "sourceVisualDirectionReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sourceVisualDirection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "inputSha256", "seed", "candidateId", "candidateSignature", "receiptSha256"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/visual-direction-search/v2" },
+        "inputSha256": { "$ref": "#/$defs/sha256" },
+        "seed": { "type": "string", "minLength": 1 },
+        "candidateId": { "type": "string", "pattern": "^direction-[1-9][0-9]*$" },
+        "candidateSignature": { "$ref": "#/$defs/sha256" },
+        "receiptSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
     "color": {
       "type": "object", "additionalProperties": false,
       "required": ["mode", "background", "surface", "text", "mutedText", "accent", "onAccent", "focus", "contrastPolicy", "contrastEvidence"],
@@ -33,36 +43,93 @@
       "type": "object", "additionalProperties": false,
       "required": ["display", "body", "scalePx"],
       "properties": {
-        "display": { "$ref": "#/$defs/displayType" },
-        "body": { "$ref": "#/$defs/bodyType" },
-        "scalePx": { "$ref": "#/$defs/viewportNumberArrays" }
+        "display": {
+          "type": "object", "additionalProperties": false,
+          "required": ["family", "fallback", "weight", "lineHeight", "letterSpacingEm"],
+          "properties": {
+            "family": { "type": "string", "minLength": 1 }, "fallback": { "$ref": "#/$defs/fontFallback" },
+            "weight": { "type": "integer", "minimum": 1, "maximum": 1000 }, "lineHeight": { "type": "number", "exclusiveMinimum": 0 }, "letterSpacingEm": { "type": "number" }
+          }
+        },
+        "body": {
+          "type": "object", "additionalProperties": false,
+          "required": ["family", "fallback", "weight", "lineHeight", "measureCh"],
+          "properties": {
+            "family": { "type": "string", "minLength": 1 }, "fallback": { "$ref": "#/$defs/fontFallback" },
+            "weight": { "type": "integer", "minimum": 1, "maximum": 1000 }, "lineHeight": { "type": "number", "exclusiveMinimum": 0 }, "measureCh": { "type": "integer", "minimum": 40, "maximum": 100 }
+          }
+        },
+        "scalePx": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mobile", "tablet", "desktop"],
+          "properties": { "mobile": { "$ref": "#/$defs/typeScale" }, "tablet": { "$ref": "#/$defs/typeScale" }, "desktop": { "$ref": "#/$defs/typeScale" } }
+        }
       }
     },
     "layout": {
       "type": "object", "additionalProperties": false,
       "required": ["breakpointsPx", "containerMaxPx", "columns", "gutterPx"],
       "properties": {
-        "breakpointsPx": { "$ref": "#/$defs/breakpoints" },
-        "containerMaxPx": { "$ref": "#/$defs/viewportNumbers" },
-        "columns": { "$ref": "#/$defs/viewportIntegers" },
-        "gutterPx": { "$ref": "#/$defs/viewportNumbers" }
+        "breakpointsPx": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mobile", "tablet", "desktop"],
+          "properties": { "mobile": { "const": 0 }, "tablet": { "const": 768 }, "desktop": { "const": 1200 } }
+        },
+        "containerMaxPx": { "$ref": "#/$defs/responsivePositive" }, "columns": { "$ref": "#/$defs/responsivePositiveInteger" }, "gutterPx": { "$ref": "#/$defs/responsivePositive" }
       }
     },
-    "spacingPx": { "type": "array", "minItems": 7, "items": { "type": "number", "minimum": 0 } },
-    "radiiPx": { "type": "object", "additionalProperties": false, "required": ["sm", "md", "lg", "pill"], "properties": { "sm": { "type": "number", "minimum": 0 }, "md": { "type": "number", "minimum": 0 }, "lg": { "type": "number", "minimum": 0 }, "pill": { "const": 999 } } },
-    "border": { "type": "object", "additionalProperties": false, "required": ["widthPx", "style", "color"], "properties": { "widthPx": { "const": 1 }, "style": { "const": "solid" }, "color": { "$ref": "#/$defs/oklch" } } },
-    "elevation": { "type": "object", "additionalProperties": false, "required": ["low", "high"], "properties": { "low": { "type": "string", "minLength": 1 }, "high": { "type": "string", "minLength": 1 } } },
-    "motionMs": { "type": "object", "additionalProperties": false, "required": ["fast", "base", "slow"], "properties": { "fast": { "type": "number", "minimum": 0 }, "base": { "type": "number", "minimum": 0 }, "slow": { "type": "number", "minimum": 0 } } },
-    "media": { "type": "object", "additionalProperties": false, "required": ["treatment", "gradientPolicy", "blurMaxPx", "noiseOpacityMax"], "properties": { "treatment": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] }, "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] }, "blurMaxPx": { "type": "number", "minimum": 0 }, "noiseOpacityMax": { "type": "number", "minimum": 0, "maximum": 1 } } },
-    "interaction": { "type": "object", "additionalProperties": false, "required": ["focusRingPx", "focusOffsetPx", "rawValueBypass"], "properties": { "focusRingPx": { "const": 3 }, "focusOffsetPx": { "const": 2 }, "rawValueBypass": { "const": false } } }
+    "spacingPx": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "type": "number", "minimum": 0 } },
+    "radiiPx": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sm", "md", "lg", "pill"],
+      "properties": { "sm": { "type": "number", "minimum": 0 }, "md": { "type": "number", "minimum": 0 }, "lg": { "type": "number", "minimum": 0 }, "pill": { "const": 999 } }
+    },
+    "border": {
+      "type": "object", "additionalProperties": false,
+      "required": ["widthPx", "style", "color"],
+      "properties": { "widthPx": { "const": 1 }, "style": { "const": "solid" }, "color": { "$ref": "#/$defs/oklch" } }
+    },
+    "elevation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["low", "high"],
+      "properties": { "low": { "type": "string", "minLength": 1 }, "high": { "type": "string", "minLength": 1 } }
+    },
+    "motionMs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fast", "base", "slow"],
+      "properties": { "fast": { "type": "integer", "minimum": 0 }, "base": { "type": "integer", "minimum": 0 }, "slow": { "type": "integer", "minimum": 0 } }
+    },
+    "media": {
+      "type": "object", "additionalProperties": false,
+      "required": ["treatment", "gradientPolicy", "blurMaxPx", "noiseOpacityMax"],
+      "properties": {
+        "treatment": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
+        "gradientPolicy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] },
+        "blurMaxPx": { "type": "number", "minimum": 0 }, "noiseOpacityMax": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "interaction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["focusRingPx", "focusOffsetPx", "minTargetPx", "hoverLiftPx", "rawValueBypass"],
+      "properties": {
+        "focusRingPx": { "const": 3 }, "focusOffsetPx": { "const": 2 }, "minTargetPx": { "const": 48 }, "hoverLiftPx": { "const": 1 }, "rawValueBypass": { "const": false }
+      }
+    }
   },
   "$defs": {
     "oklch": { "type": "string", "pattern": "^oklch\\([0-9.]+ [0-9.]+ [0-9.]+\\)$" },
-    "displayType": { "type": "object", "additionalProperties": false, "required": ["family", "fallback", "weight", "lineHeight", "letterSpacingEm"], "properties": { "family": { "type": "string", "minLength": 1 }, "fallback": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }, "weight": { "type": "integer", "minimum": 1 }, "lineHeight": { "type": "number", "exclusiveMinimum": 0 }, "letterSpacingEm": { "type": "number" } } },
-    "bodyType": { "type": "object", "additionalProperties": false, "required": ["family", "fallback", "weight", "lineHeight", "measureCh"], "properties": { "family": { "type": "string", "minLength": 1 }, "fallback": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }, "weight": { "type": "integer", "minimum": 1 }, "lineHeight": { "type": "number", "exclusiveMinimum": 0 }, "measureCh": { "type": "number", "exclusiveMinimum": 0 } } },
-    "viewportNumbers": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "type": "number", "minimum": 0 }, "tablet": { "type": "number", "minimum": 0 }, "desktop": { "type": "number", "minimum": 0 } } },
-    "viewportIntegers": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "type": "integer", "minimum": 1 }, "tablet": { "type": "integer", "minimum": 1 }, "desktop": { "type": "integer", "minimum": 1 } } },
-    "viewportNumberArrays": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } }, "tablet": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } }, "desktop": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } } } },
-    "breakpoints": { "type": "object", "additionalProperties": false, "required": ["mobile", "tablet", "desktop"], "properties": { "mobile": { "const": 0 }, "tablet": { "const": 768 }, "desktop": { "const": 1200 } } }
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "fontFallback": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "typeScale": { "type": "array", "minItems": 6, "maxItems": 6, "items": { "type": "number", "exclusiveMinimum": 0 } },
+    "responsivePositive": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mobile", "tablet", "desktop"],
+      "properties": { "mobile": { "type": "number", "exclusiveMinimum": 0 }, "tablet": { "type": "number", "exclusiveMinimum": 0 }, "desktop": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "responsivePositiveInteger": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mobile", "tablet", "desktop"],
+      "properties": { "mobile": { "type": "integer", "minimum": 1 }, "tablet": { "type": "integer", "minimum": 1 }, "desktop": { "type": "integer", "minimum": 1 } }
+    }
   }
 }

@@ -19,7 +19,10 @@ if (localSkillsDir && localSkillsDir !== "-") {
 }
 
 const consumerIdentity = process.env.GITHUB_SHA ? `git:${process.env.GITHUB_SHA}` : "NOT_EXERCISED";
-const receipt = resolveSharedBindings(bindingFile, projection, localSkillNames, consumerIdentity);
+const receipt = {
+  ...resolveSharedBindings(bindingFile, projection, localSkillNames, consumerIdentity),
+  git: { sha: process.env.GITHUB_SHA ?? "UNBOUND", ref: process.env.GITHUB_REF ?? "UNBOUND" }
+};
 await writeFile(outputPath, JSON.stringify(receipt, null, 2) + "\n", "utf8");
 
 if (receipt.overall !== "PASS") {

@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getPayload } from "payload";
@@ -12,6 +11,7 @@ import {
 import { validateAuthoringData, type AuthoringData } from "../src/puck-authoring.js";
 import { completePageGraphSignature, type CompletePageGraph } from "../src/complete-page-graph.js";
 import { pageGraphFingerprint, pageGraphToPuck, payloadToPuck, puckToPageGraph, puckToPayload, type PayloadPageGraphDocument } from "../src/page-graph-roundtrip.js";
+import { exactTrackedGitIdentity } from "../src/tracked-git-subject.js";
 
 const root = process.cwd();
 const outputDirectory = join(root, "artifacts", "cms");
@@ -20,11 +20,7 @@ const receiptPath = join(outputDirectory, "payload-cms-receipt.json");
 const publishedFixturePath = join(root, "apps", "site", "generated", "payload-published-authoring-data.json");
 const sourceFixturePath = join(root, "apps", "site", "generated", "showcase-authoring-data.json");
 const productionProjectionPath=join(root,"apps","site","generated","benchmark-page-graphs.json");
-const git = {
-  ref: `refs/heads/${execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" }).trim()}`,
-  sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-  tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim()
-};
+const git=exactTrackedGitIdentity(root,process.env.GITHUB_SHA,process.env.GITHUB_REF);
 
 await mkdir(outputDirectory, { recursive: true });
 await rm(dbPath, { force: true });
@@ -207,9 +203,10 @@ try {
   });
 
   const draftSource: AuthoringData = structuredClone(source);
-  const statusNode = (draftSource.content[0]?.props.content as AuthoringData["content"] | undefined)?.find((node) => node.type === "StatusPanelBlock");
-  if (!statusNode) throw new Error("fixture status block missing");
-  statusNode.props.message = "Newer draft content stored only in Payload versions";
+  const heroNode = draftSource.content.find((node) => node.type === "RichSectionBlock" && node.props.kind === "hero");
+  const heroFields = heroNode?.props.fields as Record<string, unknown> | undefined;
+  if (!heroFields || typeof heroFields.body !== "string") throw new Error("fixture rich hero body missing");
+  heroFields.body = "Newer draft content stored only in Payload versions";
   const draftLayout = authoringToPayloadLayout(draftSource);
 
   await api.update({
@@ -255,8 +252,8 @@ try {
   }
 
   const versions = await api.findVersions({ collection: "pages", where: { parent: { equals: page.id } }, overrideAccess: false, user, limit: 20 });
-  const publishedMessage = ((publishedAuthoring.content[0]?.props.content as AuthoringData["content"] | undefined)?.find((node) => node.type === "StatusPanelBlock")?.props.message);
-  const draftMessage = ((draftAuthoring.content[0]?.props.content as AuthoringData["content"] | undefined)?.find((node) => node.type === "StatusPanelBlock")?.props.message);
+  const publishedMessage = (publishedAuthoring.content.find((node) => node.type === "RichSectionBlock" && node.props.kind === "hero")?.props.fields as Record<string, unknown> | undefined)?.body;
+  const draftMessage = (draftAuthoring.content.find((node) => node.type === "RichSectionBlock" && node.props.kind === "hero")?.props.fields as Record<string, unknown> | undefined)?.body;
 
   const checks = {
     sourceValidation: sourceValidation.overall,

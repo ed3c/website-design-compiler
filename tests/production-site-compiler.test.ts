@@ -43,7 +43,7 @@ test("page graphs exact-bind every upstream artifact identity",()=>{
 test("explicit user content evidence compiles six production quality sites to READY",()=>{
   const compilations=qualityInputs.map(compileProductionSite);
   assert.equal(compilations.length,6);
-  assert.deepEqual([...new Set(compilations.map((compilation)=>compilation.siteGraph.routes[0]!.page.category))].sort(),["b2b-product","editorial","interactive-2d","interactive-3d","motion-heavy","premium-consumer"]);
+  assert.deepEqual([...new Set(compilations.map((compilation)=>compilation.siteGraph.routes[0]!.page.category))].sort(),["b2b-product","editorial","interactive-2d","interactive-3d","motion-heavy-creative","premium-consumer-brand"]);
   for(const compilation of compilations){
     assert.equal(compilation.contentArchitecture.overall,"READY");
     assert.equal(compilation.siteGraph.readiness,"READY");
@@ -55,7 +55,7 @@ test("explicit user content evidence compiles six production quality sites to RE
 test("selected visual directions materialize as distinct governed variants and responsive composition",()=>{
   const compilations=qualityInputs.map(compileProductionSite);
   const heroVariants=Object.fromEntries(compilations.map((compilation)=>{const page=compilation.siteGraph.routes[0]!.page;return[page.category,page.nodes.find((node)=>node.kind==="hero")?.variant];}));
-  assert.deepEqual(heroVariants,{"b2b-product":"split-media",editorial:"text-first","premium-consumer":"split-media","motion-heavy":"interactive","interactive-2d":"interactive","interactive-3d":"interactive"});
+  assert.deepEqual(heroVariants,{"b2b-product":"text-first",editorial:"text-first","premium-consumer-brand":"split-media","motion-heavy-creative":"interactive","interactive-2d":"interactive","interactive-3d":"interactive"});
   const presentationSignatures=compilations.map((compilation)=>compilation.siteGraph.routes[0]!.page.nodes.map((node)=>`${node.kind}:${node.variant}:${node.responsive.desktop.layout}:${node.responsive.desktop.columns}:${node.responsive.desktop.density}:${node.responsive.desktop.visualOrder.join("-")}`).join("|"));
   assert.equal(new Set(presentationSignatures).size,6);
 });

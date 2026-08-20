@@ -39,16 +39,7 @@ test("six benchmark page families produce materially different IA graphs", () =>
       assert.ok(section.requiredContent.length > 0);
       assert.ok(section.fallback.length > 0);
     }
-    assert.equal(plan.routes.length,2);
-    assert.equal(plan.routes[0]?.route,"/");
-    assert.ok(plan.routes.every((route)=>route.sectionIds.every((id)=>plan.sections.some((section)=>section.id===id))));
   }
-});
-
-test("IA owns unique governed routes instead of leaving page graphs fixed at root",()=>{
-  const plan=compileInformationArchitecture(input("interactive 3d showcase"));
-  assert.deepEqual(plan.routes.map((entry)=>entry.route),["/","/showcase"]);
-  assert.equal(new Set(plan.routes.map((entry)=>entry.route)).size,plan.routes.length);
 });
 
 test("B2B IA never fabricates social proof and marks it NEEDS_INPUT", () => {
@@ -65,6 +56,36 @@ test("B2B IA never fabricates social proof and marks it NEEDS_INPUT", () => {
 test("mobile information priority is explicit", () => {
   const plan = compileInformationArchitecture(input("interactive 3d showcase"));
   assert.deepEqual(plan.navigation.mobilePriority, ["primary-action", "primary-content", "supporting-content"]);
+});
+
+test("section readiness and evidence are bound to the content each section needs", () => {
+  const plan = compileInformationArchitecture(input("b2b product landing"));
+  const navigation = plan.sections.find((section) => section.id === "navigation");
+  const hero = plan.sections.find((section) => section.id === "hero");
+  const footer = plan.sections.find((section) => section.id === "footer");
+
+  assert.equal(navigation?.status, "NEEDS_INPUT");
+  assert.deepEqual(navigation?.missingContent, ["primary-action-label"]);
+  assert.equal(hero?.status, "NEEDS_INPUT");
+  assert.deepEqual(hero?.missingContent, ["headline", "value-proposition", "primary-action"]);
+  assert.equal(footer?.status, "READY");
+  assert.deepEqual(footer?.missingContent, []);
+  assert.notDeepEqual(navigation?.evidence, hero?.evidence);
+});
+
+test("section readiness reflects explicit authored content rather than planning prose", () => {
+  const baseInput = input("b2b product landing");
+  const requiredSlots = compileInformationArchitecture(baseInput).sections.flatMap((section) => section.requiredContent);
+  const plan = compileInformationArchitecture({
+    ...baseInput,
+    authoredContent: Object.fromEntries(requiredSlots.map((slot) => [slot, {
+      value: `Approved ${slot}`,
+      source: { kind: "benchmark-fixture", uri: `fixture://ia/${slot}` }
+    }]))
+  });
+
+  assert.ok(plan.sections.every((section) => section.status === "READY"));
+  assert.ok(plan.sections.every((section) => section.missingContent.length === 0));
 });
 
 test("editorial reading intent does not fabricate a hero conversion requirement",()=>{

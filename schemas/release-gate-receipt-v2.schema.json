@@ -3,7 +3,7 @@
   "$id": "https://ed3c.github.io/website-design-compiler/schemas/release-gate-receipt-v2.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "overall", "git", "workflow", "environment", "bindings", "gates", "evidence", "unresolvedRisks"],
+  "required": ["schema", "overall", "git", "workflow", "environment", "bindings", "gates", "evidence", "evidenceBindings", "optionalEvidence", "unresolvedRisks"],
   "properties": {
     "schema": { "const": "website-design-compiler/release-gate-receipt/v2" },
     "overall": { "enum": ["PASS", "FAIL"] },
@@ -27,6 +27,8 @@
       "additionalProperties": { "enum": ["PASS", "FAIL", "ABSENT", "NOT_IMPLEMENTED", "NOT_EXERCISED", "SKIPPED_BY_POLICY"] }
     },
     "evidence": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string" } },
+    "evidenceBindings": { "type": "object", "minProperties": 1 },
+    "optionalEvidence": { "type": "object", "minProperties": 1 },
     "unresolvedRisks": { "type": "array", "items": { "type": "object" } }
   }
 }

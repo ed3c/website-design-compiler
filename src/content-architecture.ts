@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import type { CompilerInput } from "./contracts.js";
+import { isAbsolute, join, relative, resolve } from "node:path";
+import type { CompilerInput, StageExecutionEvidence } from "./contracts.js";
 import { compileInformationArchitecture, type IaSection } from "./information-architecture.js";
 import { maxCharactersForContentSlot, qualityForContentFields, validContentValue, validateSectionContentContract, type ContentFieldContract, type ContentValue, type SectionContentContract } from "./content-contract.js";
 import { validateAgainstSchema } from "./validate.js";
@@ -17,14 +19,6 @@ export interface ContentArchitecturePlan {
   overall: "READY" | "NEEDS_INPUT";
 }
 
-const PLACEHOLDER_SLOTS = new Set([
-  "feature-items",
-  "proof-items",
-  "story-beats",
-  "body-content",
-  "related-items"
-]);
-
 const FORBIDDEN_SLOTS = new Set([
   "customer-logos",
   "testimonials",
@@ -34,27 +28,13 @@ const FORBIDDEN_SLOTS = new Set([
   "performance-claims"
 ]);
 
-function safeSuppliedValue(slot: string, input: CompilerInput,section:IaSection,maxCharacters:number): ContentValue | null {
-  const suppliedFields=input.contentEvidence?.source==="USER_SUPPLIED"?input.contentEvidence.sections[section.id]:undefined;
-  if(suppliedFields&&Object.hasOwn(suppliedFields,slot)){
-    const supplied=suppliedFields[slot];
-    return validContentValue(slot,supplied,maxCharacters)?structuredClone(supplied):null;
-  }
-  if (slot === "brand-or-project-name" || slot === "project-name") return validContentValue(slot,input.project,maxCharacters)?input.project:null;
-  if (
-    input.briefSourceEvidence?.fields.objective.sourceExcerpt &&
-    ((slot === "headline"&&section.type.startsWith("hero-")) || slot === "value-proposition" || slot === "product-description" || slot === "task" || slot === "dek")
-  ) return validContentValue(slot,input.brief.objective,maxCharacters)?input.brief.objective:null;
-  return null;
-}
+const EVIDENCE_REQUIRED_SLOTS = new Set(["proof-items", ...FORBIDDEN_SLOTS]);
 
-function provenanceFor(slot: string, input: CompilerInput,section:IaSection): string[] {
-  if(input.contentEvidence?.source==="USER_SUPPLIED"&&input.contentEvidence.sections[section.id]?.[slot]!==undefined&&input.briefSourceEvidence)return[`brief-input:${input.briefSourceEvidence.inputSha256}#/contentEvidence/sections/${section.id}/${slot}`];
-  if (slot === "brand-or-project-name" || slot === "project-name") return [`compiler.project:${input.project}`];
-  if (input.briefSourceEvidence?.fields.objective.sourceExcerpt && ((slot === "headline"&&section.type.startsWith("hero-")) || slot === "value-proposition" || slot === "product-description" || slot === "task" || slot === "dek")) {
-    return [`brief-input:${input.briefSourceEvidence.inputSha256}#objective`];
-  }
-  return [];
+function scopedContentValue(input: CompilerInput, section: IaSection, slot: string): ContentValue | undefined {
+  if (input.contentEvidence?.source !== "USER_SUPPLIED") return undefined;
+  const fields = input.contentEvidence.sections[section.id];
+  if (!fields || !Object.hasOwn(fields, slot)) return undefined;
+  return structuredClone(fields[slot]);
 }
 
 function audienceQuestion(section: IaSection, audience: string): string {
@@ -67,41 +47,66 @@ function ctaRole(section: IaSection): "PRIMARY" | "SECONDARY" | "NONE" {
   return "NONE";
 }
 
-function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>): ContentFieldContract {
-  const maxCharacters = maxCharactersForContentSlot(slot,section.type);
-  if (forbidden.has(slot) || FORBIDDEN_SLOTS.has(slot)) {
-    return {
-      slot,
-      state: "FORBIDDEN",
-      sourceType: "forbidden_invention",
-      value: null,
-      publishable: false,
-      provenance: [`policy.forbidden:${slot}`],
-      lengthBudget: { maxCharacters }
-    };
-  }
+function evidenceSha256(source: string, sourceSha256: string, excerpt: string, value: string): string {
+  return createHash("sha256").update(`${source}\0${sourceSha256}\0${excerpt}\0${value}`).digest("hex");
+}
 
-  const value = safeSuppliedValue(slot, input,section,maxCharacters);
-  if (!value&&PLACEHOLDER_SLOTS.has(slot)) {
+function workspaceEvidenceBytes(root: string, path: string): Buffer | null {
+  if (isAbsolute(path) || /^[a-z][a-z0-9+.-]*:/i.test(path)) return null;
+  try {
+    const canonicalRoot = realpathSync(root);
+    const resolved = realpathSync(resolve(canonicalRoot, path));
+    const traversal = relative(canonicalRoot, resolved);
+    if (traversal.split(/[\\/]/)[0] === ".." || isAbsolute(traversal)) return null;
+    return readFileSync(resolved);
+  } catch {
+    return null;
+  }
+}
+
+function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbidden: Set<string>, root: string): ContentFieldContract {
+  const maxCharacters = maxCharactersForContentSlot(slot, section.type);
+  const authored = input.authoredContent?.[slot];
+  const authoredValue = authored?.value;
+  const scopedValue = scopedContentValue(input, section, slot);
+  if (scopedValue !== undefined && authoredValue !== undefined && JSON.stringify(scopedValue) !== JSON.stringify(authoredValue)) {
+    throw new Error(`conflicting content sources for ${section.id}.${slot}`);
+  }
+  const evidence = authored?.evidence;
+  const authoredText = Array.isArray(authoredValue) ? authoredValue.join("; ") : authoredValue;
+  const evidenceBytes = evidence ? workspaceEvidenceBytes(root, evidence.source) : null;
+  const evidenceText = evidenceBytes?.toString("utf8");
+  const sourceSha256 = evidenceBytes ? createHash("sha256").update(evidenceBytes).digest("hex") : null;
+  const evidenceVerified = evidence !== undefined &&
+    authored !== undefined &&
+    evidence.source === authored.source.uri &&
+    sourceSha256 === evidence.sourceSha256 &&
+    evidenceText?.includes(evidence.excerpt) === true &&
+    authoredText !== undefined &&
+    evidence.excerpt.toLocaleLowerCase("en").includes(authoredText.toLocaleLowerCase("en")) &&
+    evidence.sha256 === evidenceSha256(evidence.source, evidence.sourceSha256, evidence.excerpt, authoredText);
+  if ((forbidden.has(slot) || EVIDENCE_REQUIRED_SLOTS.has(slot)) && !evidenceVerified) {
     return {
       slot,
       state: "NEEDS_INPUT",
       sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: [`ia.section:${section.id}`],
+      provenance: [`policy.evidence-required:${slot}`],
       lengthBudget: { maxCharacters }
     };
   }
 
-  if (!value) {
+  const projectValue = slot === "brand-or-project-name" || slot === "project-name" ? input.project : undefined;
+  const value: ContentValue | undefined = scopedValue ?? authoredValue ?? projectValue;
+  if (value === undefined || !validContentValue(slot, value, maxCharacters)) {
     return {
       slot,
       state: "NEEDS_INPUT",
       sourceType: "placeholder_required",
       value: null,
       publishable: false,
-      provenance: provenanceFor(slot, input,section),
+      provenance: [],
       lengthBudget: { maxCharacters }
     };
   }
@@ -109,15 +114,23 @@ function fieldFor(slot: string, input: CompilerInput, section: IaSection, forbid
   return {
     slot,
     state: "READY",
-    sourceType: "user_supplied_claim",
+    sourceType: evidenceVerified ? "observed_fact" : "user_supplied_claim",
     value,
     publishable: true,
-    provenance: provenanceFor(slot, input,section),
+    provenance: scopedValue !== undefined
+      ? [`brief-input:${input.briefSourceEvidence!.inputSha256}#/contentEvidence/sections/${section.id}/${slot}`]
+      : authored
+      ? [
+          `compiler.authoredContent:${slot}`,
+          `source:${authored.source.kind}:${authored.source.uri}`,
+          ...(evidenceVerified ? [`evidence:${evidence.source}#sha256=${evidence.sha256}`] : [])
+        ]
+      : [`compiler.project:${input.project}`],
     lengthBudget: { maxCharacters }
   };
 }
 
-export function compileContentArchitecture(input: CompilerInput): ContentArchitecturePlan {
+export function compileContentArchitecture(input: CompilerInput, root = process.cwd()): ContentArchitecturePlan {
   const ia = compileInformationArchitecture(input);
   if(input.contentEvidence){
     if(input.contentEvidence.schema!=="website-design-compiler/content-evidence/v1"||input.contentEvidence.source!=="USER_SUPPLIED")throw new Error("content evidence identity is invalid");
@@ -129,8 +142,15 @@ export function compileContentArchitecture(input: CompilerInput): ContentArchite
     }
   }
   const forbidden = new Set(ia.forbiddenInventions);
+  const requiredSlots = new Set(ia.sections.flatMap((section) => section.requiredContent));
+  const unownedSlots = Object.keys(input.authoredContent ?? {})
+    .filter((slot) => !requiredSlots.has(slot))
+    .sort();
+  if (unownedSlots.length > 0) {
+    throw new Error(`authored content is not owned by this page architecture: ${unownedSlots.join(", ")}`);
+  }
   const sections = ia.sections.map<SectionContentContract>((section) => {
-    const fields = section.requiredContent.map((slot) => fieldFor(slot, input, section, forbidden));
+    const fields = section.requiredContent.map((slot) => fieldFor(slot, input, section, forbidden, root));
     return {
       sectionId: section.id,
       sectionType: section.type,
@@ -159,12 +179,18 @@ export function compileContentArchitecture(input: CompilerInput): ContentArchite
   };
 }
 
-export async function writeContentArchitecturePlan(input: CompilerInput, outputDirectory: string): Promise<string> {
+export async function writeContentArchitecturePlan(input: CompilerInput, outputDirectory: string): Promise<StageExecutionEvidence> {
   const plan = compileContentArchitecture(input);
   await validateAgainstSchema(plan, "content-architecture-v2.schema.json");
   const directory = join(outputDirectory, "content-architecture");
   await mkdir(directory, { recursive: true });
   const path = join(directory, "content-architecture.json");
   await writeFile(path, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
-  return path;
+  return {
+    state: plan.overall === "READY" ? "PASS" : "ABSENT",
+    reason: plan.overall === "READY"
+      ? "Content Architecture emitted complete, provenance-bound authoring contracts."
+      : "Required authoring inputs are absent; the artifact records explicit NEEDS_INPUT fields.",
+    artifacts: [path]
+  };
 }

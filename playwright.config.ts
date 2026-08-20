@@ -1,7 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const browserPort=Number(process.env.WDC_BROWSER_PORT??"3000");
-if(!Number.isInteger(browserPort)||browserPort<1024||browserPort>65535)throw new Error("WDC_BROWSER_PORT must be an unprivileged TCP port");
+const browserPort = process.env.WDC_BROWSER_PORT ?? "3100";
+if (!/^\d{1,5}$/.test(browserPort) || Number(browserPort) < 1024 || Number(browserPort) > 65_535) {
+  throw new Error("WDC_BROWSER_PORT must be an unprivileged TCP port");
+}
+const browserBaseUrl = `http://127.0.0.1:${browserPort}`;
+const webgpuLaunchArgs = process.platform === "linux"
+  ? [
+      "--enable-unsafe-webgpu",
+      "--use-angle=vulkan",
+      "--enable-features=Vulkan",
+      "--disable-vulkan-surface"
+    ]
+  : process.platform === "darwin"
+    ? ["--enable-unsafe-webgpu", "--use-angle=metal"]
+    : ["--enable-unsafe-webgpu"];
 
 export default defineConfig({
   testDir: "./tests/browser",
@@ -10,13 +23,13 @@ export default defineConfig({
   reporter: [["json", { outputFile: "artifacts/browser-qa/playwright-report.json" }], ["line"]],
   retries: 0,
   use: {
-    baseURL: `http://127.0.0.1:${browserPort}`,
+    baseURL: browserBaseUrl,
     trace: "on",
     screenshot: "off"
   },
   webServer: {
     command: `pnpm --filter @website-design-compiler/site exec next start -H 127.0.0.1 -p ${browserPort}`,
-    url: `http://127.0.0.1:${browserPort}`,
+    url: browserBaseUrl,
     reuseExistingServer: false,
     timeout: 120_000,
     stdout: "ignore",
@@ -25,7 +38,11 @@ export default defineConfig({
   projects: [
     {
       name: "desktop-chromium",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 1000 } }
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 1000 },
+        launchOptions: { args: webgpuLaunchArgs }
+      }
     },
     {
       name: "tablet-chromium",

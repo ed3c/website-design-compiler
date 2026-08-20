@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/legacy-storybook-visual-goldens/v3",
+  "$comment": "Retained for historical fixtures only. The runtime contract is schemas/storybook-visual-goldens.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source", "screenshots"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/legacy-storybook-visual-goldens/v3" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "subjectCommit", "subjectTree", "sourceFilesSha256", "screenshotSetSha256", "reviewReceiptSha256", "node", "playwright", "browser", "projects"],
+      "properties": {
+        "kind": { "const": "agent-visual-review" },
+        "subjectCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "subjectTree": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "sourceFilesSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "screenshotSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "reviewReceiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "node": { "type": "string", "minLength": 1 },
+        "playwright": { "type": "string", "minLength": 1 },
+        "browser": { "type": "string", "minLength": 1 },
+        "projects": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "screenshots": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "\\.png$" },
+      "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    }
+  }
+}

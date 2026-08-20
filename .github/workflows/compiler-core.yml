@@ -4,8 +4,13 @@ on:
   push:
     branches:
       - main
-      - 'agent/**'
   pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: compiler-core-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -14,19 +19,20 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          fetch-depth: 2
-      - uses: pnpm/action-setup@v4
+          fetch-depth: 0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.15.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm exec playwright install --with-deps chromium
       - name: Verify v2 natural-language brief normalization and IA compilation
         run: pnpm v2:brief-ia
       - name: Verify six natural-language v2 benchmark briefs
@@ -34,7 +40,13 @@ jobs:
       - name: Verify six-category claim-safe content architecture
         run: pnpm v2:content-architecture
       - name: Verify deterministic multi-candidate visual direction search
-        run: pnpm v2:visual-directions
+        id: visual-direction
+        continue-on-error: true
+        env:
+          WDC_REFERENCE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 }}
+        run: |
+          pnpm reference:browser-fixture
+          pnpm v2:visual-directions
       - name: Verify concrete semantic tokens and production projection drift
         run: pnpm v2:semantic-tokens
       - name: Verify governed rich section grammar
@@ -49,6 +61,10 @@ jobs:
         run: pnpm v2:complete-page-graph
       - run: pnpm provenance:fixture
       - name: Verify repository-wide rights clearance
+        id: rights-clearance
+        continue-on-error: true
+        env:
+          WDC_RIGHTS_WAIVERS_SHA256: ${{ vars.WDC_RIGHTS_WAIVERS_SHA256 }}
         run: pnpm rights:clearance
       - run: pnpm compile:fixture
       - run: pnpm showcase:typecheck
@@ -57,8 +73,23 @@ jobs:
       - name: Verify pinned external design skill registry
         run: pnpm external-skills:receipt
       - name: Verify deterministic authenticated media worker
+        env:
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: pnpm media:fixture
+      - name: Materialize protected production provider inputs
+        id: production-provider-config
+        env:
+          WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64 || '' }}
+          WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256 || '' }}
+        run: pnpm media:production-config
       - name: Record fail-closed production provider admission status
+        env:
+          WDC_PRODUCTION_PROVIDER_CONFIG: ${{ steps.production-provider-config.outputs.config_path }}
+          WDC_PRODUCTION_REQUEST_SECRET: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_REQUEST_SECRET || '' }}
+          WDC_PRODUCTION_PROVIDER_CREDENTIAL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WDC_PRODUCTION_PROVIDER_CREDENTIAL || '' }}
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: pnpm media:production-status
       - name: Verify governed Puck authoring projection
         run: pnpm authoring:receipt
@@ -71,11 +102,8 @@ jobs:
       - run: pnpm browser:typecheck
       - run: pnpm storybook:typecheck
       - run: pnpm arena:typecheck
-      - run: pnpm exec playwright install chromium
       - name: Verify deterministic reference image/video decode evidence
         run: pnpm reference:media-fixture
-      - name: Verify browser-derived reference layout/typography/responsive evidence
-        run: pnpm reference:browser-fixture
       - name: Bind exact head runtime receipt
         run: |
           node -e 'const fs=require("fs"); const p="artifacts/runtime/minimal/runtime-receipt.json"; const r=JSON.parse(fs.readFileSync(p,"utf8")); r.git={sha:process.env.GITHUB_SHA,ref:process.env.GITHUB_REF}; fs.writeFileSync(p,JSON.stringify(r,null,2)+"\n")'
@@ -83,6 +111,14 @@ jobs:
         run: pnpm verify:bindings fixtures/bindings/registry-projection.json skills artifacts/runtime/shared-binding-receipt.json
       - name: Run Storybook, browser, generated-page evidence, design-quality, accessibility-performance, arena, and release gates
         id: runtime-gates
+        continue-on-error: true
+        env:
+          WDC_REFERENCE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_REFERENCE_BROWSER_ADMISSION_SHA256 }}
+          WDC_STORYBOOK_VISUAL_GOLDENS_SHA256: ${{ vars.WDC_STORYBOOK_VISUAL_GOLDENS_SHA256 }}
+          WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256: ${{ vars.WDC_GENERATED_PAGE_BROWSER_ADMISSION_SHA256 }}
+          WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64: ${{ secrets.WDC_GENERATED_PAGE_BROWSER_ADMISSION_BASE64 }}
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: |
           set +e
           pnpm storybook:build
@@ -119,9 +155,9 @@ jobs:
       - name: Upload Ubuntu Storybook golden screenshot candidate
         id: storybook-golden-screenshots
         if: always() && steps.runtime-gates.outputs.storybook_build_status == '0' && steps.runtime-gates.outputs.storybook_qa_status == '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          name: storybook-golden-screenshots-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
           path: artifacts/storybook/screenshots/*.png
           if-no-files-found: error
           retention-days: 14
@@ -130,13 +166,17 @@ jobs:
         if: always() && steps.storybook-golden-screenshots.outputs.artifact-id != ''
         env:
           STORYBOOK_SCREENSHOT_ARTIFACT_ID: ${{ steps.storybook-golden-screenshots.outputs.artifact-id }}
-          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.sha }}-${{ github.run_attempt }}
+          STORYBOOK_SCREENSHOT_ARTIFACT_NAME: storybook-golden-screenshots-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
           STORYBOOK_BUILD_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_build_status }}
           STORYBOOK_QA_EXIT_CODE: ${{ steps.runtime-gates.outputs.storybook_qa_status }}
+          WDC_STORYBOOK_CANDIDATE_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WDC_STORYBOOK_CANDIDATE_GIT_REF: ${{ github.head_ref && format('refs/heads/{0}', github.head_ref) || github.ref }}
+          WDC_STORYBOOK_RUNTIME_GIT_SHA: ${{ github.sha }}
+          WDC_STORYBOOK_RUNTIME_GIT_REF: ${{ github.ref }}
         run: pnpm storybook:golden-candidate
       - name: Upload review-required Storybook golden candidate manifest
         if: always() && steps.storybook-golden-candidate.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: storybook-golden-candidate-${{ github.sha }}-${{ github.run_attempt }}
           path: artifacts/storybook/golden-candidate.json
@@ -144,8 +184,13 @@ jobs:
           retention-days: 14
       - name: Verify canonical v2 release policy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          WDC_RELEASE_PROFILE: COMMERCIAL_PRODUCTION
+          WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256: ${{ vars.WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256 }}
+          WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE: ${{ vars.WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE }}
         run: pnpm release:v2
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        id: compiler-core-evidence
         if: always()
         with:
           name: compiler-core-receipt-${{ github.sha }}
@@ -159,7 +204,7 @@ jobs:
             artifacts/runtime/minimal/reference-intelligence/originality-plan.json
             artifacts/runtime/minimal/reference-intelligence/originality-plan.md
             artifacts/reference-media/reference-media-receipt.json
-            artifacts/reference-browser/reference-browser-receipt.json
+            artifacts/reference-browser/
             artifacts/runtime/minimal/art-direction/design-read.json
             artifacts/runtime/minimal/art-direction/DESIGN.md
             artifacts/runtime/minimal/art-direction/semantic-tokens.json
@@ -183,8 +228,11 @@ jobs:
             artifacts/browser-qa/playwright-runtime-report.json
             artifacts/browser-qa/screenshots/
             artifacts/browser-qa/test-results/
+            artifacts/browser-qa/test-results-functional/
+            artifacts/browser-qa/test-results-runtime/
             artifacts/graphics-3d/
             artifacts/generated-pages/
+            artifacts/design-quality-browser/
             artifacts/media-orchestration/
             artifacts/accessibility-performance/
             artifacts/arena/
@@ -192,3 +240,15 @@ jobs:
             artifacts/release-v2/release-policy-v2-receipt.json
             artifacts/runtime/shared-binding-receipt.json
           if-no-files-found: warn
+      - name: Enforce aggregate verification result after evidence upload
+        id: enforce-verification
+        if: always()
+        env:
+          VISUAL_DIRECTION_OUTCOME: ${{ steps.visual-direction.outcome }}
+          RIGHTS_CLEARANCE_OUTCOME: ${{ steps.rights-clearance.outcome }}
+          RUNTIME_GATES_OUTCOME: ${{ steps.runtime-gates.outcome }}
+        run: |
+          if [ "$VISUAL_DIRECTION_OUTCOME" != "success" ] || [ "$RIGHTS_CLEARANCE_OUTCOME" != "success" ] || [ "$RUNTIME_GATES_OUTCOME" != "success" ]; then
+            echo "verification failed after review artifacts were preserved"
+            exit 1
+          fi

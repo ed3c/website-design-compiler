@@ -1,6 +1,10 @@
 import { sqliteAdapter } from "@payloadcms/db-sqlite";
 import { buildConfig, type Block, type CollectionConfig, type Field } from "payload";
-import { SECTION_CONTRACTS, SECTION_KINDS, type SectionFieldContract, type SectionKind } from "./section-grammar.js";
+import { SECTION_KINDS, type SectionKind } from "./section-grammar.js";
+import {
+  projectSectionContracts,
+  type ProjectionField
+} from "./section-projections.js";
 import { validateAuthoringData, type AuthoringComponentData, type AuthoringData } from "./puck-authoring.js";
 import { validateCompletePageGraph, type CompletePageGraph } from "./complete-page-graph.js";
 import { pageGraphFingerprint, payloadToPuck, puckToPageGraph, type PayloadPageGraphDocument } from "./page-graph-roundtrip.js";
@@ -13,15 +17,25 @@ export const StatusPanelBlock:Block={slug:"status-panel",interfaceName:"Governed
 export const SectionBlock:Block={slug:"section",interfaceName:"GovernedSectionBlock",fields:[{name:"componentId",type:"text",required:true},{name:"surfaceToken",type:"select",required:true,options:["surface-default","surface-muted"]},{name:"content",type:"blocks",required:true,blocks:[ButtonBlock,StatusPanelBlock],maxRows:24}]};
 
 function pascal(value:string):string{return value.split("-").map((part)=>part.charAt(0).toUpperCase()+part.slice(1)).join("");}
-function payloadField(name:string,contract:SectionFieldContract):Field{
+function payloadField(name:string,contract:ProjectionField):Field{
   if(contract.type==="number")return{name,type:"number",required:contract.required};
   if(contract.type==="items"||contract.type==="media")return{name,type:"json",required:contract.required};
-  if(contract.type==="link")return{name,type:"group",required:contract.required,fields:[{name:"label",type:"text",required:true,localized:true},{name:"href",type:"text",required:true}]};
-  if(contract.type==="rich-text"||((contract.maxLength??0)>120))return{name,type:"textarea",required:contract.required,localized:true};
+  if(contract.type==="link")return{name,type:"group",required:contract.required,fields:[{name:"label",type:"text",required:contract.required,localized:true},{name:"href",type:"text",required:contract.required}]};
+  if(contract.type==="textarea"||((contract.maxLength??0)>120))return{name,type:"textarea",required:contract.required,localized:true};
   return{name,type:"text",required:contract.required,localized:true};
 }
 export function buildRichSectionPayloadBlocks():Block[]{
-  return SECTION_KINDS.map((kind)=>{const contract=SECTION_CONTRACTS[kind];return{slug:`section-${kind}`,interfaceName:`Governed${pascal(kind)}SectionBlock`,fields:[{name:"componentId",type:"text",required:true},{name:"variant",type:"select",required:true,options:[...contract.variants]},...Object.entries(contract.fields).map(([name,field])=>payloadField(name,field)),{name:"provenance",type:"json",required:true},{name:"tokenRef",type:"text",required:true,defaultValue:"semantic-design-tokens/v2",admin:{readOnly:true}}]};});
+  return projectSectionContracts().map((projection)=>({
+    slug:projection.payloadSlug,
+    interfaceName:`Governed${pascal(projection.kind)}SectionBlock`,
+    fields:[
+      {name:"componentId",type:"text",required:true},
+      {name:"variant",type:"select",required:true,options:[...projection.variants]},
+      ...projection.fields.map((field)=>payloadField(field.name,field)),
+      {name:"provenance",type:"json",required:true},
+      {name:"tokenRef",type:"text",required:true,admin:{readOnly:true}}
+    ]
+  }));
 }
 export const RichSectionBlocks=buildRichSectionPayloadBlocks();
 
@@ -38,7 +52,7 @@ export function validateStoredPageGraph(value:unknown):true|string{
     const {blockType:_,...node}=entry;
     return node;
   });
-  const graph={schema:"website-design-compiler/page-graph/v2",project:value.project,category:value.category,route:value.route,source:value.source,readiness:value.readiness,missingEvidence:value.missingEvidence,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,nodes,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature} as unknown as CompletePageGraph;
+  const graph={schema:"website-design-compiler/page-graph/v2",project:value.project,category:value.category,route:value.route,source:value.source,readiness:value.readiness,sourceMissingEvidence:value.sourceMissingEvidence,missingEvidence:value.missingEvidence,semanticOrder:value.semanticOrder,conversionPath:value.conversionPath,nodes,sharedChrome:value.sharedChrome,contracts:value.contracts,signature:value.signature} as unknown as CompletePageGraph;
   const errors=validateCompletePageGraph(graph);
   return errors.length===0?true:errors.join("; ");
 }
@@ -77,7 +91,19 @@ function fromPayloadBlock(block:PayloadBlock):AuthoringComponentData{
   if(block.blockType==="status-panel")return{type:"StatusPanelBlock",props:{id,state:block.state,title:requireString(block.title,"status title"),message:requireString(block.message,"status message")}};
   if(block.blockType==="section"){if(!Array.isArray(block.content))throw new Error("section content must be a block array");return{type:"Section",props:{id,surfaceToken:block.surfaceToken,content:block.content.map((entry)=>{if(!entry||typeof entry!=="object"||Array.isArray(entry)||typeof(entry as Record<string,unknown>).blockType!=="string")throw new Error("section child is not a governed Payload block");return fromPayloadBlock(entry as PayloadBlock);})}};}
   const kind=richKindFromBlockType(block.blockType);
-  if(kind){const contract=SECTION_CONTRACTS[kind];const fields:Record<string,unknown>={};for(const name of Object.keys(contract.fields))if(block[name]!==undefined)fields[name]=block[name];return{type:"RichSectionBlock",props:{id,kind,variant:block.variant,fields,provenance:block.provenance,tokenRef:block.tokenRef??"semantic-design-tokens/v2"}};}
+  if(kind){
+    const projection=projectSectionContracts().find((entry)=>entry.kind===kind)!;
+    const allowed=new Set(["blockType","componentId","variant","provenance","tokenRef","id","blockName",...projection.fields.map((field)=>field.name)]);
+    for(const key of Object.keys(block))if(!allowed.has(key))throw new Error(`${key} is not an approved Payload field for ${kind}`);
+    const fields:Record<string,unknown>={};
+    for(const field of projection.fields){
+      const value=block[field.name];
+      if(!field.required&&(value===null||value===""))continue;
+      if(field.type==="link"&&!field.required&&isRecord(value)&&[value.label,value.href].every((entry)=>entry===undefined||entry===null||entry===""))continue;
+      if(value!==undefined)fields[field.name]=value;
+    }
+    return{type:"RichSectionBlock",props:{id,kind,variant:block.variant,fields,provenance:block.provenance,tokenRef:block.tokenRef}};
+  }
   throw new Error(`Payload block type ${block.blockType} is not governed`);
 }
 

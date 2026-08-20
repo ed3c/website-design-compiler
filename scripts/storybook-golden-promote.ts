@@ -24,6 +24,19 @@ function sha256(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function assertCandidateRuntimeGitBinding(candidate: StorybookGoldenCandidate): void {
+  const { git, runtimeGit } = candidate.source;
+  if (!/^refs\/heads\/.+/.test(git.ref)) throw new Error("Storybook candidate Git must bind a durable branch head");
+  if (runtimeGit.ref === git.ref) {
+    if (runtimeGit.sha !== git.sha) throw new Error("Storybook candidate and runtime Git on the same ref must bind the same SHA");
+    return;
+  }
+  if (!/^refs\/pull\/[1-9][0-9]*\/merge$/.test(runtimeGit.ref)) {
+    throw new Error("Storybook candidate Git must bind either its runtime ref or a durable branch head paired with a PR merge runtime ref");
+  }
+  if (runtimeGit.sha === git.sha) throw new Error("A Storybook PR merge runtime SHA must differ from its durable branch head SHA");
+}
+
 function assertPublicReview(review: GoldenReview): void {
   const serialized = JSON.stringify(review);
   const forbidden = [
@@ -64,6 +77,7 @@ export async function validateReviewedGoldenManifest(value: unknown, schemaRoot 
   const candidateBytes = Buffer.from(manifest.candidateArtifact.document, "utf8");
   if (sha256(candidateBytes) !== manifest.candidateArtifact.sha256) throw new Error("Embedded candidate bytes do not match the admitted candidate hash");
   const candidate = await validateAgainstSchema<StorybookGoldenCandidate>(JSON.parse(manifest.candidateArtifact.document) as unknown, "storybook-golden-candidate.schema.json", schemaRoot);
+  assertCandidateRuntimeGitBinding(candidate);
   const review = await validateAgainstSchema<GoldenReview>(manifest.review, "storybook-golden-review.schema.json", schemaRoot);
   assertPublicReview(review);
   if (review.candidateSha256 !== manifest.candidateArtifact.sha256) throw new Error("Review is not bound to the embedded candidate bytes");
@@ -106,6 +120,7 @@ export async function promoteStorybookGoldenCandidate(options: {
   const candidateValue = JSON.parse(candidateBytes.toString("utf8")) as unknown;
   const reviewValue = JSON.parse(reviewBytes.toString("utf8")) as unknown;
   const candidate = await validateAgainstSchema<StorybookGoldenCandidate>(candidateValue, "storybook-golden-candidate.schema.json", process.cwd());
+  assertCandidateRuntimeGitBinding(candidate);
   const review = await validateAgainstSchema<GoldenReview>(reviewValue, "storybook-golden-review.schema.json", process.cwd());
   assertPublicReview(review);
   if (options.githubRunId === candidate.source.workflow.runId) {

@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateCommandResults, OWNING_CLOSURE_COMMANDS, summarizeGeneratedPageReport } from "../scripts/issue-35-local-closure-receipt.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
 const git = { ref: "refs/heads/test", sha: "a".repeat(40), tree: "b".repeat(40) };
-const categories = ["b2b-product", "editorial", "premium-consumer", "motion-heavy", "interactive-2d", "interactive-3d"];
+const categories = ARENA_CATEGORIES;
 const projects = ["desktop-chromium", "tablet-chromium", "mobile-chromium", "reduced-motion-chromium"];
 
 function passingCommandResults() {

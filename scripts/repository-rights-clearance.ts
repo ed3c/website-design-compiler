@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { loadWaivers, scanRepositoryRights } from "../src/repository-rights-clearance.js";
+import { loadTrustedWaivers, scanRepositoryRights } from "../src/repository-rights-clearance.js";
 
-const waivers = await loadWaivers(resolve("rights-waivers.json"));
+const waivers = await loadTrustedWaivers(resolve("rights-waivers.json"), process.env.WDC_RIGHTS_WAIVERS_SHA256);
 const scanned = await scanRepositoryRights(process.cwd(), waivers);
 const receipt = {...scanned,git:{sha:process.env.GITHUB_SHA??"UNBOUND",ref:process.env.GITHUB_REF??"UNBOUND"}};
 const directory = resolve("artifacts/rights-clearance");

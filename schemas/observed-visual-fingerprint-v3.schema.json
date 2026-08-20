@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "website-design-compiler/observed-visual-fingerprint/v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "state", "producer", "referenceValueSha256", "capturedArtifactSha256", "producerReceipt", "evidenceArtifacts", "measurements", "dimensions", "observations"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/observed-visual-fingerprint/v3" },
+    "state": { "const": "PASS" },
+    "producer": { "const": "playwright-computed-style/v1" },
+    "referenceValueSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "capturedArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "producerReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "path", "sha256"],
+      "properties": {
+        "schema": { "const": "website-design-compiler/reference-browser-receipt/v2" },
+        "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.json$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "evidenceArtifacts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/evidenceArtifact" }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desktop", "mobile"],
+      "properties": {
+        "desktop": { "$ref": "#/$defs/measurement" },
+        "mobile": { "$ref": "#/$defs/measurement" }
+      }
+    },
+    "dimensions": { "$ref": "#/$defs/dimensions" },
+    "observations": { "type": "array", "minItems": 5, "items": { "type": "string", "minLength": 1 } }
+  },
+  "$defs": {
+    "evidenceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["viewport", "path", "sha256", "width", "minimumHeight"],
+      "properties": {
+        "viewport": { "enum": ["desktop", "mobile"] },
+        "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.png$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "width": { "type": "integer", "minimum": 1 },
+        "minimumHeight": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fontFamily", "headingFontSizePx", "bodyFontSizePx", "gridColumnCount", "gapPx", "cardBorderWidthPx", "cardBackgroundColor", "bodyColor", "bodyBackgroundColor", "linkColor", "images", "videos", "canvases", "transitionDurationMs", "transitionProperty", "interactiveControlCount", "revealTargetCount"],
+      "properties": {
+        "fontFamily": { "type": "string", "minLength": 1 },
+        "headingFontSizePx": { "type": "number", "exclusiveMinimum": 0 },
+        "bodyFontSizePx": { "type": "number", "exclusiveMinimum": 0 },
+        "gridColumnCount": { "type": "integer", "minimum": 1 },
+        "gapPx": { "type": "number", "minimum": 0 },
+        "cardBorderWidthPx": { "type": "number", "minimum": 0 },
+        "cardBackgroundColor": { "type": "string", "minLength": 1 },
+        "bodyColor": { "type": "string", "minLength": 1 },
+        "bodyBackgroundColor": { "type": "string", "minLength": 1 },
+        "linkColor": { "type": "string", "minLength": 1 },
+        "images": { "type": "integer", "minimum": 0 },
+        "videos": { "type": "integer", "minimum": 0 },
+        "canvases": { "type": "integer", "minimum": 0 },
+        "transitionDurationMs": { "type": "number", "minimum": 0 },
+        "transitionProperty": { "type": "string", "minLength": 1 },
+        "interactiveControlCount": { "type": "integer", "minimum": 0 },
+        "revealTargetCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typography", "typeContrast", "density", "grid", "surface", "colorStrategy", "mediaStrategy", "motionIntensity", "signatureInteraction"],
+      "properties": {
+        "typography": { "enum": ["neo-grotesk", "editorial-serif", "humanist-sans", "display-contrast"] },
+        "typeContrast": { "enum": ["restrained", "balanced", "dramatic"] },
+        "density": { "enum": ["airy", "balanced", "dense"] },
+        "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
+        "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
+        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand"] },
+        "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
+        "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
+        "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }
+      }
+    }
+  }
+}

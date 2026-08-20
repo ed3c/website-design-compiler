@@ -6,12 +6,13 @@ import { validateCompletePageGraph } from "../src/complete-page-graph.js";
 import { validateCompleteSiteGraph } from "../src/complete-site-graph.js";
 import { compileProductionSite } from "../src/production-site-compiler.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
 const incompleteInputs=JSON.parse(await readFile(resolve("fixtures/v2/brief-benchmarks.json"),"utf8")) as NaturalLanguageBriefInput[];
 const qualityInputs=JSON.parse(await readFile(resolve("fixtures/v2/quality-site-benchmarks.json"),"utf8")) as NaturalLanguageBriefInput[];
 const incompleteCompilations=incompleteInputs.map(compileProductionSite);
 const compilations=qualityInputs.map(compileProductionSite);const errors:string[]=[];
-const expectedCategories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"];
+const expectedCategories=ARENA_CATEGORIES;
 const incompleteProjects=incompleteInputs.map((input)=>input.project).sort();
 const qualityProjects=qualityInputs.map((input)=>input.project).sort();
 const cohortIdentityMatches=incompleteInputs.length===6&&qualityInputs.length===6&&JSON.stringify(incompleteProjects)===JSON.stringify(qualityProjects);

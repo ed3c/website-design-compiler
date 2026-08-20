@@ -9,6 +9,10 @@ export interface PinnedTransportRequest {
   resolvedAddress: string;
   deadlineAt: number;
   maxBytes: number;
+  method?: "GET" | "POST";
+  headers?: Record<string, string>;
+  body?: Uint8Array;
+  signal?: AbortSignal;
 }
 
 export interface PinnedTransportResponse {
@@ -64,9 +68,9 @@ export async function productionPinnedTransport(input: PinnedTransportRequest): 
     }
 
     const options: RequestOptions = {
-      method: "GET",
+      method: input.method ?? "GET",
       family,
-      headers: {
+      headers: input.headers ?? {
         accept: "text/html,application/xhtml+xml;q=0.9",
         "user-agent": "website-design-compiler-reference-capture/2"
       },
@@ -80,8 +84,10 @@ export async function productionPinnedTransport(input: PinnedTransportRequest): 
       if (settled) return;
       settled = true;
       clearTimeout(totalTimer);
+      input.signal?.removeEventListener("abort", abortRequest);
       rejectResponse(error instanceof Error ? error : new Error("remote reference transport failed"));
     };
+    const abortRequest = () => clientRequest.destroy(new Error("pinned transport request was cancelled"));
     const clientRequest = requestFn(input.url, options, (response) => {
       let connectedAddress: string;
       try {
@@ -106,6 +112,7 @@ export async function productionPinnedTransport(input: PinnedTransportRequest): 
         if (settled) return;
         settled = true;
         clearTimeout(totalTimer);
+        input.signal?.removeEventListener("abort", abortRequest);
         resolveResponse({
           status: response.statusCode ?? 0,
           headers: headersFromNode(response.headers),
@@ -119,25 +126,34 @@ export async function productionPinnedTransport(input: PinnedTransportRequest): 
       clientRequest.destroy(new Error("remote reference total deadline exceeded during transport"));
     }, remaining);
     clientRequest.on("error", fail);
-    clientRequest.end();
+    input.signal?.addEventListener("abort", abortRequest, { once: true });
+    if (input.signal?.aborted) abortRequest();
+    else {
+      if (input.body) clientRequest.write(input.body);
+      clientRequest.end();
+    }
   });
 }
 
 export function injectedFetchTransport(fetchImpl: typeof globalThis.fetch): PinnedTransport {
   return async (input) => {
     const controller = new AbortController();
+    const abortRequest=()=>controller.abort(new Error("pinned transport request was cancelled"));
     const remaining = remainingMilliseconds(input.deadlineAt);
     if (remaining === 0) throw new Error("remote reference total deadline exceeded before injected transport");
     const timer = setTimeout(() => controller.abort(new Error("remote reference total deadline exceeded during injected transport")), remaining);
+    input.signal?.addEventListener("abort",abortRequest,{once:true});
+    if(input.signal?.aborted)abortRequest();
     try {
       const response = await fetchImpl(input.url, {
-        method: "GET",
+        method: input.method ?? "GET",
         redirect: "manual",
         credentials: "omit",
-        headers: {
+        headers: input.headers ?? {
           accept: "text/html,application/xhtml+xml;q=0.9",
           "user-agent": "website-design-compiler-reference-capture/2"
         },
+        ...(input.body ? { body: Buffer.from(input.body) } : {}),
         signal: controller.signal
       });
       const chunks: Uint8Array[] = [];
@@ -170,6 +186,7 @@ export function injectedFetchTransport(fetchImpl: typeof globalThis.fetch): Pinn
       };
     } finally {
       clearTimeout(timer);
+      input.signal?.removeEventListener("abort",abortRequest);
     }
   };
 }

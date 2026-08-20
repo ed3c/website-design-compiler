@@ -3,7 +3,7 @@
   "$id": "https://ed3c.github.io/website-design-compiler/schemas/repository-rights-clearance.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "overall", "generatedAt", "subjects", "counts", "unresolved", "expiredWaivers", "noticeSubjects", "legalDisclaimer", "git"],
+  "required": ["schema", "overall", "generatedAt", "subjects", "counts", "unresolved", "expiredWaivers", "diagnostics", "noticeSubjects", "legalDisclaimer", "git"],
   "properties": {
     "schema": { "const": "website-design-compiler/repository-rights-clearance/v2" },
     "overall": { "enum": ["PASS", "FAIL"] },
@@ -43,6 +43,7 @@
     },
     "unresolved": { "type": "array", "items": { "type": "string" } },
     "expiredWaivers": { "type": "array", "items": { "type": "string" } },
+    "diagnostics": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "noticeSubjects": { "type": "array", "items": { "type": "string" } },
     "legalDisclaimer": { "const": "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE" },
     "git": {

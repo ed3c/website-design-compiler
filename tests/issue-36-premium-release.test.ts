@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateIssue36PremiumRelease } from "../scripts/issue-36-premium-release-receipt.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
 const sha="a".repeat(40);const tree="b".repeat(40);const digest="c".repeat(64);const ref="refs/heads/test";
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"];
+const categories=ARENA_CATEGORIES;
 const evaluator={schema:"website-design-compiler/design-quality-eval-receipt/v3",overall:"PASS",git:{sha,ref},releaseProfile:{premiumQualityThreshold:78,originalitySimilarityThreshold:.82},calibration:{state:"PASS",exactObservationSetBound:true},categoryCount:6,viewportCoverage:{mobile:6,desktop:6},exactHeadBound:true,allEvidenceBound:true,allStructuralPass:true,allOriginalityPass:true,allMeasurementsPass:true,premium:{state:"PASS",evaluations:categories.flatMap((category)=>(["mobile","desktop"] as const).map((viewport)=>({card:{category,viewport,schema:"website-design-compiler/design-quality-eval/v3",overall:"PASS"},decision:{overall:"PREMIUM_PASS"}})))}};
 const binding={schema:"website-design-compiler/issue-36-evidence-binding/v2",overall:"PASS",git:{sha,ref,tree},evaluator:{path:"artifacts/v3/design-quality/design-quality-eval-receipt.json",sha256:digest,schema:"website-design-compiler/design-quality-eval-receipt/v3",result:"PASS"},inventory:{state:"PASS",expected:12,observed:12},negativeControls:{state:"PASS"},residual:{premiumEvaluation:"PASS"}};
 const arena={overall:"PASS",git:{sha,ref},v2Metrics:{designQuality:{state:"PASS",categoryCount:6,mobileCount:6,desktopCount:6}},metricEvidence:{designQualityPremium:["artifacts/v3/design-quality/design-quality-eval-receipt.json"]},evidence:{designQuality:"artifacts/v3/design-quality/design-quality-eval-receipt.json"}};

@@ -12,6 +12,7 @@ const outputPath = join(root, "artifacts", "showcase", "showcase-compiler-receip
 const requiredStages = [
   "reference-intelligence",
   "art-direction",
+  "visual-direction-search",
   "design-system-compiler",
   "page-architect",
   "frontend-builder",
@@ -32,6 +33,7 @@ const requiredArtifacts = [
   "art-direction/component-state-matrix.json",
   "art-direction/motion-spec.json",
   "art-direction/scene-spec.json",
+  "visual-direction-search/visual-direction-search.json",
   "design-system-compiler/design-system-plan.json",
   "page-architect/page-architecture-plan.json",
   "frontend-builder/frontend-plan.json",

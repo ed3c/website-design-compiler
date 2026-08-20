@@ -10,18 +10,18 @@ const INTERACTIVE=new Set<SectionKind>(["graphics-2d-stage","graphics-3d-stage",
 const GRID=new Set<SectionKind>(["feature-grid","bento-grid","proof-cloud","metrics","comparison","pricing"]);
 const DENSE=new Set<SectionKind>(["navigation","footer","faq","editorial-prose"]);
 function composition(kind:SectionKind,viewport:"mobile"|"tablet"|"desktop",direction?:VisualDirectionDimensions):ViewportComposition{
-  const interactive=INTERACTIVE.has(kind);const grid=GRID.has(kind);const dense=DENSE.has(kind);
+  const interactive=INTERACTIVE.has(kind);const immersive=kind==="graphics-3d-stage";const grid=GRID.has(kind);const dense=DENSE.has(kind);
   const density:Density=!direction?viewport==="mobile"?"compact":viewport==="tablet"?"comfortable":"spacious":direction.density==="dense"?"compact":direction.density==="airy"?"spacious":"comfortable";
   if(viewport==="mobile"){
     const asymmetric=direction?.grid==="asymmetric";
     return{layout:interactive?"stage":grid?"stack":dense?"list":"stack",columns:1,visualOrder:asymmetric?["media","content"]:["content","media"],mediaPlacement:interactive?asymmetric?"before":"after":"none",sticky:false,density,maxContentChars:kind==="hero"?180:240};
   }
-  if(!direction){if(viewport==="tablet")return{layout:interactive||kind==="hero"?"split":grid?"grid":dense?"list":"stack",columns:grid?2:interactive||kind==="hero"?2:1,visualOrder:["content","media"],mediaPlacement:interactive||kind==="hero"?"after":"none",sticky:false,density,maxContentChars:360};return{layout:interactive||kind==="hero"?"split":grid?"grid":dense?"list":"stack",columns:grid?3:interactive||kind==="hero"?2:1,visualOrder:["content","media"],mediaPlacement:interactive?"after":kind==="hero"?"background":"none",sticky:kind==="navigation",density,maxContentChars:520};}
+  if(!direction){if(viewport==="tablet")return{layout:immersive?"stage":interactive||kind==="hero"?"split":grid?"grid":dense?"list":"stack",columns:immersive?1:grid?2:interactive||kind==="hero"?2:1,visualOrder:["content","media"],mediaPlacement:interactive||kind==="hero"?"after":"none",sticky:false,density,maxContentChars:360};return{layout:immersive?"stage":interactive||kind==="hero"?"split":grid?"grid":dense?"list":"stack",columns:immersive?1:grid?3:interactive||kind==="hero"?2:1,visualOrder:["content","media"],mediaPlacement:interactive?"after":kind==="hero"?"background":"none",sticky:kind==="navigation",density,maxContentChars:520};}
   const editorial=direction.grid==="editorial";const asymmetric=direction.grid==="asymmetric";
   const gridColumns:1|2|3|4=viewport==="tablet"?2:direction.grid==="strict"?4:direction.grid==="modular"?3:2;
   const heroSplit=direction.mediaStrategy==="product-media"||direction.mediaStrategy==="interactive-stage";
   const layout:LayoutMode=interactive?"stage":kind==="hero"?(heroSplit?"split":"stack"):grid?(editorial?"list":"grid"):dense?"list":asymmetric?"split":"stack";
-  const columns:1|2|3|4=layout==="grid"?gridColumns:layout==="split"||layout==="stage"?2:1;
+  const columns:1|2|3|4=layout==="grid"?gridColumns:layout==="split"||layout==="stage"?immersive?1:2:1;
   return{layout,columns,visualOrder:asymmetric?["media","content"]:["content","media"],mediaPlacement:interactive||heroSplit?"after":"none",sticky:kind==="navigation"&&viewport==="desktop",density,maxContentChars:viewport==="tablet"?360:direction.density==="dense"?420:560};
 }
 export function compileResponsiveSectionPolicy(kind:SectionKind,direction?:VisualDirectionDimensions):ResponsiveSectionPolicy{

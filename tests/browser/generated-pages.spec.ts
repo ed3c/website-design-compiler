@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { ARENA_CATEGORIES } from "../../src/arena.js";
 
 function measureGeneratedPageLayout(){
   const tolerance=1;
+  const minimumContentFillRatio=.9;
   const clips=(element:HTMLElement,axis:"x"|"y")=>{
     const style=getComputedStyle(element);
     const overflow=axis==="x"?style.overflowX:style.overflowY;
@@ -21,14 +23,23 @@ function measureGeneratedPageLayout(){
     return clippedX||clippedY?[{tag:element.tagName.toLowerCase(),text:(element.textContent??"").trim().slice(0,80),clippedX,clippedY,scrollWidth:element.scrollWidth,clientWidth:element.clientWidth,scrollHeight:element.scrollHeight,clientHeight:element.clientHeight}]:[];
   });
   const nodeHorizontalOverflow=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node]")).flatMap((element)=>element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{id:element.dataset.pageNode??"UNKNOWN",scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[]);
+  const mediaHorizontalOverflow=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node] .wdc-generated-node__media, [data-page-node] .wdc-generated-node__media *")).flatMap((element)=>element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{id:element.closest<HTMLElement>("[data-page-node]")?.dataset.pageNode??"UNKNOWN",tag:element.tagName.toLowerCase(),scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[]);
   const unsafeHorizontalScroll=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node] *")).flatMap((element)=>{
     const overflowX=getComputedStyle(element).overflowX;
     return (overflowX==="auto"||overflowX==="scroll")&&element.clientWidth>0&&element.scrollWidth>element.clientWidth+tolerance?[{tag:element.tagName.toLowerCase(),text:(element.textContent??"").trim().slice(0,80),scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}]:[];
   });
-  return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,unsafeHorizontalScroll};
+  const underfilledContentOnlyNodes=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node]")).flatMap((element)=>{
+    const content=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__content");
+    const auxiliary=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__media, :scope > .wdc-generated-node__field");
+    const declaredColumns=Number(element.dataset.activeColumns);
+    if(!content||auxiliary||element.clientWidth===0||declaredColumns<=1)return[];
+    const ratio=content.getBoundingClientRect().width/element.getBoundingClientRect().width;
+    return ratio<minimumContentFillRatio?[{id:element.dataset.pageNode??"UNKNOWN",ratio,declaredColumns}]:[];
+  });
+  return{documentHorizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+tolerance,textClipping,nodeHorizontalOverflow,mediaHorizontalOverflow,unsafeHorizontalScroll,underfilledContentOnlyNodes};
 }
 
-const categories=["b2b-product","editorial","premium-consumer","motion-heavy","interactive-2d","interactive-3d"] as const;
+const categories=ARENA_CATEGORIES;
 for(const category of categories){
   test(`${category} generated page consumes responsive and motion contracts`,async({page},testInfo)=>{
     if(testInfo.project.name==="reduced-motion-chromium")await page.emulateMedia({reducedMotion:"reduce"});
@@ -37,16 +48,21 @@ for(const category of categories){
     await expect(page.locator(`[data-generated-page='${category}']`)).toBeVisible();
     const nodes=page.locator("[data-page-node]");
     expect(await nodes.count()).toBeGreaterThanOrEqual(5);
+    const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
+    await expect.poll(
+      ()=>nodes.evaluateAll((entries,expectedViewport)=>entries.every((entry)=>entry.getAttribute("data-current-viewport")===expectedViewport),viewport),
+      {message:`all generated sections must hydrate the ${viewport} responsive contract before layout measurement`}
+    ).toBe(true);
     const indices=await nodes.evaluateAll((entries)=>entries.map((entry)=>Number(entry.getAttribute("data-semantic-index"))));
     expect(indices).toEqual(indices.map((_,index)=>index));
     const runtimeLayout=await page.evaluate(measureGeneratedPageLayout);
     expect(runtimeLayout.documentHorizontalOverflow,"document has unsafe horizontal overflow").toBe(false);
     expect(runtimeLayout.nodeHorizontalOverflow,"generated section exceeds its runtime box").toEqual([]);
+    expect(runtimeLayout.mediaHorizontalOverflow,"generated media exceeds its assigned composition column").toEqual([]);
     expect(runtimeLayout.unsafeHorizontalScroll,"generated content requires unsafe horizontal scrolling").toEqual([]);
     expect(runtimeLayout.textClipping,"rendered text is actually clipped").toEqual([]);
-    const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
+    expect(runtimeLayout.underfilledContentOnlyNodes,"content-only sections must span their declared outer composition").toEqual([]);
     const expectedLayoutAttribute=`data-${viewport}-layout`;
-    await expect(nodes.first()).toHaveAttribute("data-current-viewport",viewport);
     expect(await nodes.first().getAttribute(expectedLayoutAttribute)).toBeTruthy();
     const responsiveObservations=await nodes.evaluateAll((entries)=>entries.map((entry)=>{
       const style=getComputedStyle(entry);
@@ -121,12 +137,24 @@ for(const category of categories){
   });
 }
 
-test("runtime layout gate detects injected clipping and unsafe horizontal scrolling",async({page})=>{
+test("runtime layout gate detects injected clipping, scrolling, and underfilled content-only sections",async({page},testInfo)=>{
   const response=await page.goto("/benchmarks/b2b-product",{waitUntil:"networkidle"});
   expect(response?.ok()).toBeTruthy();
+  const nodes=page.locator("[data-page-node]");
+  const viewport=testInfo.project.name.startsWith("mobile")?"mobile":testInfo.project.name.startsWith("tablet")?"tablet":"desktop";
+  await expect.poll(
+    ()=>nodes.evaluateAll((entries,expectedViewport)=>entries.every((entry)=>entry.getAttribute("data-current-viewport")===expectedViewport),viewport),
+    {message:`negative control requires stable ${viewport} responsive contracts`}
+  ).toBe(true);
+  expect((await page.evaluate(measureGeneratedPageLayout)).underfilledContentOnlyNodes,"stable responsive content must not be reported before injection").toEqual([]);
   await page.evaluate(()=>{
-    const node=document.querySelector<HTMLElement>("[data-page-node]");
+    const node=Array.from(document.querySelectorAll<HTMLElement>("[data-page-node]")).find((entry)=>entry.querySelector(":scope > .wdc-generated-node__content")&&!entry.querySelector(":scope > .wdc-generated-node__media, :scope > .wdc-generated-node__field"));
     if(!node)throw new Error("negative-control generated content is absent");
+    const content=node.querySelector<HTMLElement>(":scope > .wdc-generated-node__content");
+    if(!content)throw new Error("negative-control content-only section is absent");
+    node.dataset.activeColumns="4";
+    node.style.gridTemplateColumns="repeat(4,minmax(0,1fr))";
+    content.style.gridColumn="auto";
     const clippedText=document.createElement("p");clippedText.textContent="runtime clipping negative control with intentionally oversized text";
     clippedText.style.cssText="display:block;width:24px;height:2px;line-height:20px;overflow:hidden;white-space:nowrap";
     node.append(clippedText);
@@ -139,4 +167,44 @@ test("runtime layout gate detects injected clipping and unsafe horizontal scroll
   expect(observation.textClipping.length,"negative control must trip real text clipping measurement").toBeGreaterThan(0);
   expect(observation.nodeHorizontalOverflow.length,"negative control must trip generated-node overflow measurement").toBeGreaterThan(0);
   expect(observation.unsafeHorizontalScroll.length,"negative control must trip unsafe scroll-container measurement").toBeGreaterThan(0);
+  expect(observation.underfilledContentOnlyNodes.length,"negative control must trip multi-column content-only underfill measurement").toBeGreaterThan(0);
+});
+
+test("interactive tablet composition contains visible governed content and media across the responsive boundary",async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=="tablet-chromium","the tablet lane owns the 48rem boundary regression");
+  for(const width of [768,769]){
+    await page.setViewportSize({width,height:1024});
+    const response=await page.goto("/benchmarks/interactive-2d",{waitUntil:"networkidle"});
+    expect(response?.ok()).toBeTruthy();
+    const nodes=page.locator("[data-page-node]");
+    await expect.poll(
+      ()=>nodes.evaluateAll((entries)=>entries.length>0&&entries.every((entry)=>entry.getAttribute("data-current-viewport")==="tablet")),
+      {message:`all generated sections must hydrate the tablet responsive contract at ${width}px before boundary measurement`}
+    ).toBe(true);
+    const hero=page.locator("[data-page-node='02-experience-hero']");
+    const content=hero.locator(":scope > .wdc-generated-node__content");
+    const media=hero.locator(":scope > .wdc-generated-node__media");
+    const governedHero=content.locator("[data-governed-section='hero']");
+    await expect(hero).toHaveCount(1);
+    await expect(content).toBeVisible();
+    await expect(media).toBeVisible();
+    await expect(governedHero).toBeVisible();
+    expect(await hero.evaluate((element)=>{
+      const contentElement=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__content");
+      const mediaElement=element.querySelector<HTMLElement>(":scope > .wdc-generated-node__media");
+      const governed=contentElement?.querySelector<HTMLElement>("[data-governed-section='hero']");
+      if(!contentElement||!mediaElement||!governed)return false;
+      const contentBox=contentElement.getBoundingClientRect();
+      const mediaBox=mediaElement.getBoundingClientRect();
+      const governedBox=governed.getBoundingClientRect();
+      return contentBox.width>0&&contentBox.height>0&&mediaBox.width>0&&mediaBox.height>0&&governedBox.width===contentBox.width&&getComputedStyle(governed).gridTemplateColumns.split(" ").filter(Boolean).length===1;
+    }),`tablet hero content and media must remain materially rendered at ${width}px`).toBe(true);
+    const observation=await page.evaluate(measureGeneratedPageLayout);
+    expect(observation.documentHorizontalOverflow,`document must not overflow at ${width}px`).toBe(false);
+    expect(observation.nodeHorizontalOverflow,`generated sections must stay inside their runtime boxes at ${width}px`).toEqual([]);
+    expect(observation.mediaHorizontalOverflow,`runtime media must remain inside its composition column at ${width}px`).toEqual([]);
+    expect(observation.unsafeHorizontalScroll,`generated content must not require horizontal scrolling at ${width}px`).toEqual([]);
+    expect(observation.textClipping,`responsive containment must not clip text at ${width}px`).toEqual([]);
+    expect(observation.underfilledContentOnlyNodes,`content-only sections must preserve their declared composition at ${width}px`).toEqual([]);
+  }
 });

@@ -9,8 +9,9 @@ import { decidePremiumQuality, type DesignQualityEvidenceBinding, type ExpectedD
 import { evaluateDesignQualityV3, type DesignQualityScorecardV3 } from "../src/design-quality-eval.js";
 import { compileAllSectionPageFixtures } from "../src/section-page-fixtures.js";
 import { validateAgainstSchema } from "../src/validate.js";
+import { ARENA_CATEGORIES } from "../src/arena.js";
 
-const categories = ["b2b-product", "editorial", "premium-consumer", "motion-heavy", "interactive-2d", "interactive-3d"] as const;
+const categories = ARENA_CATEGORIES;
 const viewports = ["mobile", "desktop"] as const;
 const hash = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
 const alteredHash = (value: string) => `${value[0] === "a" ? "b" : "a"}${value.slice(1)}`;

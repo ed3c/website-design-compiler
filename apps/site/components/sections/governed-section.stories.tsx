@@ -9,18 +9,22 @@ type Story=StoryObj<typeof meta>;
 function canonicalStory(kind:SectionKind,variant:string):Story {
   const contract=SECTION_CONTRACTS[kind];
   if(!contract.variants.includes(variant))throw new Error(`Storybook variant ${variant} is not governed for ${kind}`);
-  const fieldNames=new Set(Object.keys(contract.fields));
   const label=`${kind} / ${variant}`;
+  const fields=Object.fromEntries(Object.entries(contract.fields).map(([name,field])=>{
+    const value=kind==="navigation"&&name==="links"?["Overview","Evidence","Security"]
+      :field.type==="items"?[`${label} evidence item`,`${label} responsive item`]
+      :field.type==="link"?{label:`${label} action`,href:"#storybook-evidence"}
+      :field.type==="media"?{assetId:`storybook:${kind}:${variant}`,alt:`${label} approved media`}
+      :field.type==="number"?42
+      :`${label} governed, provenance-backed ${name}.`;
+    return[name,value];
+  }));
   const args={
     kind,
     variant,
-    heading:fieldNames.has("headline")||fieldNames.has("heading")||fieldNames.has("brand")?`${label} heading`:undefined,
-    body:fieldNames.has("quote")||fieldNames.has("body")||fieldNames.has("description")||fieldNames.has("caption")||fieldNames.has("legal")?`${label} governed, provenance-backed copy.`:undefined,
-    items:fieldNames.has("items")?[`${label} evidence item`,`${label} responsive item`]:undefined,
-    links:fieldNames.has("links")?[{label:`${label} link`,href:"#storybook-evidence"}]:undefined,
-    action:fieldNames.has("action")||fieldNames.has("primaryAction")?{label:`${label} action`,href:"#storybook-evidence"}:undefined
+    fields
   };
-  return {args,parameters:{canonicalSection:{kind,variant,fields:[...fieldNames],claimPolicy:contract.claimPolicy}}};
+  return {args,parameters:{canonicalSection:{kind,variant,fields:Object.keys(contract.fields),claimPolicy:contract.claimPolicy}}};
 }
 
 export const Navigation:Story=canonicalStory("navigation","minimal");

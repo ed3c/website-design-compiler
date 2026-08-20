@@ -4,19 +4,33 @@
   "type": "object", "additionalProperties": false,
   "required": ["schema", "gate", "overall", "admissionState", "productionReleaseEligible", "providerIdentity", "modelIdentity", "rightsClearance", "runtimeCredentials", "budgetAuthorization", "deterministicMockGate", "executionReceiptSha256", "requestSha256", "assetSha256", "reason", "git"],
   "properties": {
-    "schema": { "const": "website-design-compiler/production-provider-status/v2" }, "gate": { "const": "PRODUCTION_PROVIDER" },
+    "schema": { "const": "website-design-compiler/production-provider-status/v3" }, "gate": { "const": "PRODUCTION_PROVIDER" },
     "overall": { "enum": ["PASS", "FAIL", "NOT_EXERCISED"] }, "admissionState": { "enum": ["ADMITTED", "NEEDS_HUMAN_ADMIT", "DENIED", "REVOKED"] }, "productionReleaseEligible": { "type": "boolean" },
     "providerIdentity": { "$ref": "#/$defs/digestOrAbsent" }, "modelIdentity": { "$ref": "#/$defs/digestOrAbsent" }, "rightsClearance": { "enum": ["PASS", "FAIL", "ABSENT"] },
     "runtimeCredentials": { "enum": ["AVAILABLE", "ABSENT"] }, "budgetAuthorization": { "enum": ["AUTHORIZED", "ABSENT"] }, "deterministicMockGate": { "const": "SEPARATE" },
     "executionReceiptSha256": { "$ref": "#/$defs/rawDigestOrAbsent" }, "requestSha256": { "$ref": "#/$defs/rawDigestOrAbsent" }, "assetSha256": { "$ref": "#/$defs/rawDigestOrAbsent" },
     "reason": { "type": "string" },
-    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string" }, "ref": { "type": "string" } } }
+    "executedAt": { "type": "string", "format": "date-time" },
+    "artifacts": {
+      "type":"object","additionalProperties":false,"required":["executionInput","executionReceipt","asset","candidateRejection"],
+      "properties":{
+        "executionInput":{"allOf":[{"$ref":"#/$defs/artifact"},{"type":"object","properties":{"path":{"const":"production-provider-execution-input.json"}}}]},
+        "executionReceipt":{"allOf":[{"$ref":"#/$defs/artifact"},{"type":"object","properties":{"path":{"const":"production-provider-execution-receipt.json"}}}]},
+        "asset":{"allOf":[{"$ref":"#/$defs/artifact"},{"type":"object","required":["mediaType"],"properties":{"mediaType":{"type":"string","minLength":1}}}]},
+        "candidateRejection":{"type":"object","additionalProperties":false,"required":["path","schema","sha256","bytes","sourceAdmissionSha256","trustedGitTree"],"properties":{"path":{"const":"media-candidate-rejection.json"},"schema":{"const":"website-design-compiler/media-candidate-rejection/v2"},"sha256":{"$ref":"#/$defs/rawDigest"},"bytes":{"type":"integer","minimum":1},"sourceAdmissionSha256":{"$ref":"#/$defs/rawDigest"},"trustedGitTree":{"type":"string","pattern":"^[a-f0-9]{40}$"}}}
+      }
+    },
+    "git": { "type": "object", "additionalProperties": false, "required": ["sha", "ref"], "properties": { "sha": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 } } }
   },
   "allOf": [
     {
       "if": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] },
       "then": {
+        "required":["artifacts","executedAt"],
         "properties": {
+          "artifacts": {},
+          "executedAt": { "type": "string", "format": "date-time" },
+          "git": { "type": "object", "properties": { "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" }, "ref": { "type": "string", "pattern": "^refs/" } } },
           "admissionState": { "const": "ADMITTED" }, "productionReleaseEligible": { "const": true },
           "providerIdentity": { "$ref": "#/$defs/digest" }, "modelIdentity": { "$ref": "#/$defs/digest" },
           "rightsClearance": { "const": "PASS" }, "runtimeCredentials": { "const": "AVAILABLE" },
@@ -38,6 +52,7 @@
     "rawDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "rawDigestOrAbsent": { "oneOf": [{ "$ref": "#/$defs/rawDigest" }, { "const": "ABSENT" }] },
-    "digestOrAbsent": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "const": "ABSENT" }] }
+    "digestOrAbsent": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "const": "ABSENT" }] },
+    "artifact":{"type":"object","additionalProperties":false,"required":["path","sha256","bytes"],"properties":{"path":{"type":"string","pattern":"^[A-Za-z0-9._-]+$"},"sha256":{"$ref":"#/$defs/rawDigest"},"bytes":{"type":"integer","minimum":1},"mediaType":{"type":"string","minLength":1}}}
   }
 }

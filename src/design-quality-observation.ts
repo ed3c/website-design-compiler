@@ -6,7 +6,7 @@ export interface DesignQualityBrowserObservation{
   git:{sha:string;ref:string};
   screenshot:{path:string;sha256:string;bytes:number};
   pixels:{sourceWidth:number;sourceHeight:number;sampledPixels:number;quantizedUniqueColors:number;luminanceMean:number;luminanceStdDev:number;luminanceSpan:number;edgeContrastMean:number;colorEntropy:number;channels:{red:{mean:number;stdDev:number};green:{mean:number;stdDev:number};blue:{mean:number;stdDev:number}}};
-  computed:{viewport:{width:number;height:number};h1Count:number;h2Count:number;h1Px:number;medianH2Px:number;fontFamilies:string[];sectionCount:number;sectionHeights:number[];sectionWidths:number[];renderedColumns:number[];layouts:string[];distinctSectionBackgrounds:number;spacingGapMean:number;spacingGapStdDev:number;pageWidth:number;pageHeight:number;overflowX:boolean;ctaSectionCount:number;actionTargets:Array<{width:number;height:number;visible:boolean}>;mediaStages:number;motionStates:string[];contentBudgetPass:boolean;cssTokens:Record<string,string>};
+  computed:{viewport:{width:number;height:number};h1Count:number;h2Count:number;h1Px:number;medianH2Px:number;fontFamilies:string[];minimumTextContrastRatio:number;sectionCount:number;sectionHeights:number[];sectionWidths:number[];renderedColumns:number[];layouts:string[];distinctSectionBackgrounds:number;spacingGapMean:number;spacingGapStdDev:number;pageWidth:number;pageHeight:number;overflowX:boolean;ctaSectionCount:number;actionTargets:Array<{width:number;height:number;visible:boolean}>;mediaStages:number;motionStates:string[];contentBudgetPass:boolean;cssTokens:Record<string,string>};
   accessibility:{seriousCriticalViolationCount:number;ruleIds:string[]};
 }
 

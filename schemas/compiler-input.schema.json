@@ -24,6 +24,11 @@
       "uniqueItems": true,
       "default": []
     },
+    "authoredContent": {
+      "type": "object",
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/authoredContentEntry" }
+    },
     "briefSourceEvidence": {
       "type": "object",
       "additionalProperties": false,
@@ -51,7 +56,16 @@
         "required": ["kind", "value"],
         "properties": {
           "kind": { "enum": ["url", "image", "video", "html"] },
-          "value": { "type": "string", "minLength": 1 }
+          "value": { "$ref": "#/$defs/contentValue" },
+          "visualEvidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["receiptPath", "receiptSha256"],
+            "properties": {
+              "receiptPath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.json$" },
+              "receiptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
         }
       },
       "default": []
@@ -74,6 +88,51 @@
   },
   "dependentRequired": { "contentEvidence": ["briefSourceEvidence"] },
   "$defs": {
+    "authoredContentEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "uri"],
+          "properties": {
+            "kind": { "enum": ["user-supplied", "benchmark-fixture"] },
+            "uri": { "type": "string", "minLength": 1 }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "source", "sourceSha256", "excerpt", "sha256"],
+          "properties": {
+            "kind": { "const": "source-excerpt" },
+            "source": { "type": "string", "minLength": 1 },
+            "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "excerpt": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+    "visualDirectionDimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typography", "typeContrast", "density", "grid", "surface", "colorStrategy", "mediaStrategy", "motionIntensity", "signatureInteraction"],
+      "properties": {
+        "typography": { "enum": ["neo-grotesk", "editorial-serif", "humanist-sans", "display-contrast"] },
+        "typeContrast": { "enum": ["restrained", "balanced", "dramatic"] },
+        "density": { "enum": ["airy", "balanced", "dense"] },
+        "grid": { "enum": ["strict", "asymmetric", "modular", "editorial"] },
+        "surface": { "enum": ["flat", "layered", "bordered", "tonal"] },
+        "colorStrategy": { "enum": ["neutral-accent", "warm-editorial", "high-contrast", "tonal-brand", "spatial-dark"] },
+        "mediaStrategy": { "enum": ["text-first", "product-media", "editorial-media", "interactive-stage"] },
+        "motionIntensity": { "enum": ["minimal", "moderate", "expressive"] },
+        "signatureInteraction": { "enum": ["none", "progressive-reveal", "spatial-focus", "direct-manipulation"] }
+      }
+    },
     "sourceField": {
       "type": "object",
       "additionalProperties": false,

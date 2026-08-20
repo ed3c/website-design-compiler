@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
+import { OBSERVED_VISUAL_FIXTURE_HTML } from "../src/reference-browser-observation-fixture.js";
+import { deriveObservedVisualDimensions, type ObservedVisualMeasurement } from "../src/visual-direction-search.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const FIXTURE_HTML = `<!doctype html>
@@ -40,11 +43,12 @@ type Snapshot = {
   layout: { gridColumnCount: number; gridTemplateColumns: string; gap: string };
   motion: { transitionDuration: string; transitionProperty: string };
   assets: { images: number; videos: number; canvases: number };
+  visualMeasurement: ObservedVisualMeasurement;
 };
 
 async function observe(page: Page, width: number, height: number): Promise<Snapshot> {
   await page.setViewportSize({ width, height });
-  await page.setContent(FIXTURE_HTML, { waitUntil: "load" });
+  await page.setContent(OBSERVED_VISUAL_FIXTURE_HTML, { waitUntil: "load" });
   return page.evaluate(() => {
     const main = document.querySelector("main") as HTMLElement;
     const h1 = document.querySelector("h1") as HTMLElement;
@@ -54,6 +58,8 @@ async function observe(page: Page, width: number, height: number): Promise<Snaps
     const h1Style = getComputedStyle(h1);
     const gridStyle = getComputedStyle(grid);
     const cardStyle = getComputedStyle(card);
+    const bodyStyle = getComputedStyle(document.body);
+    const linkStyle = getComputedStyle(document.querySelector("a") as HTMLElement);
     const columns = gridStyle.gridTemplateColumns.split(/\s+/).filter(Boolean);
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },
@@ -85,24 +91,80 @@ async function observe(page: Page, width: number, height: number): Promise<Snaps
         images: document.images.length,
         videos: document.querySelectorAll("video").length,
         canvases: document.querySelectorAll("canvas").length
+      },
+      visualMeasurement: {
+        fontFamily: h1Style.fontFamily,
+        headingFontSizePx: Number.parseFloat(h1Style.fontSize),
+        bodyFontSizePx: Number.parseFloat(bodyStyle.fontSize),
+        gridColumnCount: columns.length,
+        gapPx: Number.parseFloat(gridStyle.gap),
+        cardBorderWidthPx: Number.parseFloat(cardStyle.borderTopWidth),
+        cardBackgroundColor: cardStyle.backgroundColor,
+        bodyColor: bodyStyle.color,
+        bodyBackgroundColor: bodyStyle.backgroundColor,
+        linkColor: linkStyle.color,
+        images: document.images.length,
+        videos: document.querySelectorAll("video").length,
+        canvases: document.querySelectorAll("canvas").length,
+        transitionDurationMs: Number.parseFloat(cardStyle.transitionDuration) * (cardStyle.transitionDuration.endsWith("ms") ? 1 : 1000),
+        transitionProperty: cardStyle.transitionProperty,
+        interactiveControlCount: document.querySelectorAll("button,input,select,textarea,[role='button']").length,
+        revealTargetCount: document.querySelectorAll("[data-reveal],[aria-expanded]").length
       }
     };
   });
 }
 
 const browser = await chromium.launch({ headless: true });
+const startedAt = new Date().toISOString();
 try {
   const page = await browser.newPage();
   const desktop = await observe(page, 1280, 800);
+  const outputDirectory = join(process.cwd(), "artifacts", "reference-browser");
+  await mkdir(outputDirectory, { recursive: true });
+  const desktopEvidencePath = join(outputDirectory, "observed-visual-reference-desktop.png");
+  await page.screenshot({ path: desktopEvidencePath, fullPage: true });
   const mobile = await observe(page, 390, 844);
+  const mobileEvidencePath = join(outputDirectory, "observed-visual-reference-mobile.png");
+  await page.screenshot({ path: mobileEvidencePath, fullPage: true });
   const responsiveChanged = desktop.layout.gridColumnCount === 2 && mobile.layout.gridColumnCount === 1 && desktop.typography.fontSize !== mobile.typography.fontSize;
+  const { visualMeasurement: desktopMeasurement, ...desktopObservation } = desktop;
+  const { visualMeasurement: mobileMeasurement, ...mobileObservation } = mobile;
 
+  const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+  const desktopEvidenceBytes = await import("node:fs/promises").then(({ readFile }) => readFile(desktopEvidencePath));
+  const mobileEvidenceBytes = await import("node:fs/promises").then(({ readFile }) => readFile(mobileEvidencePath));
+  const measurements = { desktop: desktopMeasurement, mobile: mobileMeasurement };
+  const evidenceArtifacts = [
+    {
+      viewport: "desktop" as const,
+      path: "artifacts/reference-browser/observed-visual-reference-desktop.png",
+      sha256: sha256(desktopEvidenceBytes),
+      width: desktop.viewport.width,
+      minimumHeight: desktop.viewport.height
+    },
+    {
+      viewport: "mobile" as const,
+      path: "artifacts/reference-browser/observed-visual-reference-mobile.png",
+      sha256: sha256(mobileEvidenceBytes),
+      width: mobile.viewport.width,
+      minimumHeight: mobile.viewport.height
+    }
+  ];
   const receipt = {
-    schema: "website-design-compiler/reference-browser-receipt/v1",
+    schema: "website-design-compiler/reference-browser-receipt/v2",
     overall: responsiveChanged ? "PASS" as const : "FAIL" as const,
+    execution: {
+      mode: "PLAYWRIGHT_BROWSER" as const,
+      startedAt,
+      completedAt: new Date().toISOString()
+    },
     browser: { engine: "chromium", version: browser.version() },
     sourceMode: "DETERMINISTIC_HTML_FIXTURE",
-    observations: { desktop, mobile },
+    capturedArtifactSha256: sha256(OBSERVED_VISUAL_FIXTURE_HTML),
+    measurementsSha256: sha256(JSON.stringify(measurements)),
+    evidenceArtifacts,
+    observations: { desktop: desktopObservation, mobile: mobileObservation },
     responsiveBehavior: {
       state: responsiveChanged ? "PASS" as const : "FAIL" as const,
       desktopColumns: desktop.layout.gridColumnCount,
@@ -116,11 +178,36 @@ try {
   };
 
   await validateAgainstSchema(receipt, "reference-browser-receipt.schema.json");
-  const outputDirectory = join(process.cwd(), "artifacts", "reference-browser");
-  await mkdir(outputDirectory, { recursive: true });
   const outputPath = join(outputDirectory, "reference-browser-receipt.json");
-  await writeFile(outputPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify({ outputPath, overall: receipt.overall, responsiveBehavior: receipt.responsiveBehavior }));
+  const producerReceiptText = `${JSON.stringify(receipt, null, 2)}\n`;
+  await writeFile(outputPath, producerReceiptText, "utf8");
+  const producerReceiptSha256 = sha256(producerReceiptText);
+  const visualFingerprint = {
+    schema: "website-design-compiler/observed-visual-fingerprint/v3",
+    state: "PASS",
+    producer: "playwright-computed-style/v1",
+    referenceValueSha256: sha256(OBSERVED_VISUAL_FIXTURE_HTML),
+    capturedArtifactSha256: sha256(OBSERVED_VISUAL_FIXTURE_HTML),
+    producerReceipt: {
+      schema: "website-design-compiler/reference-browser-receipt/v2",
+      path: "artifacts/reference-browser/reference-browser-receipt.json",
+      sha256: producerReceiptSha256
+    },
+    evidenceArtifacts,
+    measurements,
+    dimensions: deriveObservedVisualDimensions(measurements),
+    observations: [
+      `desktop computed heading: ${desktop.typography.fontFamily} ${desktop.typography.fontSize}/${desktop.typography.lineHeight}`,
+      `responsive grid columns: ${desktop.layout.gridColumnCount} desktop, ${mobile.layout.gridColumnCount} mobile`,
+      `computed grid gap: ${desktop.layout.gap}`,
+      `computed transition: ${desktop.motion.transitionProperty} ${desktop.motion.transitionDuration}`,
+      `observed assets: ${desktop.assets.images} image, ${desktop.assets.videos} video, ${desktop.assets.canvases} canvas`
+    ]
+  } as const;
+  await validateAgainstSchema(visualFingerprint, "observed-visual-fingerprint-v3.schema.json");
+  const fingerprintPath = join(outputDirectory, "observed-visual-fingerprint.json");
+  await writeFile(fingerprintPath, `${JSON.stringify(visualFingerprint, null, 2)}\n`, "utf8");
+  console.log(JSON.stringify({ outputPath, fingerprintPath, producerReceiptSha256, overall: receipt.overall, responsiveBehavior: receipt.responsiveBehavior }));
   if (receipt.overall !== "PASS") process.exitCode = 1;
 } finally {
   await browser.close();

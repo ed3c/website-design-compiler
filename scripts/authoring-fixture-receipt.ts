@@ -25,8 +25,8 @@ const receipt = {
   source: { frontendPlan: "apps/site/generated/showcase-frontend-plan.json", authoringData: "apps/site/generated/showcase-authoring-data.json" },
   ownership: {
     schemaOwner: "src/puck-authoring.ts",
-    componentRegistry: ["ButtonBlock", "StatusPanelBlock", "Section"],
-    productionComponents: ["Button", "StatusPanel"],
+    componentRegistry: ["ButtonBlock", "StatusPanelBlock", "Section", "RichSectionBlock"],
+    productionComponents: ["Button", "StatusPanel", "GovernedSection"],
     arbitraryHtml: "FORBIDDEN",
     arbitraryCssProps: "FORBIDDEN",
     rawDesignValues: "FORBIDDEN"

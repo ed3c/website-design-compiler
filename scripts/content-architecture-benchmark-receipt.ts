@@ -30,7 +30,8 @@ for (const benchmark of matrix.categories) {
   const sectionAlignment = JSON.stringify(content.sections.map((section) => section.sectionId)) === JSON.stringify(ia.sections.map((section) => section.id));
   const pageProjection = page.sectionIntents.every((intent) => {
     const section = content.sections.find((candidate) => candidate.sectionId === intent.id);
-    return Boolean(section) && intent.contentContract.fields.length === section?.fields.length;
+    const { state: _state, ...projectedSection } = intent.contentContract;
+    return Boolean(section) && JSON.stringify(projectedSection) === JSON.stringify(section);
   });
   const missingInputs = content.sections.flatMap((section) => section.fields.filter((field) => field.state === "NEEDS_INPUT").map((field) => `${section.sectionId}:${field.slot}`));
   const state = sectionAlignment && provenanceComplete && budgetsPass && forbiddenPublishable.length === 0 && pageProjection ? "PASS" : "FAIL";

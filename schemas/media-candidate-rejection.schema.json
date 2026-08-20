@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/website-design-compiler/media-candidate-rejection.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "overall", "decision", "generatedAt", "git", "evidenceAdmission", "bindings", "candidates"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/media-candidate-rejection/v2" },
+    "overall": { "enum": ["PASS", "NOT_EXERCISED"] },
+    "decision": { "const": "REJECT" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "git": { "$ref": "#/$defs/git" },
+    "evidenceAdmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "channel", "observedSha256", "trustedSha256", "trustedGitTree"],
+      "properties": {
+        "state": { "enum": ["PASS", "NOT_EXERCISED"] },
+        "channel": { "const": "PROTECTED_SHA256" },
+        "observedSha256": { "$ref": "#/$defs/sha256" },
+        "trustedSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "const": "ABSENT" }] },
+        "trustedGitTree": { "oneOf": [{ "type": "string", "pattern": "^[a-f0-9]{40}$" }, { "const": "ABSENT" }] }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "rightsEvidence"],
+      "properties": {
+        "policy": { "$ref": "#/$defs/policyBinding" },
+        "rightsEvidence": { "$ref": "#/$defs/rightsBinding" }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["modelId", "kind", "adapter", "versionOrCommit", "rights", "sources", "routing", "rejectionReasons"],
+        "properties": {
+          "modelId": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["image", "video", "3d"] },
+          "adapter": { "enum": ["diffusers-image", "diffusers-video", "three-d-worker"] },
+          "versionOrCommit": { "type": "string", "minLength": 1 },
+          "rights": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["model", "output", "service"],
+            "properties": {
+              "model": { "$ref": "#/$defs/deniedRight" },
+              "output": { "$ref": "#/$defs/right" },
+              "service": { "$ref": "#/$defs/right" }
+            }
+          },
+          "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/source" } },
+          "routing": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["route", "requestSha256", "overall", "admissionState", "transportCalls", "reason"],
+            "properties": {
+              "route": { "const": "PRODUCTION_PROVIDER" },
+              "requestSha256": { "$ref": "#/$defs/sha256" },
+              "overall": { "const": "NOT_EXERCISED" },
+              "admissionState": { "const": "DENIED" },
+              "transportCalls": { "const": 0 },
+              "reason": { "type": "string", "pattern": "rights state is DENY" }
+            }
+          },
+          "rejectionReasons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "overall": { "const": "PASS" } }, "required": ["overall"] },
+      "then": { "properties": { "evidenceAdmission": { "type": "object", "properties": { "state": { "const": "PASS" }, "trustedSha256": { "$ref": "#/$defs/sha256" }, "trustedGitTree": { "type": "string", "pattern": "^[a-f0-9]{40}$" } } } } }
+    },
+    {
+      "if": { "properties": { "overall": { "const": "NOT_EXERCISED" } }, "required": ["overall"] },
+      "then": { "properties": { "evidenceAdmission": { "type": "object", "properties": { "state": { "const": "NOT_EXERCISED" }, "trustedSha256": { "const": "ABSENT" }, "trustedGitTree": { "const": "ABSENT" } } } } }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "git": {
+      "type": "object", "additionalProperties": false, "required": ["sha", "tree", "ref"],
+      "properties": { "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" }, "tree": { "type": "string", "pattern": "^[a-f0-9]{40}$" }, "ref": { "type": "string", "pattern": "^refs/[A-Za-z0-9._/-]+$" } }
+    },
+    "binding": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": { "path": { "type": "string" }, "sha256": { "$ref": "#/$defs/sha256" } }
+    },
+    "policyBinding": { "allOf": [{ "$ref": "#/$defs/binding" }, { "type": "object", "properties": { "path": { "const": "fixtures/media/model-policy.json" } } }] },
+    "rightsBinding": { "allOf": [{ "$ref": "#/$defs/binding" }, { "type": "object", "properties": { "path": { "const": "rights-production-evidence.json" } } }] },
+    "right": {
+      "type": "object", "additionalProperties": false, "required": ["subjectId", "state"],
+      "properties": { "subjectId": { "type": "string", "minLength": 1 }, "state": { "enum": ["ALLOW", "REVIEW_REQUIRED", "DENY", "UNKNOWN", "NOT_DISTRIBUTED"] } }
+    },
+    "deniedRight": { "allOf": [{ "$ref": "#/$defs/right" }, { "type": "object", "properties": { "state": { "const": "DENY" } } }] },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["url", "sha256", "bytes", "verifiedAt"],
+      "properties": { "url": { "type": "string", "pattern": "^https://[^\\s/?#]+(?:/[^\\s?#]*)?$" }, "sha256": { "$ref": "#/$defs/sha256" }, "bytes": { "type": "integer", "minimum": 1 }, "verifiedAt": { "type": "string", "format": "date-time" } }
+    }
+  }
+}

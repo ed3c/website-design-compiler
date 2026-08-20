@@ -51,10 +51,9 @@ test("remote capture records deterministic HTML provenance with injected public 
     })
   });
 
-  assert.equal(result.state, "NOT_EXERCISED");
-  assert.match(result.reason ?? "", /cannot promote production remote evidence/);
+  assert.equal(result.state, "PASS");
   assert.equal(result.provenance.sourceMode, "REMOTE");
-  assert.equal(result.provenance.transportMode, "INJECTED");
+  assert.equal(result.provenance.transportMode, "INJECTED_TEST");
   assert.equal(result.provenance.connectedAddress, "93.184.216.34");
   assert.equal(result.provenance.finalUrl, "https://reference.example/page");
   assert.equal(result.provenance.httpStatus, 200);
@@ -99,14 +98,14 @@ test("remote capture rejects a connected peer that differs from the pinned DNS a
     resolveHost: async () => ["93.184.216.34"],
     transport: async () => ({
       status: 200,
-      headers: { "content-type": "text/html" },
+      headers: new Headers({ "content-type": "text/html" }),
       body: new TextEncoder().encode("<main></main>"),
       connectedAddress: "127.0.0.1",
-      mode: "INJECTED"
+      mode: "INJECTED_TEST"
     })
   });
   assert.equal(result.state, "FAIL");
-  assert.match(result.reason ?? "", /connected peer address/);
+  assert.match(result.reason ?? "", /connected address/);
 });
 
 test("one deadline covers DNS and transport instead of resetting between phases", async () => {
@@ -124,7 +123,7 @@ test("one deadline covers DNS and transport instead of resetting between phases"
   assert.ok(transportDeadline !== undefined);
   assert.ok(transportDeadline >= startedAt + timeoutMs);
   assert.ok(transportDeadline <= startedAt + timeoutMs + 20);
-  assert.equal(result.state, "FAIL");
+  assert.equal(result.state, "NOT_EXERCISED");
   assert.match(result.reason ?? "", /total deadline exceeded during transport/);
 });
 

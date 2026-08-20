@@ -1,13 +1,39 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { exportFrontendPlan, importFrontendPlan, validateAuthoringData, type FrontendPlanLike } from "../src/puck-authoring.js";
+import type { CompilerInput } from "../src/contracts.js";
+import { buildFrontendPlan } from "../src/frontend-builder.js";
+import { exportFrontendPlan, importFrontendPlan, validateAuthoringData, type AuthoringData, type FrontendPlanLike } from "../src/puck-authoring.js";
 
 test("compiler frontend plan round-trips through governed authoring data", async () => {
   const raw = JSON.parse(await readFile(new URL("../apps/site/generated/showcase-frontend-plan.json", import.meta.url), "utf8")) as FrontendPlanLike;
   const data = importFrontendPlan(raw);
   assert.equal(validateAuthoringData(data).overall, "PASS");
   assert.deepEqual(exportFrontendPlan(data, raw.project), raw);
+});
+
+test("checked-in authoring projection matches the compiler frontend plan", async () => {
+  const frontendPlan = JSON.parse(await readFile(new URL("../apps/site/generated/showcase-frontend-plan.json", import.meta.url), "utf8")) as FrontendPlanLike;
+  const authoringData = JSON.parse(await readFile(new URL("../apps/site/generated/showcase-authoring-data.json", import.meta.url), "utf8")) as AuthoringData;
+  const publishedPayloadData = JSON.parse(await readFile(new URL("../apps/site/generated/payload-published-authoring-data.json", import.meta.url), "utf8")) as AuthoringData;
+  assert.deepEqual(exportFrontendPlan(authoringData, frontendPlan.project), frontendPlan);
+  assert.deepEqual(publishedPayloadData, authoringData);
+});
+
+test("compiler rich-section output round-trips through governed authoring without field loss", () => {
+  const input: CompilerInput = {
+    schema: "website-design-compiler/input/v1",
+    project: "rich-authoring-roundtrip",
+    brief: {
+      pageType: "interactive-3d",
+      audience: "evaluation teams",
+      objective: "inspect a governed spatial experience"
+    },
+    requestedStages: ["information-architecture", "content-architecture", "frontend-builder"]
+  };
+  const plan = buildFrontendPlan(input);
+  assert.ok(plan.components.every((component) => component.component === "rich-section"));
+  assert.deepEqual(exportFrontendPlan(importFrontendPlan(plan), input.project), plan);
 });
 
 test("unknown component type fails closed", () => {

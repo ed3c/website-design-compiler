@@ -15,7 +15,8 @@ export interface PageGraphSourceBinding{
 export interface PageGraphCompilationInput extends SectionPageSource{
   project?:string;
   route?:string;
-  source?:PageGraphSourceBinding;
+  sourceBinding?:PageGraphSourceBinding;
+  missingEvidence?:string[];
   contentContracts?:SectionContentContract[];
   visualDirection?:VisualDirectionDimensions;
 }
@@ -38,6 +39,7 @@ export interface CompletePageGraph {
   route:string;
   source:PageGraphSourceBinding;
   readiness:PageGraphReadiness;
+  sourceMissingEvidence:string[];
   missingEvidence:string[];
   semanticOrder:string[];
   conversionPath:string[];
@@ -61,7 +63,7 @@ function requiredEvidenceMissing(section:SectionInstance):string[]{
   for(const [key,field] of Object.entries(SECTION_CONTRACTS[section.kind].fields))if(field.required&&(section.props[key]===undefined||section.props[key]===null||section.props[key]===""))missing.push(`${section.id}.${key}`);
   return missing;
 }
-function sourceFor(page:PageGraphCompilationInput):PageGraphSourceBinding{return page.source??{mode:"FIXTURE",artifacts:{sectionPageFixture:stableIdentity({category:page.category,sections:page.sections})}};}
+function sourceFor(page:PageGraphCompilationInput):PageGraphSourceBinding{return page.sourceBinding??{mode:"FIXTURE",artifacts:{sectionPageFixture:stableIdentity({category:page.category,sections:page.sections})}};}
 function contentEvidenceMissing(sectionId:string,contract:SectionContentContract|null):string[]{
   if(!contract)return[];
   const fields=contract.fields.filter((field)=>field.state!=="READY"||!field.publishable||!field.value||field.provenance.length===0).map((field)=>`${sectionId}.content.${field.slot}`);
@@ -76,7 +78,13 @@ export function compileCompletePageGraph(page:PageGraphCompilationInput):Complet
   const motion=compileMotionChoreography(page);
   const media=compileMediaOrchestration(page);
   const contentBySection=new Map((page.contentContracts??[]).map((contract)=>[contract.sectionId,contract]));
-  const missingEvidence=[...new Set(page.sections.flatMap((section)=>[...requiredEvidenceMissing(section),...contentEvidenceMissing(section.id,contentBySection.get(section.id)??null)]))].sort();
+  const missingEvidence=[...new Set([
+    ...(page.missingEvidence??[]),
+    ...page.sections.flatMap((section)=>[
+      ...requiredEvidenceMissing(section),
+      ...contentEvidenceMissing(section.id,contentBySection.get(section.id)??null)
+    ])
+  ])].sort();
   const source=sourceFor(page);
   const route=normalizeRoute(page.route??"/");
   const nodes=page.sections.map((section,index):CompletePageNode=>({
@@ -102,6 +110,7 @@ export function compileCompletePageGraph(page:PageGraphCompilationInput):Complet
     route,
     source:structuredClone(source),
     readiness:missingEvidence.length===0?"READY":"NEEDS_INPUT",
+    sourceMissingEvidence:[...new Set(page.missingEvidence??[])].sort(),
     missingEvidence,
     semanticOrder,
     conversionPath:conversionPath(page.sections),
@@ -113,6 +122,8 @@ export function compileCompletePageGraph(page:PageGraphCompilationInput):Complet
 }
 export function validateCompletePageGraph(graph:CompletePageGraph):string[]{
   const errors:string[]=[];
+  const sourceMissingEvidence=Array.isArray(graph.sourceMissingEvidence)?graph.sourceMissingEvidence:[];
+  if(!Array.isArray(graph.sourceMissingEvidence))errors.push("source missing evidence must be an array");
   if(graph.nodes.length<5)errors.push("complete page has fewer than five governed sections");
   if(graph.semanticOrder.join("|")!==graph.nodes.map((node)=>node.id).join("|"))errors.push("semantic order drifted from node order");
   if(graph.nodes.some((node,index)=>node.semanticIndex!==index))errors.push("semantic indices are not contiguous");
@@ -120,13 +131,16 @@ export function validateCompletePageGraph(graph:CompletePageGraph):string[]{
   if(graph.nodes.some((node)=>node.responsive.semanticOrder!=="DOM_STABLE"))errors.push("responsive policy does not preserve semantic DOM order");
   if(graph.nodes.some((node)=>node.motionHook.sectionId!==node.id))errors.push("motion hook identity drift");
   if(graph.nodes.some((node)=>node.mediaHook.sectionId!==node.id))errors.push("media hook identity drift");
-  const expectedMissing=expectedMissingEvidence(graph.nodes);
+  const expectedMissing=[...new Set([
+    ...sourceMissingEvidence,
+    ...expectedMissingEvidence(graph.nodes)
+  ])].sort();
   if(JSON.stringify(graph.missingEvidence)!==JSON.stringify(expectedMissing))errors.push("missing evidence projection drift");
   const expectedReadiness:PageGraphReadiness=expectedMissing.length===0?"READY":"NEEDS_INPUT";
   if(graph.readiness!==expectedReadiness)errors.push(`readiness drift: expected ${expectedReadiness}`);
   for(const node of graph.nodes){
     const structuralErrors=validateSectionInstance(node.section).filter((error)=>{
-      const missing=error.match(/^missing (?:required field|provenance for) (.+)$/)?.[1];
+      const missing=error.match(/^missing (?:required field|provenance for) (.+)$/)?.[1]??error.match(/^provenance\.(.+) must be non-empty text$/)?.[1];
       return !missing||!graph.missingEvidence.includes(`${node.id}.${missing}`);
     });
     errors.push(...structuralErrors.map((error)=>`${node.id}: ${error}`));
@@ -136,8 +150,12 @@ export function validateCompletePageGraph(graph:CompletePageGraph):string[]{
       if(SECTION_TYPE_TO_KIND[node.contentContract.sectionType]!==node.kind)errors.push(`${node.id}.content: section type/kind drift`);
       for(const [prop,slots] of Object.entries(FIELD_SLOTS[node.kind]??{})){
         if(node.section.props[prop]===undefined)continue;
-        const sourceField=node.contentContract.fields.find((field)=>slots.includes(field.slot)&&sectionFieldNameForContentSlot(node.contentContract!.sectionType,field.slot)===prop);
-        if(!sourceField||sourceField.state!=="READY"||!sourceField.publishable||sourceField.provenance.join("|")!==node.section.provenance[prop])errors.push(`${node.id}.content: ${prop} lacks exact READY field backing`);
+        const sourceFields=slots.map((slot)=>node.contentContract!.fields.find((field)=>field.slot===slot&&sectionFieldNameForContentSlot(node.contentContract!.sectionType,field.slot)===prop)).filter((field):field is NonNullable<typeof field>=>field!==undefined);
+        const isMedia=SECTION_CONTRACTS[node.kind].fields[prop]?.type==="media";
+        const selected=isMedia?sourceFields:sourceFields.filter((field)=>field.state==="READY"&&field.publishable&&field.value).slice(0,1);
+        const expectedProvenance=selected.map((field)=>field.provenance.join("|")).join("|");
+        if(selected.length===(isMedia?slots.length:1)&&selected.every((field)=>field.state==="READY"&&field.publishable&&field.value&&field.provenance.length>0)&&expectedProvenance===node.section.provenance[prop])continue;
+        errors.push(`${node.id}.content: ${prop} lacks exact READY field backing`);
       }
     }
     if(graph.source.mode==="PRODUCTION"&&!node.contentContract)errors.push(`${node.id}: production node lacks content contract`);

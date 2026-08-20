@@ -43,6 +43,7 @@ test("HTTP adapter sends credentials only in the request header and parses a str
   const transport = createHttpProductionProviderTransport({
     config,
     credential: "fixture-secret",
+    resolveHost: async()=>["93.184.216.34"],
     fetchImpl: async (input, init) => {
       calls.push({ url: String(input), init });
       return new Response(JSON.stringify({
@@ -68,6 +69,7 @@ test("HTTP adapter rejects extra response fields and never returns provider erro
   const transport = createHttpProductionProviderTransport({
     config,
     credential: "fixture-secret",
+    resolveHost: async()=>["93.184.216.34"],
     fetchImpl: async () => new Response(JSON.stringify({
       schema: "website-design-compiler/http-production-provider-response/v1",
       providerRequestId: "provider-job-1",
@@ -87,6 +89,7 @@ test("HTTP adapter rejects base64 with non-canonical padding bits", async () => 
   const transport = createHttpProductionProviderTransport({
     config,
     credential: "fixture-secret",
+    resolveHost: async()=>["93.184.216.34"],
     fetchImpl: async () => new Response(JSON.stringify({
       schema: "website-design-compiler/http-production-provider-response/v1",
       providerRequestId: "provider-job-1",
@@ -99,4 +102,18 @@ test("HTTP adapter rejects base64 with non-canonical padding bits", async () => 
     transport.generate({ request, signal: new AbortController().signal, attempt: 1 }),
     (error: unknown) => error instanceof ProductionProviderError && error.code === "INVALID_RESPONSE"
   );
+});
+
+test("HTTP adapter rejects private DNS before sending credentials",async()=>{
+  let calls=0;
+  const transport=createHttpProductionProviderTransport({config,credential:"fixture-secret",resolveHost:async()=>["127.0.0.1"],fetchImpl:async()=>{calls+=1;return new Response();}});
+  await assert.rejects(transport.generate({request,signal:new AbortController().signal,attempt:1}),(error:unknown)=>error instanceof ProductionProviderError&&error.code==="INVALID_RESPONSE");
+  assert.equal(calls,0);
+});
+
+test("HTTP adapter never follows a redirect to a private target",async()=>{
+  const urls:string[]=[];
+  const transport=createHttpProductionProviderTransport({config,credential:"fixture-secret",resolveHost:async()=>["93.184.216.34"],fetchImpl:async(input)=>{urls.push(String(input));return new Response(null,{status:302,headers:{location:"http://127.0.0.1/admin"}});}});
+  await assert.rejects(transport.generate({request,signal:new AbortController().signal,attempt:1}),(error:unknown)=>error instanceof ProductionProviderError&&error.code==="INVALID_RESPONSE");
+  assert.deepEqual(urls,[config.endpoint]);
 });

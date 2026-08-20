@@ -3,6 +3,13 @@
     "schema": "website-design-compiler/brief-input/v2",
     "project": "benchmark-b2b",
     "briefText": "Page type: b2b product landing\nAudience: enterprise software buyers\nObjective: explain governed website generation and drive product evaluation\nMust preserve semantic HTML.\nDo not invent testimonials, metrics, customer logos, or pricing.",
+    "authoredContent": {
+      "proof-items": {
+        "value": ["Runtime receipts bind results to an exact commit", "Browser observations record the rendered output", "Release profiles expose every unmet capability"],
+        "source": { "kind": "benchmark-fixture", "uri": "fixtures/content/proof-evidence.txt" },
+        "evidence": { "kind": "source-excerpt", "source": "fixtures/content/proof-evidence.txt", "sourceSha256": "14d2a0d1b15a42cb88e1f00d04e74dc96df0333f951072f32b9d0eda6bee6959", "excerpt": "Quality B2B evidence states: Runtime receipts bind results to an exact commit; Browser observations record the rendered output; Release profiles expose every unmet capability", "sha256": "9b0122f91ab801ef2b8f4284c120382e075ee7645d91e5d700f26c29ede79f4b" }
+      }
+    },
     "contentEvidence": {
       "schema": "website-design-compiler/content-evidence/v1",
       "source": "USER_SUPPLIED",
@@ -34,13 +41,20 @@
     "schema": "website-design-compiler/brief-input/v2",
     "project": "benchmark-premium",
     "briefText": "Page type: premium consumer brand site\nAudience: high-intent consumer buyers\nObjective: present a distinctive premium product story with a clear action\nMust preserve accessible commerce actions.\nDo not invent customer logos, testimonials, metrics, or pricing.",
+    "authoredContent": {
+      "proof-items": {
+        "value": ["Material specifications accompany every object", "Care and repair guidance remains available after purchase", "Packaging decisions are documented by product"],
+        "source": { "kind": "benchmark-fixture", "uri": "fixtures/content/proof-evidence.txt" },
+        "evidence": { "kind": "source-excerpt", "source": "fixtures/content/proof-evidence.txt", "sourceSha256": "14d2a0d1b15a42cb88e1f00d04e74dc96df0333f951072f32b9d0eda6bee6959", "excerpt": "Quality premium evidence states: Material specifications accompany every object; Care and repair guidance remains available after purchase; Packaging decisions are documented by product", "sha256": "aa5545f472240ed1a654a5ce0f993f2170ba48efa82cefb94e71901da6e360ef" }
+      }
+    },
     "contentEvidence": {
       "schema": "website-design-compiler/content-evidence/v1",
       "source": "USER_SUPPLIED",
       "sections": {
         "navigation": { "primary-action-label": "Explore the collection" },
         "brand-hero": { "headline": "Made for a slower kind of attention", "value-proposition": "A restrained collection shaped by tactile materials, deliberate proportions and lasting utility.", "primary-action": "View the collection" },
-        "product-showcase": { "headline": "Form, repair and daily use", "product-description": "A sculptural everyday object with a quiet profile and a repairable, modular construction." },
+        "product-showcase": { "headline": "Form, repair and daily use", "product-description": "A sculptural everyday object with a quiet profile and a repairable, modular construction.", "product-media-asset-id": "approved-product-object", "product-media-alt": "Sculptural modular object shown against a quiet neutral ground" },
         "brand-proof": { "proof-items": ["Material specifications accompany every object", "Care and repair guidance remains available after purchase", "Packaging decisions are documented by product"] },
         "conversion": { "cta-headline": "Choose the object that stays", "cta-label": "Explore objects" }
       }
@@ -57,7 +71,7 @@
         "navigation": { "primary-action-label": "Enter the sequence" },
         "creative-hero": { "headline": "Motion with a reason", "value-proposition": "A paced narrative where movement reveals causality and the complete story remains available without animation.", "primary-action": "Start the sequence" },
         "narrative-sequence": { "story-beats": ["Orient with a stable opening frame", "Reveal relationships as the story advances", "Return control before the primary decision"] },
-        "interactive-showcase": { "interaction-purpose": "Let visitors scrub between the authored states while semantic copy owns the explanation." },
+        "interactive-showcase": { "interaction-purpose": "Let visitors scrub between the authored states while semantic copy owns the explanation.", "stage-media-asset-id": "approved-authored-state-sequence", "stage-media-alt": "Sequence of three authored states controlled by a scrubber" },
         "conversion": { "cta-headline": "Take the idea into the studio", "cta-label": "Open the studio" }
       }
     }

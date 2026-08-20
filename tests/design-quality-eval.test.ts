@@ -12,7 +12,7 @@ test("all six categories emit separate fail-closed scorecards when browser evide
   assert.equal(new Set(cards.map((card)=>card.category)).size,6);
   assert.equal(cards.filter((card)=>card.viewport==="mobile").length,6);
   assert.equal(cards.filter((card)=>card.viewport==="desktop").length,6);
-  assert.ok(cards.every((card)=>Object.keys(card.dimensions).length===10));
+  assert.ok(cards.every((card)=>Object.keys(card.dimensions).length===13));
   assert.ok(cards.every((card)=>card.measurement.state==="ABSENT"&&card.overall==="FAIL"));
 });
 

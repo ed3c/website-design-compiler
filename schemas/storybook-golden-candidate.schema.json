@@ -11,9 +11,18 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["git", "workflow", "screenshotArtifact", "runnerImage", "browser", "fonts", "projects", "qualification"],
+      "required": ["git", "runtimeGit", "workflow", "screenshotArtifact", "runnerImage", "browser", "fonts", "projects", "qualification"],
       "properties": {
         "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha", "ref"],
+          "properties": {
+            "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+            "ref": { "type": "string", "minLength": 1 }
+          }
+        },
+        "runtimeGit": {
           "type": "object",
           "additionalProperties": false,
           "required": ["sha", "ref"],

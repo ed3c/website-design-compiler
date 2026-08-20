@@ -18,6 +18,7 @@ import { compileCompleteSiteGraph, validateCompleteSiteGraph, type CompleteSiteG
 import { assertLosslessSiteGraphRoundTrip, payloadSiteToPuck, puckSiteToPayload, puckToSiteGraph, siteGraphFingerprint, siteGraphToPuck, type PayloadSiteGraphDocument, type PuckSiteGraphDocument } from "./page-graph-roundtrip.js";
 import { validateAuthoringData } from "./puck-authoring.js";
 import { validateAgainstSchema } from "./validate.js";
+import { ARENA_CATEGORIES, type ArenaCategory } from "./arena.js";
 
 export interface ProductionSiteCompilation{
   schema:"website-design-compiler/production-site-compilation/v2";
@@ -34,7 +35,11 @@ export interface ProductionSiteCompilation{
   payloadSiteGraph:PayloadSiteGraphDocument;
 }
 
-function categoryFor(family:string):string{return family==="motion-heavy-creative"?"motion-heavy":family;}
+function categoryFor(family:string):ArenaCategory{
+  if(family==="premium-consumer")return "premium-consumer-brand";
+  if(ARENA_CATEGORIES.includes(family as ArenaCategory))return family as ArenaCategory;
+  throw new Error(`unsupported production page category family: ${family}`);
+}
 function toFieldValue(field:SectionFieldContract,value:string|string[],route:string):unknown{
   if(field.type==="link")return typeof value==="string"?{label:value,href:route==="/"?"#primary-action":route}:null;
   if(field.type==="items")return Array.isArray(value)?value:[value];
@@ -43,6 +48,14 @@ function toFieldValue(field:SectionFieldContract,value:string|string[],route:str
   return typeof value==="string"?value:null;
 }
 function fieldFor(contract:SectionContentContract,slots:readonly string[]):SectionContentContract["fields"][number]|undefined{return slots.map((slot)=>contract.fields.find((field)=>field.slot===slot)).find(Boolean);}
+function mediaFor(contract:SectionContentContract,slots:readonly string[]):{value:{assetId:string;alt:string};provenance:string}|null{
+  const fields=slots.map((slot)=>contract.fields.find((field)=>field.slot===slot));
+  const asset=fields.find((field)=>field?.slot.endsWith("asset-id"));
+  const alt=fields.find((field)=>field?.slot.endsWith("-alt"));
+  if(asset?.state!=="READY"||!asset.publishable||typeof asset.value!=="string"||asset.provenance.length===0)return null;
+  if(alt?.state!=="READY"||!alt.publishable||typeof alt.value!=="string"||alt.provenance.length===0)return null;
+  return{value:{assetId:asset.value,alt:alt.value},provenance:[asset,alt].map((field)=>field.provenance.join("|")).join("|")};
+}
 function projectSection(sectionId:string,sectionType:string,content:SectionContentContract,route:string,ia:InformationArchitecturePlan,iaSha256:string,direction:VisualDirectionDimensions):SectionInstance{
   const kind=SECTION_TYPE_TO_KIND[sectionType];
   if(!kind)throw new Error(`${sectionId}: no governed section kind for IA type ${sectionType}`);
@@ -51,6 +64,9 @@ function projectSection(sectionId:string,sectionType:string,content:SectionConte
   for(const [name,fieldContract] of Object.entries(canonical.fields)){
     if((kind==="navigation"||kind==="footer")&&name==="links"){
       props[name]=ia.routes.map((entry)=>`${entry.label}:${entry.route}`);provenance[name]=`information-architecture:${iaSha256}#routes`;continue;
+    }
+    if(fieldContract.type==="media"){
+      const media=mediaFor(content,FIELD_SLOTS[kind]?.[name]??[]);if(media){props[name]=media.value;provenance[name]=media.provenance;}continue;
     }
     const field=fieldFor(content,FIELD_SLOTS[kind]?.[name]??[]);
     if(field?.state==="READY"&&field.publishable&&field.value&&field.provenance.length>0){
@@ -81,7 +97,7 @@ export function compileProductionSite(input:NaturalLanguageBriefInput):Productio
     const contentContracts=iaSections.map((section)=>contentById.get(section.id)??(()=>{throw new Error(`${route.route}: content contract absent for ${section.id}`);})());
     const sections=iaSections.map((section,index)=>projectSection(`${String(index+1).padStart(2,"0")}-${section.id}`,section.type,contentById.get(section.id)!,route.route,informationArchitecture,artifacts.informationArchitecture,visualDirectionSearch.selectedDirection));
     const routedContracts=contentContracts.map((contract,index)=>({...structuredClone(contract),sectionId:sections[index]!.id}));
-    const page=compileCompletePageGraph({project:compilerInput.project,category:categoryFor(informationArchitecture.family),route:route.route,sections,source,contentContracts:routedContracts,visualDirection:visualDirectionSearch.selectedDirection});
+    const page=compileCompletePageGraph({project:compilerInput.project,category:categoryFor(informationArchitecture.family),route:route.route,sections,sourceBinding:source,contentContracts:routedContracts,visualDirection:visualDirectionSearch.selectedDirection});
     const errors=validateCompletePageGraph(page);if(errors.length>0)throw new Error(`${route.route}: invalid production page graph: ${errors.join("; ")}`);
     return page;
   });

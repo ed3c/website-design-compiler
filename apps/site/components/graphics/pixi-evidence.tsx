@@ -59,7 +59,7 @@ export function PixiEvidence() {
         const app = new Application();
         await app.init({
           preference: "webgl",
-          width: Math.max(host.clientWidth, 320),
+          width: Math.max(host.clientWidth, 1),
           height: 220,
           resolution: cappedResolution,
           autoDensity: true,
@@ -107,7 +107,7 @@ export function PixiEvidence() {
         setState("ready");
 
         const onResize = () => {
-          const nextWidth = Math.max(host.clientWidth, 320);
+          const nextWidth = Math.max(host.clientWidth, 1);
           app.renderer.resize(nextWidth, 220);
           app.renderer.render(app.stage);
         };

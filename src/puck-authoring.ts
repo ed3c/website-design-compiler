@@ -18,7 +18,11 @@ export interface FrontendPlanLike {
   project: string;
   renderer: "nextjs-registry";
   arbitraryMarkupAllowed: false;
-  components: Array<{ id: string; component: "button" | "status-panel"; props: Record<string, unknown> }>;
+  components: Array<
+    | { id: string; component: "button"; props: Record<string, unknown> }
+    | { id: string; component: "status-panel"; props: Record<string, unknown> }
+    | { id: string; component: "rich-section"; props: SectionInstance }
+  >;
 }
 
 export interface AuthoringValidation { overall: "PASS" | "FAIL"; errors: string[]; }
@@ -49,7 +53,7 @@ function validateComponent(value:unknown,path:string,errors:string[],depth=0):vo
   if(type==="ButtonBlock"){hasOnlyKeys(props,["id","label","intent"],`${path}.props`,errors);if(typeof props.label!=="string"||props.label.trim()==="")errors.push(`${path}.props.label must be non-empty text`);if(!BUTTON_INTENTS.has(String(props.intent)))errors.push(`${path}.props.intent must be a governed button intent`);return;}
   if(type==="StatusPanelBlock"){hasOnlyKeys(props,["id","state","title","message"],`${path}.props`,errors);if(!STATUS_STATES.has(String(props.state)))errors.push(`${path}.props.state must be a governed status state`);if(typeof props.title!=="string"||props.title.trim()==="")errors.push(`${path}.props.title must be non-empty text`);if(typeof props.message!=="string"||props.message.trim()==="")errors.push(`${path}.props.message must be non-empty text`);return;}
   if(type==="RichSectionBlock"){validateRichSection(props,`${path}.props`,errors);return;}
-  hasOnlyKeys(props,["id","surfaceToken","content"],`${path}.props`,errors);if(!SURFACE_TOKENS.has(String(props.surfaceToken)))errors.push(`${path}.props.surfaceToken must reference an approved design token`);if(!Array.isArray(props.content)){errors.push(`${path}.props.content must be a slot component array`);return;}props.content.forEach((entry,index)=>{if(isRecord(entry)&&entry.type==="Section")errors.push(`${path}.props.content[${index}] cannot nest Section inside Section`);validateComponent(entry,`${path}.props.content[${index}]`,errors,depth+1);});
+  hasOnlyKeys(props,["id","surfaceToken","content"],`${path}.props`,errors);if(!SURFACE_TOKENS.has(String(props.surfaceToken)))errors.push(`${path}.props.surfaceToken must reference an approved design token`);if(!Array.isArray(props.content)){errors.push(`${path}.props.content must be a slot component array`);return;}props.content.forEach((entry,index)=>{if(isRecord(entry)&&entry.type==="Section")errors.push(`${path}.props.content[${index}] cannot nest Section inside Section`);if(isRecord(entry)&&entry.type==="RichSectionBlock")errors.push(`${path}.props.content[${index}] RichSectionBlock must be placed at page root`);validateComponent(entry,`${path}.props.content[${index}]`,errors,depth+1);});
 }
 
 function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringValidation{
@@ -62,7 +66,7 @@ function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringV
 
   const root=value.root as {props:Record<string,unknown>};
   hasOnlyKeys(root,["props"],"data.root",errors);
-  hasOnlyKeys(root.props,["project","category","route","source","readiness","semanticOrder","conversionPath","sharedChrome","contracts","signature","missingEvidence"],"data.root.props",errors);
+  hasOnlyKeys(root.props,["project","category","route","source","readiness","sourceMissingEvidence","semanticOrder","conversionPath","sharedChrome","contracts","signature","missingEvidence"],"data.root.props",errors);
   const nodes:CompletePageNode[]=[];
   (value.content as unknown[]).forEach((entry,index)=>{
     const path=`data.content[${index}]`;
@@ -82,7 +86,7 @@ function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringV
     nodes.push(node);
   });
   if(errors.length>0)return{overall:"FAIL",errors};
-  if(!Array.isArray(root.props.semanticOrder)||!Array.isArray(root.props.conversionPath)||!Array.isArray(root.props.missingEvidence))errors.push("data.root.props graph arrays are invalid");
+  if(!Array.isArray(root.props.sourceMissingEvidence)||!Array.isArray(root.props.semanticOrder)||!Array.isArray(root.props.conversionPath)||!Array.isArray(root.props.missingEvidence))errors.push("data.root.props graph arrays are invalid");
   if(!isRecord(root.props.sharedChrome)||!isRecord(root.props.contracts)||!isRecord(root.props.source))errors.push("data.root.props graph contracts are invalid");
   if(typeof root.props.project!=="string"||typeof root.props.category!=="string"||typeof root.props.route!=="string"||typeof root.props.signature!=="string")errors.push("data.root.props graph identity is invalid");
   if(root.props.readiness!=="READY"&&root.props.readiness!=="NEEDS_INPUT")errors.push("data.root.props.readiness is invalid");
@@ -95,6 +99,7 @@ function validatePageGraphAuthoringData(value:Record<string,unknown>):AuthoringV
     route:root.props.route as string,
     source:root.props.source as unknown as CompletePageGraph["source"],
     readiness:root.props.readiness as CompletePageGraph["readiness"],
+    sourceMissingEvidence:root.props.sourceMissingEvidence as string[],
     missingEvidence:root.props.missingEvidence as string[],
     semanticOrder:root.props.semanticOrder as string[],
     conversionPath:root.props.conversionPath as string[],
@@ -113,11 +118,11 @@ export function validateAuthoringData(value:unknown):AuthoringValidation{
 
 export function importFrontendPlan(plan:FrontendPlanLike):AuthoringData{
   if(plan.schema!=="website-design-compiler/frontend-plan/v1"||plan.renderer!=="nextjs-registry"||plan.arbitraryMarkupAllowed!==false)throw new Error("frontend plan is not eligible for governed Puck import");
-  const content:AuthoringComponentData[]=plan.components.map((node)=>{if(node.component==="button"){const intent=String(node.props.intent??"primary");const label=node.props.children;if(!BUTTON_INTENTS.has(intent)||typeof label!=="string")throw new Error(`invalid governed button node ${node.id}`);return{type:"ButtonBlock",props:{id:node.id,label,intent}};}if(node.component==="status-panel"){const state=String(node.props.state);if(!STATUS_STATES.has(state)||typeof node.props.title!=="string"||typeof node.props.message!=="string")throw new Error(`invalid governed status node ${node.id}`);return{type:"StatusPanelBlock",props:{id:node.id,state,title:node.props.title,message:node.props.message}};}throw new Error(`unsupported frontend component ${(node as{component:string}).component}`);});
+  const content:AuthoringComponentData[]=plan.components.map((node)=>{if(node.component==="button"){const intent=String(node.props.intent??"primary");const label=node.props.children;if(!BUTTON_INTENTS.has(intent)||typeof label!=="string")throw new Error(`invalid governed button node ${node.id}`);return{type:"ButtonBlock",props:{id:node.id,label,intent}};}if(node.component==="status-panel"){const state=String(node.props.state);if(!STATUS_STATES.has(state)||typeof node.props.title!=="string"||typeof node.props.message!=="string")throw new Error(`invalid governed status node ${node.id}`);return{type:"StatusPanelBlock",props:{id:node.id,state,title:node.props.title,message:node.props.message}};}if(node.component==="rich-section"){const section=node.props as SectionInstance;const sectionErrors=validateSectionInstance(section);if(sectionErrors.length>0)throw new Error(`invalid governed rich section ${node.id}: ${sectionErrors.join("; ")}`);return{type:"RichSectionBlock",props:{id:section.id,kind:section.kind,variant:section.variant,fields:structuredClone(section.props),provenance:structuredClone(section.provenance),tokenRef:section.tokenRef}};}throw new Error(`unsupported frontend component ${(node as{component:string}).component}`);});
   const data:AuthoringData={content,root:{props:{pageTitle:plan.project,surfaceToken:"surface-default"}}};const validation=validateAuthoringData(data);if(validation.overall!=="PASS")throw new Error(`imported authoring data failed validation: ${validation.errors.join("; ")}`);return data;
 }
 
 export function exportFrontendPlan(data:AuthoringData,project:string):FrontendPlanLike{
   const validation=validateAuthoringData(data);if(validation.overall!=="PASS")throw new Error(`authoring data failed validation: ${validation.errors.join("; ")}`);const flattened=data.content.flatMap((entry)=>entry.type==="Section"?(entry.props.content as AuthoringComponentData[]):[entry]);
-  return{schema:"website-design-compiler/frontend-plan/v1",project,renderer:"nextjs-registry",arbitraryMarkupAllowed:false,components:flattened.map((entry)=>{if(entry.type==="ButtonBlock")return{id:entry.props.id,component:"button" as const,props:{intent:entry.props.intent,children:entry.props.label}};if(entry.type==="StatusPanelBlock")return{id:entry.props.id,component:"status-panel" as const,props:{state:entry.props.state,title:entry.props.title,message:entry.props.message}};if(entry.type==="RichSectionBlock")throw new Error("rich sections require complete-page-graph/v2 export, not frontend-plan/v1");throw new Error("nested Section cannot be exported as a production registry node");})};
+  return{schema:"website-design-compiler/frontend-plan/v1",project,renderer:"nextjs-registry",arbitraryMarkupAllowed:false,components:flattened.map((entry)=>{if(entry.type==="ButtonBlock")return{id:entry.props.id,component:"button" as const,props:{intent:entry.props.intent,children:entry.props.label}};if(entry.type==="StatusPanelBlock")return{id:entry.props.id,component:"status-panel" as const,props:{state:entry.props.state,title:entry.props.title,message:entry.props.message}};if(entry.type==="RichSectionBlock"){const section:SectionInstance={id:entry.props.id,kind:entry.props.kind as SectionKind,variant:String(entry.props.variant),props:structuredClone(entry.props.fields as Record<string,unknown>),provenance:structuredClone(entry.props.provenance as Record<string,string>),tokenRef:entry.props.tokenRef as "semantic-design-tokens/v2"};return{id:section.id,component:"rich-section" as const,props:section};}throw new Error("nested Section cannot be exported as a production registry node");})};
 }

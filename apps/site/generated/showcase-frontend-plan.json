@@ -5,20 +5,139 @@
   "arbitraryMarkupAllowed": false,
   "components": [
     {
-      "id": "primary-action",
-      "component": "button",
+      "id": "01-navigation",
+      "component": "rich-section",
       "props": {
-        "intent": "primary",
-        "children": "Open compiler contract"
+        "id": "01-navigation",
+        "kind": "navigation",
+        "variant": "minimal",
+        "props": {
+          "brand": "evidence-first-showcase",
+          "links": [
+            "hero",
+            "features",
+            "proof",
+            "conversion"
+          ],
+          "action": {
+            "label": "Continue",
+            "href": "#conversion"
+          }
+        },
+        "provenance": {
+          "brand": "compiler.project:evidence-first-showcase",
+          "links": "compiler.informationArchitecture:navigation",
+          "action": "ia.fallback:navigation"
+        },
+        "tokenRef": "semantic-design-tokens/v2"
       }
     },
     {
-      "id": "runtime-status",
-      "component": "status-panel",
+      "id": "02-hero",
+      "component": "rich-section",
       "props": {
-        "state": "success",
-        "title": "Runtime status",
-        "message": "Governed component plan emitted"
+        "id": "02-hero",
+        "kind": "hero",
+        "variant": "text-first",
+        "props": {
+          "headline": "State the product promise and primary action.",
+          "body": "State the product promise and primary action.",
+          "primaryAction": {
+            "label": "Continue",
+            "href": "#conversion"
+          }
+        },
+        "provenance": {
+          "headline": "ia.fallback:hero",
+          "body": "ia.fallback:hero",
+          "primaryAction": "ia.fallback:hero"
+        },
+        "tokenRef": "semantic-design-tokens/v2"
+      }
+    },
+    {
+      "id": "03-feature-grid",
+      "component": "rich-section",
+      "props": {
+        "id": "03-feature-grid",
+        "kind": "feature-grid",
+        "variant": "cards",
+        "props": {
+          "heading": "Explain the product capabilities needed to evaluate fit.",
+          "items": [
+            "Omit the list until feature evidence is supplied."
+          ]
+        },
+        "provenance": {
+          "heading": "ia.fallback:features",
+          "items": "ia.fallback:features"
+        },
+        "tokenRef": "semantic-design-tokens/v2"
+      }
+    },
+    {
+      "id": "04-proof-cloud",
+      "component": "rich-section",
+      "props": {
+        "id": "04-proof-cloud",
+        "kind": "proof-cloud",
+        "variant": "citations",
+        "props": {
+          "heading": "Evidence",
+          "items": [
+            "Omit proof section until evidence is supplied."
+          ]
+        },
+        "provenance": {
+          "heading": "information-architecture:proof",
+          "items": "ia.fallback:proof"
+        },
+        "tokenRef": "semantic-design-tokens/v2"
+      }
+    },
+    {
+      "id": "05-cta",
+      "component": "rich-section",
+      "props": {
+        "id": "05-cta",
+        "kind": "cta",
+        "variant": "band",
+        "props": {
+          "headline": "Provide the primary conversion action after evaluation.",
+          "action": {
+            "label": "Continue",
+            "href": "#navigation"
+          }
+        },
+        "provenance": {
+          "headline": "ia.fallback:conversion",
+          "action": "ia.fallback:conversion"
+        },
+        "tokenRef": "semantic-design-tokens/v2"
+      }
+    },
+    {
+      "id": "06-footer",
+      "component": "rich-section",
+      "props": {
+        "id": "06-footer",
+        "kind": "footer",
+        "variant": "compact",
+        "props": {
+          "brand": "evidence-first-showcase",
+          "links": [
+            "navigation",
+            "hero",
+            "features",
+            "proof",
+            "conversion"
+          ]
+        },
+        "provenance": {
+          "brand": "compiler.project:evidence-first-showcase",
+          "links": "compiler.informationArchitecture:footer"
+        },
+        "tokenRef": "semantic-design-tokens/v2"
       }
     }
   ]

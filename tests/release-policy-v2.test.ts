@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { readCapabilityEvidence } from "../src/release-evidence.js";
-import { CAPABILITIES, CAPABILITY_RECEIPT_CONTRACTS, evaluateReleasePolicy, validateReleasePolicy, type Capability, type CapabilityEvidence, type ReleasePolicy } from "../src/release-policy-v2.js";
+import { CAPABILITIES, CAPABILITY_RECEIPT_CONTRACTS, CAPABILITY_RECEIPT_SCHEMAS, evaluateReleasePolicy, validateReleasePolicy, type Capability, type CapabilityEvidence, type ReleasePolicy } from "../src/release-policy-v2.js";
 import { validateAgainstSchema } from "../src/validate.js";
 
 const policy:ReleasePolicy={
@@ -27,6 +27,10 @@ test("release policy validates versioned profiles and points to the premium thre
   await validateAgainstSchema(policy,"release-policy-v2.schema.json");
   assert.equal(CAPABILITY_RECEIPT_CONTRACTS.premiumQuality.identity,"website-design-compiler/design-quality-eval-receipt/v3");
   assert.equal(CAPABILITY_RECEIPT_CONTRACTS.premiumQuality.path,"artifacts/v3/design-quality/design-quality-eval-receipt.json");
+});
+
+test("release evidence schema identities are derived from one versioned source of truth",()=>{
+  for(const capability of CAPABILITIES)assert.equal(CAPABILITY_RECEIPT_SCHEMAS[capability],CAPABILITY_RECEIPT_CONTRACTS[capability].identity);
 });
 
 test("CORE visibly marks every non-required capability NOT_REQUIRED",()=>{
@@ -73,7 +77,7 @@ test("capability evidence reader validates fixed schema and rejects malformed JS
   await writeFile(join(root,"schemas",contract.schemaFile),await readFile(join(process.cwd(),"schemas",contract.schemaFile)));
   const artifactPath=join(root,contract.path);
   await mkdir(dirname(artifactPath),{recursive:true});
-  const receipt={schema:contract.identity,overall:"PASS",git:{sha,ref:"refs/heads/main",event:"push",changedFiles:[]},workflow:{},environment:{},bindings:"ABSENT",gates:{core:"PASS"},evidence:{core:"artifact.json"},unresolvedRisks:[]};
+  const receipt={schema:contract.identity,overall:"PASS",git:{sha,ref:"refs/heads/main",event:"push",changedFiles:[]},workflow:{},environment:{},bindings:"ABSENT",gates:{core:"PASS"},evidence:{core:"artifact.json"},evidenceBindings:{core:{state:"PASS"}},optionalEvidence:{capabilities:{state:"NOT_EXERCISED"}},unresolvedRisks:[]};
   await writeFile(artifactPath,`${JSON.stringify(receipt)}\n`,"utf8");
   const evidence=await readCapabilityEvidence(root,"core");
   assert.equal(evidence.identity,contract.identity);

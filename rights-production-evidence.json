@@ -1,0 +1,102 @@
+{
+  "schema": "website-design-compiler/production-rights-evidence/v2",
+  "subjects": [
+    {
+      "id": "model:stabilityai-svd-1.1-tensorrt",
+      "kind": "model",
+      "name": "stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt",
+      "sourceRevision": "32eaa3e7d521d402740f134d3390c9697fb99f3e",
+      "versionOrIdentity": "commit:32eaa3e7d521d402740f134d3390c9697fb99f3e",
+      "licenseExpression": "LicenseRef-StabilityAI-NON-COMMERCIAL-Research-Community-2024-02-02",
+      "evidence": [
+        { "url": "https://huggingface.co/api/models/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/revision/32eaa3e7d521d402740f134d3390c9697fb99f3e", "sha256": "2fcdbbec5fc0ba786c1b40d900b9e2b47d3451e05f71e6141df790fbe6363a0c", "bytes": 9783, "verifiedAt": "2026-08-18T20:30:42.000Z" },
+        { "url": "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/resolve/32eaa3e7d521d402740f134d3390c9697fb99f3e/LICENSE", "sha256": "84820bab4f7f59120ab8463f7fbff842941a6be62f585e4ea052d9e4f201e300", "bytes": 8112, "verifiedAt": "2026-08-18T20:30:42.000Z" },
+        { "url": "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/resolve/32eaa3e7d521d402740f134d3390c9697fb99f3e/README.md", "sha256": "d092fd337cfb356ca63ad788e3a19eddc77452f43047da2497b1c4e59a24ad1d", "bytes": 11121, "verifiedAt": "2026-08-18T20:30:42.000Z" }
+      ],
+      "attributionRequired": true,
+      "distributed": false,
+      "geographicRestrictions": [],
+      "usageRestrictions": ["NON_COMMERCIAL_ONLY", "PRODUCTION_USE_EXCLUDED", "HOSTED_SERVICE_OR_API_PROHIBITED_WITHOUT_SEPARATE_LICENSE", "STABILITY_AI_AUP_APPLIES"]
+    },
+    {
+      "id": "generated-output:stabilityai-svd-1.1-tensorrt",
+      "kind": "generated-output",
+      "name": "SVD 1.1 TensorRT generated video output",
+      "sourceRevision": "32eaa3e7d521d402740f134d3390c9697fb99f3e",
+      "versionOrIdentity": "local-tensorrt-svd-1.1@commit:32eaa3e7d521d402740f134d3390c9697fb99f3e/stabilityai-svd-1.1-tensorrt@commit:32eaa3e7d521d402740f134d3390c9697fb99f3e",
+      "licenseExpression": "NOASSERTION",
+      "evidence": [
+        { "url": "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/resolve/32eaa3e7d521d402740f134d3390c9697fb99f3e/LICENSE", "sha256": "84820bab4f7f59120ab8463f7fbff842941a6be62f585e4ea052d9e4f201e300", "bytes": 8112, "verifiedAt": "2026-08-18T20:30:42.000Z" },
+        { "url": "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/resolve/32eaa3e7d521d402740f134d3390c9697fb99f3e/README.md", "sha256": "d092fd337cfb356ca63ad788e3a19eddc77452f43047da2497b1c4e59a24ad1d", "bytes": 11121, "verifiedAt": "2026-08-18T20:30:42.000Z" }
+      ],
+      "attributionRequired": false,
+      "distributed": false,
+      "geographicRestrictions": [],
+      "usageRestrictions": ["STABILITY_AI_AUP_APPLIES", "OUTPUT_OWNERSHIP_AND_COMMERCIAL_REDISTRIBUTION_NOT_PROVEN"]
+    },
+    {
+      "id": "service:local-tensorrt-svd-1.1",
+      "kind": "service",
+      "name": "Local self-hosted TensorRT execution",
+      "sourceRevision": "32eaa3e7d521d402740f134d3390c9697fb99f3e",
+      "versionOrIdentity": "local-tensorrt-svd-1.1@commit:32eaa3e7d521d402740f134d3390c9697fb99f3e",
+      "licenseExpression": "NOASSERTION",
+      "evidence": [
+        { "url": "https://huggingface.co/api/models/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/revision/32eaa3e7d521d402740f134d3390c9697fb99f3e", "sha256": "2fcdbbec5fc0ba786c1b40d900b9e2b47d3451e05f71e6141df790fbe6363a0c", "bytes": 9783, "verifiedAt": "2026-08-18T20:30:42.000Z" },
+        { "url": "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1-tensorrt/resolve/32eaa3e7d521d402740f134d3390c9697fb99f3e/README.md", "sha256": "d092fd337cfb356ca63ad788e3a19eddc77452f43047da2497b1c4e59a24ad1d", "bytes": 11121, "verifiedAt": "2026-08-18T20:30:42.000Z" }
+      ],
+      "attributionRequired": false,
+      "distributed": false,
+      "geographicRestrictions": [],
+      "usageRestrictions": ["LOCAL_EXECUTION_ONLY", "NO_HOSTED_PROVIDER_TERMS_PROVEN"]
+    },
+    {
+      "id": "model:facebook-vfusion3d",
+      "kind": "model",
+      "name": "facebook/vfusion3d",
+      "sourceRevision": "0aeeaaca12806a10d7ba326992f84b0922f41188",
+      "versionOrIdentity": "commit:0aeeaaca12806a10d7ba326992f84b0922f41188",
+      "licenseExpression": "LicenseRef-vfusion3d-NON-COMMERCIAL-version-conflict",
+      "evidence": [
+        { "url": "https://huggingface.co/facebook/vfusion3d/raw/0aeeaaca12806a10d7ba326992f84b0922f41188/README.md", "sha256": "78d0c34e5256bd64c2861bc9a7fc434b0154d1d0fb32842f3609902a3bda87db", "bytes": 4312, "verifiedAt": "2026-08-18T20:36:34.000Z" },
+        { "url": "https://huggingface.co/facebook/vfusion3d/raw/0aeeaaca12806a10d7ba326992f84b0922f41188/LICENSE", "sha256": "1d8ca66080a2701508a70be4ddad4be28c509bcc3397a682fb8edf767fdd7a00", "bytes": 19332, "verifiedAt": "2026-08-18T20:36:34.000Z" }
+      ],
+      "attributionRequired": true,
+      "distributed": false,
+      "geographicRestrictions": [],
+      "usageRestrictions": ["PRODUCTION_COMMERCIAL_USE_EXCLUDED", "WEIGHT_REDISTRIBUTION_NONCOMMERCIAL_ONLY", "LICENSE_VERSION_DECLARATION_CONFLICT"]
+    },
+    {
+      "id": "generated-output:facebook-vfusion3d",
+      "kind": "generated-output",
+      "name": "facebook/vfusion3d generated output",
+      "sourceRevision": "0aeeaaca12806a10d7ba326992f84b0922f41188",
+      "versionOrIdentity": "local-vfusion3d@commit:0aeeaaca12806a10d7ba326992f84b0922f41188/facebook-vfusion3d@commit:0aeeaaca12806a10d7ba326992f84b0922f41188",
+      "licenseExpression": "NOASSERTION",
+      "evidence": [
+        { "url": "https://huggingface.co/facebook/vfusion3d/raw/0aeeaaca12806a10d7ba326992f84b0922f41188/README.md", "sha256": "78d0c34e5256bd64c2861bc9a7fc434b0154d1d0fb32842f3609902a3bda87db", "bytes": 4312, "verifiedAt": "2026-08-18T20:36:34.000Z" },
+        { "url": "https://huggingface.co/facebook/vfusion3d/raw/0aeeaaca12806a10d7ba326992f84b0922f41188/LICENSE", "sha256": "1d8ca66080a2701508a70be4ddad4be28c509bcc3397a682fb8edf767fdd7a00", "bytes": 19332, "verifiedAt": "2026-08-18T20:36:34.000Z" }
+      ],
+      "attributionRequired": false,
+      "distributed": false,
+      "geographicRestrictions": [],
+      "usageRestrictions": ["OUTPUT_OWNERSHIP_UNPROVEN", "OUTPUT_COMMERCIAL_USE_UNPROVEN", "OUTPUT_REDISTRIBUTION_UNPROVEN", "OUTPUT_ATTRIBUTION_TERMS_UNPROVEN"]
+    },
+    {
+      "id": "service:local-vfusion3d",
+      "kind": "service",
+      "name": "Local VFusion3D worker",
+      "sourceRevision": "0aeeaaca12806a10d7ba326992f84b0922f41188",
+      "versionOrIdentity": "local-vfusion3d@commit:0aeeaaca12806a10d7ba326992f84b0922f41188",
+      "licenseExpression": "NOASSERTION",
+      "evidence": [
+        { "url": "https://huggingface.co/api/models/facebook/vfusion3d/revision/0aeeaaca12806a10d7ba326992f84b0922f41188", "sha256": "f33846d54f7536d058eb0c4f373a057561187cf44b4da028f47a5253bdccd423", "bytes": 5107, "verifiedAt": "2026-08-18T20:36:34.000Z" },
+        { "url": "https://huggingface.co/facebook/vfusion3d/raw/0aeeaaca12806a10d7ba326992f84b0922f41188/README.md", "sha256": "78d0c34e5256bd64c2861bc9a7fc434b0154d1d0fb32842f3609902a3bda87db", "bytes": 4312, "verifiedAt": "2026-08-18T20:36:34.000Z" }
+      ],
+      "attributionRequired": false,
+      "distributed": false,
+      "geographicRestrictions": [],
+      "usageRestrictions": ["NO_PRODUCTION_HOSTED_API_TERMS", "DEMO_IS_NOT_A_PRODUCTION_PROVIDER", "COMMERCIAL_HOSTING_WITH_MODEL_WEIGHTS_EXCLUDED"]
+    }
+  ]
+}

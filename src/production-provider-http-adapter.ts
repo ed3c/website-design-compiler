@@ -5,7 +5,10 @@ import type {
 } from "./production-media-provider.js";
 import { ProductionProviderError } from "./production-media-provider.js";
 import { canonicalMediaValue, sha256 } from "./media-router.js";
+import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { isPublicIpAddress } from "./reference-capture.js";
+import { injectedFetchTransport, productionPinnedTransport, type PinnedTransport } from "./pinned-http-transport.js";
 
 export interface HttpProductionProviderAdapterConfig {
   schema: "website-design-compiler/http-production-provider-adapter/v1";
@@ -57,32 +60,11 @@ export function validateHttpProductionProviderAdapterConfig(config: HttpProducti
   return errors;
 }
 
-async function readBoundedResponse(response: Response, maxBytes: number): Promise<string> {
-  if (!response.body) throw new ProductionProviderError("INVALID_RESPONSE", "provider response body is absent");
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > maxBytes) {
-        await reader.cancel();
-        throw new ProductionProviderError("INVALID_RESPONSE", "provider response exceeds the admitted response budget");
-      }
-      chunks.push(value);
-    }
-  } catch (error) {
-    if (error instanceof ProductionProviderError) throw error;
-    throw new ProductionProviderError("INVALID_RESPONSE", "provider response stream failed");
-  }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
+async function defaultResolveHost(hostname:string):Promise<string[]>{return(await lookup(hostname,{all:true,verbatim:true})).map((entry)=>entry.address);}
+
+async function readBoundedResponse(bytes: Uint8Array, maxBytes: number): Promise<string> {
+  if (bytes.byteLength === 0) throw new ProductionProviderError("INVALID_RESPONSE", "provider response body is absent");
+  if (bytes.byteLength > maxBytes) throw new ProductionProviderError("INVALID_RESPONSE", "provider response exceeds the admitted response budget");
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
@@ -128,32 +110,44 @@ export function createHttpProductionProviderTransport(args: {
   config: HttpProductionProviderAdapterConfig;
   credential: string;
   fetchImpl?: typeof fetch;
+  resolveHost?: (hostname:string)=>Promise<string[]>;
+  pinnedTransport?: PinnedTransport;
 }): ProductionProviderTransport {
   const errors = validateHttpProductionProviderAdapterConfig(args.config);
   if (errors.length > 0) throw new Error(`invalid HTTP production provider adapter: ${errors.join("; ")}`);
   if (!args.credential || /[\r\n]/.test(args.credential)) throw new Error("production provider credential is absent or invalid");
-  const fetchImpl = args.fetchImpl ?? fetch;
+  const resolveHost=args.resolveHost??defaultResolveHost;
+  const transport=args.pinnedTransport??(args.fetchImpl?injectedFetchTransport(args.fetchImpl):productionPinnedTransport);
   return {
     identity: args.config.identity,
     configurationSha256: sha256(canonicalMediaValue(args.config)),
     async generate({ request, signal, attempt }) {
-      let response: Response;
+      const endpoint=new URL(args.config.endpoint);
+      let addresses:string[];
+      try{addresses=await resolveHost(endpoint.hostname);}catch{throw new ProductionProviderError("OUTAGE","provider DNS resolution failed");}
+      if(addresses.length===0)throw new ProductionProviderError("OUTAGE","provider DNS resolution returned no addresses");
+      if(addresses.some((address)=>!isPublicIpAddress(address)))throw new ProductionProviderError("INVALID_RESPONSE","provider endpoint resolved to a non-public address");
+      const maximumResponseBytes=Math.min(67_108_864,Math.max(65_536,request.optimization.maxBytes*2));
+      let response: Awaited<ReturnType<PinnedTransport>>;
       try {
-        response = await fetchImpl(args.config.endpoint, {
+        response = await transport({
+          url:endpoint,
+          resolvedAddress:addresses[0]!,
+          deadlineAt:Date.now()+30_000,
+          maxBytes:maximumResponseBytes,
           method: "POST",
-          redirect: "error",
           signal,
           headers: {
             authorization: `Bearer ${args.credential}`,
             "content-type": "application/json",
             accept: "application/json"
           },
-          body: JSON.stringify({
+          body:new TextEncoder().encode(JSON.stringify({
             schema: "website-design-compiler/http-production-provider-request/v1",
             identity: args.config.identity,
             request,
             attempt
-          })
+          }))
         });
       } catch (error) {
         if (signal.aborted) throw new ProductionProviderError("CANCELLED", "provider request was cancelled");
@@ -162,13 +156,10 @@ export function createHttpProductionProviderTransport(args: {
       if (response.status === 429) throw new ProductionProviderError("RATE_LIMIT", "provider rate limited the request");
       if (response.status === 402) throw new ProductionProviderError("QUOTA", "provider quota rejected the request");
       if (response.status >= 500) throw new ProductionProviderError("OUTAGE", "provider service is unavailable");
-      if (!response.ok) throw new ProductionProviderError("INVALID_RESPONSE", "provider rejected the request");
-      const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+      if (response.status < 200 || response.status >= 300) throw new ProductionProviderError("INVALID_RESPONSE", "provider rejected the request");
+      const contentType = response.headers["content-type"]?.split(";", 1)[0]?.trim().toLowerCase();
       if (contentType !== "application/json") throw new ProductionProviderError("INVALID_RESPONSE", "provider response content type is not application/json");
-      const source = await readBoundedResponse(
-        response,
-        Math.min(67_108_864, Math.max(65_536, request.optimization.maxBytes * 2))
-      );
+      const source = await readBoundedResponse(response.body,maximumResponseBytes);
       let value: unknown;
       try {
         value = JSON.parse(source);

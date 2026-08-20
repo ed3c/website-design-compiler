@@ -3,6 +3,7 @@ import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 import {
   buildUnconfiguredProductionProviderStatus,
+  productionRightsAdmissionSha256,
   ProductionProviderError,
   routeProductionMediaGeneration as routeProvider,
   validateProductionMediaRequest,
@@ -84,6 +85,7 @@ const rightsReceipt: RepositoryClearanceReceipt = {
   counts: { ALLOW: 3, REVIEW_REQUIRED: 0, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 },
   unresolved: [],
   expiredWaivers: [],
+  diagnostics: [],
   noticeSubjects: [],
   legalDisclaimer: "ENGINEERING_CLEARANCE_NOT_LEGAL_ADVICE"
 };
@@ -123,7 +125,7 @@ function admissionFor(
       kind: admittedPolicy.identity.kind
     })),
     policySha256: sha256(canonicalMediaValue(admittedPolicy)),
-    rightsReceiptSha256: sha256(canonicalMediaValue(admittedRights)),
+    rightsReceiptSha256: productionRightsAdmissionSha256(admittedRights, admittedPolicy),
     credentials: "AVAILABLE",
     budget: "AUTHORIZED",
     rateLimitRemaining: 2,
@@ -176,6 +178,31 @@ test("production provider is not called without explicit human, credential, and 
   assert.match(result.receipt.reason, /human admission|credentials|budget/i);
 });
 
+test("known non-ALLOW rights are denied before human admission or production transport",async()=>{
+  let calls=0;
+  const transport:ProductionProviderTransport={
+    identity:policy.identity,
+    async generate(){calls+=1;throw new Error("must not execute");}
+  };
+  const deniedSubjects=rightsReceipt.subjects.map((entry)=>{
+    if(entry.id===policy.rights.modelWeight.subjectId)return{...entry,state:"DENY" as const};
+    if(entry.id===policy.rights.generatedOutput.subjectId||entry.id===policy.rights.hostedService.subjectId)return{...entry,state:"UNKNOWN" as const};
+    return entry;
+  });
+  const deniedRights:RepositoryClearanceReceipt={
+    ...rightsReceipt,
+    subjects:deniedSubjects,
+    counts:{ALLOW:0,REVIEW_REQUIRED:0,DENY:1,UNKNOWN:2,NOT_DISTRIBUTED:0}
+  };
+  const result=await routeProductionMediaGeneration({signed:signed(),secret,policy,rightsReceipt:deniedRights,transport});
+  assert.equal(calls,0);
+  assert.equal(result.receipt.overall,"NOT_EXERCISED");
+  assert.equal(result.receipt.admissionState,"DENIED");
+  assert.match(result.receipt.reason,/model:fixture-model rights state is DENY/);
+  assert.match(result.receipt.reason,/generated-output:fixture-model rights state is UNKNOWN/);
+  assert.match(result.receipt.reason,/service:fixture-provider rights state is UNKNOWN/);
+});
+
 test("durable production admission satisfies its strict schema and exact digest bindings", async () => {
   const packet = admissionFor();
   await validateAgainstSchema(packet, "production-provider-admission.schema.json");
@@ -186,6 +213,29 @@ test("durable production admission satisfies its strict schema and exact digest 
   assert.match(packet.policySha256, /^[a-f0-9]{64}$/);
   assert.match(packet.rightsReceiptSha256, /^[a-f0-9]{64}$/);
   assert.match(packet.signatureBase64, /^[A-Za-z0-9+/]+=*$/);
+});
+
+test("production rights admission ignores volatile receipt metadata but binds exact legal subjects", () => {
+  const laterReceipt = {
+    ...rightsReceipt,
+    generatedAt: "2026-08-19T12:34:56.000Z",
+    git: { sha: "f".repeat(40), ref: "refs/heads/main" },
+    subjects: [
+      ...rightsReceipt.subjects,
+      subject("package:unrelated", "package", "1.0.0")
+    ]
+  };
+  assert.equal(
+    productionRightsAdmissionSha256(laterReceipt, policy),
+    productionRightsAdmissionSha256(rightsReceipt, policy)
+  );
+
+  const changedRights = structuredClone(rightsReceipt);
+  changedRights.subjects[1]!.usageRestrictions = ["NO_PAID_ADVERTISING"];
+  assert.notEqual(
+    productionRightsAdmissionSha256(changedRights, policy),
+    productionRightsAdmissionSha256(rightsReceipt, policy)
+  );
 });
 
 test("tampered, expired, or untrusted human admission cannot execute the provider", async () => {
@@ -243,7 +293,7 @@ test("non-ALLOW repository rights fail closed before provider execution", async 
     ...rightsReceipt,
     overall: "FAIL",
     subjects: rightsReceipt.subjects.map((entry) => entry.id === policy.rights.generatedOutput.subjectId
-      ? { ...entry, state: "REVIEW_REQUIRED" as const }
+      ? { ...entry, state: "REVIEW_REQUIRED" as const, distributed: true }
       : entry),
     counts: { ALLOW: 2, REVIEW_REQUIRED: 1, DENY: 0, UNKNOWN: 0, NOT_DISTRIBUTED: 0 },
     unresolved: [policy.rights.generatedOutput.subjectId]
@@ -258,6 +308,31 @@ test("non-ALLOW repository rights fail closed before provider execution", async 
   assert.equal(result.receipt.overall, "NOT_EXERCISED");
   assert.equal(result.receipt.admissionState, "DENIED");
   assert.match(result.receipt.reason, /generated-output:fixture-model.*REVIEW_REQUIRED/);
+});
+
+test("semantically inconsistent rights PASS is denied before provider execution", async () => {
+  let calls = 0;
+  const transport: ProductionProviderTransport = {
+    identity: policy.identity,
+    async generate() {
+      calls += 1;
+      throw new Error("must not execute");
+    }
+  };
+  const forgedPass: RepositoryClearanceReceipt = {
+    ...rightsReceipt,
+    diagnostics: ["diagnostic:package-evidence:INVALID_JSON"]
+  };
+
+  const result = await routeProductionMediaGeneration({
+    signed: signed(), secret, policy, rightsReceipt: forgedPass, transport,
+    executionAdmission: admissionFor(policy, forgedPass)
+  });
+
+  assert.equal(calls, 0);
+  assert.equal(result.receipt.overall, "FAIL");
+  assert.equal(result.receipt.admissionState, "DENIED");
+  assert.match(result.receipt.reason, /repository rights receipt.*invalid/i);
 });
 
 test("production rights must explicitly record geographic and usage restriction fields", async () => {
@@ -534,6 +609,21 @@ test("production policy rejects floating identities, incomplete rights bindings,
   assert.match(errors, /maxAttempts/);
   assert.match(errors, /revocation.*reason/);
   assert.match(errors, /revocation.*effectiveAt/);
+});
+
+test("production policy rejects abbreviated commit identities", () => {
+  const invalid: ProductionProviderPolicy = {
+    ...policy,
+    identity: {
+      ...policy.identity,
+      serviceRevision: "commit:1234567",
+      modelRevision: "commit:1234567890abcdef1234567890abcdef1234567"
+    }
+  };
+
+  const errors = validateProductionProviderPolicy(invalid).join("\n");
+  assert.match(errors, /serviceRevision.*exact/);
+  assert.match(errors, /modelRevision.*exact/);
 });
 
 test("production request rejects non-finite parameters and unbounded response budgets before transport", async () => {

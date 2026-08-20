@@ -3,15 +3,39 @@
   "$id": "https://ed3c.github.io/website-design-compiler/schemas/reference-browser-receipt.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "overall", "browser", "sourceMode", "observations", "responsiveBehavior", "supportedFacts", "cameraObservation", "implementationDetails"],
+  "required": ["schema", "overall", "execution", "browser", "sourceMode", "capturedArtifactSha256", "measurementsSha256", "evidenceArtifacts", "observations", "responsiveBehavior", "supportedFacts", "cameraObservation", "implementationDetails"],
   "properties": {
-    "schema": { "const": "website-design-compiler/reference-browser-receipt/v1" },
+    "schema": { "const": "website-design-compiler/reference-browser-receipt/v2" },
     "overall": { "enum": ["PASS", "FAIL"] },
+    "execution": {
+      "type": "object", "additionalProperties": false, "required": ["mode", "startedAt", "completedAt"],
+      "properties": {
+        "mode": { "const": "PLAYWRIGHT_BROWSER" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "browser": {
       "type": "object", "additionalProperties": false, "required": ["engine", "version"],
       "properties": { "engine": { "const": "chromium" }, "version": { "type": "string", "minLength": 1 } }
     },
     "sourceMode": { "const": "DETERMINISTIC_HTML_FIXTURE" },
+    "capturedArtifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "measurementsSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "evidenceArtifacts": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["viewport", "path", "sha256", "width", "minimumHeight"],
+        "properties": {
+          "viewport": { "enum": ["desktop", "mobile"] },
+          "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.png$" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "width": { "type": "integer", "minimum": 1 },
+          "minimumHeight": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
     "observations": {
       "type": "object", "additionalProperties": false, "required": ["desktop", "mobile"],
       "properties": { "desktop": { "$ref": "#/$defs/snapshot" }, "mobile": { "$ref": "#/$defs/snapshot" } }
