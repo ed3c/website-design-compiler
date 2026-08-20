@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://ed3c.github.io/website-design-compiler/schemas/local-handoff-queue.schema.json",
+  "title":"Local Handoff Queue","type":"object","additionalProperties":false,
+  "required":["schema","programId","items","generatedAt","queueIdentitySha256"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/local-handoff-queue/v1"},"programId":{"$ref":"#/$defs/id"},"items":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/item"}},"generatedAt":{"type":"string","format":"date-time"},"queueIdentitySha256":{"$ref":"#/$defs/sha256"}
+  },
+  "$defs":{
+    "id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{2,127}$"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"},"path":{"type":"string","pattern":"^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\).+$"},
+    "item":{"type":"object","additionalProperties":false,"required":["queueId","state","repository","headSha","owningIssue","ownerRole","blockingReason","protectedNames","commands","expectedArtifacts","completionGate","resumePhase"],"properties":{
+      "queueId":{"$ref":"#/$defs/id"},"state":{"enum":["QUEUED","READY","RUNNING","BLOCKED","REVIEW_REQUIRED","COMPLETE","REJECTED","SUPERSEDED"]},"repository":{"type":"string","format":"uri","pattern":"^https://github\\.com/[^/]+/[^/?#]+$"},"headSha":{"$ref":"#/$defs/gitSha"},"owningIssue":{"type":"integer","minimum":1},"ownerRole":{"type":"string","minLength":1},"blockingReason":{"type":"string","minLength":1},"protectedNames":{"type":"array","uniqueItems":true,"items":{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,127}$"}},"commands":{"type":"array","items":{"type":"string","minLength":1}},"expectedArtifacts":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/path"}},"completionGate":{"type":"string","minLength":1},"resumePhase":{"enum":["P0","P1","P2","P3","P4","P5","P6","P7","P8","P9"]}
+    }}
+  }
+}

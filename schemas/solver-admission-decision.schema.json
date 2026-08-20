@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/solver-admission-decision.schema.json",
+  "title": "Solver Admission Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "criteriaVersion", "criteriaIdentitySha256", "caseSetSha256", "state", "triggeredCaseIds", "solverAdapterState", "rationale", "decisionIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/solver-admission-decision/v1" },
+    "criteriaVersion": { "const": "solver-admission-criteria/v1" },
+    "criteriaIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "caseSetSha256": { "$ref": "#/$defs/sha256" },
+    "state": { "enum": ["NOT_REQUIRED_FOR_CURRENT_CASESET", "REQUIRED_NOT_ADMITTED"] },
+    "triggeredCaseIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$" } },
+    "solverAdapterState": { "const": "NOT_ADMITTED" },
+    "rationale": { "type": "string", "minLength": 1 },
+    "decisionIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

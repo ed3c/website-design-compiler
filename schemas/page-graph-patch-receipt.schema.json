@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/page-graph-patch-receipt.schema.json",
+  "title": "Page Graph Patch Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "patchId", "patchIdentitySha256", "state", "baseDigest", "resultDigest", "history", "inverseOperations", "diagnostics", "receiptIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/page-graph-patch-receipt/v1" },
+    "patchId": { "$ref": "#/$defs/stableId" },
+    "patchIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "state": { "enum": ["APPLIED", "CONFLICT", "REJECTED"] },
+    "baseDigest": { "$ref": "#/$defs/sha256" },
+    "resultDigest": { "oneOf": [ { "$ref": "#/$defs/sha256" }, { "type": "null" } ] },
+    "history": { "$ref": "#/$defs/history" },
+    "inverseOperations": { "type": "array", "items": { "$ref": "#/$defs/operation" } },
+    "diagnostics": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "receiptIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "stableId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$" },
+    "nullableSha256": { "oneOf": [ { "$ref": "#/$defs/sha256" }, { "type": "null" } ] },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parentReceiptSha256", "revertsReceiptSha256"],
+      "properties": {
+        "parentReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+        "revertsReceiptSha256": { "$ref": "#/$defs/nullableSha256" }
+      }
+    },
+    "jsonValue": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+      ]
+    },
+    "setField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "op", "nodeId", "expectedNodeKind", "field", "expectedValueSha256", "value", "fieldProvenance"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "op": { "const": "SET_SECTION_FIELD" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "expectedNodeKind": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "minLength": 1 },
+        "expectedValueSha256": { "$ref": "#/$defs/sha256" },
+        "value": { "$ref": "#/$defs/jsonValue" },
+        "fieldProvenance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "setVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "op", "nodeId", "expectedNodeKind", "expectedVariant", "variant"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "op": { "const": "SET_VARIANT" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "expectedNodeKind": { "type": "string", "minLength": 1 },
+        "expectedVariant": { "type": "string", "minLength": 1 },
+        "variant": { "type": "string", "minLength": 1 }
+      }
+    },
+    "moveNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "op", "nodeId", "expectedNodeKind", "expectedFromIndex", "toIndex"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "op": { "const": "MOVE_NODE" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "expectedNodeKind": { "type": "string", "minLength": 1 },
+        "expectedFromIndex": { "type": "integer", "minimum": 0 },
+        "toIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "operation": {
+      "oneOf": [
+        { "$ref": "#/$defs/setField" },
+        { "$ref": "#/$defs/setVariant" },
+        { "$ref": "#/$defs/moveNode" }
+      ]
+    }
+  }
+}

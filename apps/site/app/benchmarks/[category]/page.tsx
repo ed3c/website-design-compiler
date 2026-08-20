@@ -5,11 +5,13 @@ import projection from "@/generated/benchmark-page-graphs.json";
 
 const graphs=projection.graphs as Record<string,ProjectedPageGraph>;
 type ProjectedSite={project:string;signature:string;source:{mode:string;artifacts:Record<string,string>};routes:Array<{route:string;page:ProjectedPageGraph&{signature:string}}>};
+type KernelEditProof={schema:"website-design-compiler/kernel-edited-page-browser-subject/v1";subjectHeadSha:string;category:string;route:string;sourceManifestIdentitySha256:string;sourceObservationIdentitySha256:string;basePageDigest:string;patchIdentitySha256:string;patchReceiptIdentitySha256:string;resultPageDigest:string;editedHeadline:string;site:ProjectedSite};
 type ProjectedTokens={color:{background:string;surface:string;text:string;mutedText:string;accent:string;onAccent:string;focus:string};typography:{display:{family:string;fallback:string[];weight:number;lineHeight:number;letterSpacingEm:number};body:{family:string;fallback:string[];weight:number;lineHeight:number;measureCh:number};scalePx:{mobile:number[];tablet:number[];desktop:number[]}};layout:{containerMaxPx:{mobile:number;tablet:number;desktop:number};columns:{mobile:number;tablet:number;desktop:number};gutterPx:{mobile:number;tablet:number;desktop:number}};spacingPx:number[];radiiPx:{sm:number;md:number;lg:number;pill:number};border:{widthPx:number;style:string;color:string};elevation:{low:string;high:string};motionMs:{fast:number;base:number;slow:number};media:{treatment:string;gradientPolicy:string;blurMaxPx:number;noiseOpacityMax:number};interaction:{focusRingPx:number;focusOffsetPx:number;minTargetPx:number;hoverLiftPx:number}};
 type ProjectedDirection={typography:string;typeContrast:string;density:string;grid:string;surface:string;colorStrategy:string;mediaStrategy:string;motionIntensity:string;signatureInteraction:string};
 type ProjectedDesignSystem={selectedVisualDirection:{candidateId:string;dimensions:ProjectedDirection}};
 type TokenStyle=CSSProperties&Record<`--${string}`,string|number>;
 const sites=projection.sites as Record<string,ProjectedSite>;
+const kernelEditProof=projection.kernelEditProof as KernelEditProof;
 const designTokens=projection.designTokens as Record<string,ProjectedTokens>;
 const designSystems=projection.designSystems as Record<string,ProjectedDesignSystem>;
 export function generateStaticParams(){return Object.keys(graphs).map((category)=>({category}));}
@@ -27,14 +29,42 @@ function tokenStyle(tokens:ProjectedTokens):TokenStyle{
   return style;
 }
 
-export default async function BenchmarkPage({params,searchParams}:{params:Promise<{category:string}>;searchParams:Promise<{route?:string}>}){
+export default async function BenchmarkPage({params,searchParams}:{params:Promise<{category:string}>;searchParams:Promise<{route?:string;kernelEdit?:string}>}){
   const {category}=await params;
-  const {route="/"}=await searchParams;
-  const site=sites[category];
+  const {route="/",kernelEdit}=await searchParams;
+  const useKernelEdit=kernelEdit==="1";
+  const site=useKernelEdit&&kernelEditProof.category===category?kernelEditProof.site:sites[category];
   const tokens=designTokens[category];
   const designSystem=designSystems[category];
   const graph=site?.routes.find((entry)=>entry.route===route)?.page;
   if(!site||!graph||!tokens||!designSystem)notFound();
+  if(useKernelEdit&&(kernelEditProof.category!==category||kernelEditProof.route!==route))notFound();
   const direction=designSystem.selectedVisualDirection.dimensions;
-  return <div style={tokenStyle(tokens)} data-compiled-site={category} data-site-project={site.project} data-site-route={route} data-site-signature={site.signature} data-page-signature={graph.signature} data-upstream-mode={site.source.mode} data-upstream-artifacts={JSON.stringify(site.source.artifacts)} data-direction-typography={direction.typography} data-direction-contrast={direction.typeContrast} data-direction-density={direction.density} data-direction-grid={direction.grid} data-direction-surface={direction.surface} data-direction-color={direction.colorStrategy} data-direction-media={direction.mediaStrategy} data-direction-motion={direction.motionIntensity} data-direction-interaction={direction.signatureInteraction}><GeneratedPage graph={graph}/></div>;
+  return <div
+    style={tokenStyle(tokens)}
+    data-compiled-site={category}
+    data-site-project={site.project}
+    data-site-route={route}
+    data-site-signature={site.signature}
+    data-page-signature={graph.signature}
+    data-upstream-mode={site.source.mode}
+    data-upstream-artifacts={JSON.stringify(site.source.artifacts)}
+    data-kernel-edit={useKernelEdit?"true":"false"}
+    data-kernel-subject-head={useKernelEdit?kernelEditProof.subjectHeadSha:undefined}
+    data-kernel-source-manifest={useKernelEdit?kernelEditProof.sourceManifestIdentitySha256:undefined}
+    data-kernel-source-observation={useKernelEdit?kernelEditProof.sourceObservationIdentitySha256:undefined}
+    data-kernel-base-digest={useKernelEdit?kernelEditProof.basePageDigest:undefined}
+    data-kernel-patch-identity={useKernelEdit?kernelEditProof.patchIdentitySha256:undefined}
+    data-kernel-patch-receipt={useKernelEdit?kernelEditProof.patchReceiptIdentitySha256:undefined}
+    data-kernel-result-digest={useKernelEdit?kernelEditProof.resultPageDigest:undefined}
+    data-direction-typography={direction.typography}
+    data-direction-contrast={direction.typeContrast}
+    data-direction-density={direction.density}
+    data-direction-grid={direction.grid}
+    data-direction-surface={direction.surface}
+    data-direction-color={direction.colorStrategy}
+    data-direction-media={direction.mediaStrategy}
+    data-direction-motion={direction.motionIntensity}
+    data-direction-interaction={direction.signatureInteraction}
+  ><GeneratedPage graph={graph}/></div>;
 }

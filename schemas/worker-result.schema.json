@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://ed3c.github.io/website-design-compiler/schemas/worker-result.schema.json",
+  "title":"Worker Result","type":"object","additionalProperties":false,
+  "required":["schema","taskIdentitySha256","attemptId","leaseIdentitySha256","workerRole","headSha","state","artifacts","commands","diagnostics","workerResultIdentitySha256"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/worker-result/v1"},"taskIdentitySha256":{"$ref":"#/$defs/sha256"},"attemptId":{"$ref":"#/$defs/id"},"leaseIdentitySha256":{"$ref":"#/$defs/sha256"},"workerRole":{"type":"string","minLength":1},"headSha":{"$ref":"#/$defs/gitSha"},"state":{"enum":["PASS","FAIL","BLOCKED"]},
+    "artifacts":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["path","sha256"],"properties":{"path":{"$ref":"#/$defs/path"},"sha256":{"$ref":"#/$defs/sha256"}}}},
+    "commands":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["command","exitCode"],"properties":{"command":{"type":"string","minLength":1},"exitCode":{"type":"integer"}}}},
+    "diagnostics":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},"workerResultIdentitySha256":{"$ref":"#/$defs/sha256"}
+  },
+  "$defs":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{2,127}$"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"},"path":{"type":"string","pattern":"^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\).+$"}}
+}

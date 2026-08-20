@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/production-content-patch-receipt.schema.json",
+  "title": "Production Content Patch Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "mode", "patchId", "patchIdentitySha256", "state", "baseDigest", "resultDigest", "history", "operationRefs", "beforeConstraintReportIdentitySha256", "afterConstraintReportIdentitySha256", "introducedHardFailures", "diagnostics", "receiptIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/production-content-patch-receipt/v1" },
+    "mode": { "enum": ["FORWARD", "REVERT"] },
+    "patchId": { "$ref": "#/$defs/stableId" },
+    "patchIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "state": { "enum": ["APPLIED", "CONFLICT", "REJECTED", "HARD_CONSTRAINT_REJECTED"] },
+    "baseDigest": { "$ref": "#/$defs/sha256" },
+    "resultDigest": { "$ref": "#/$defs/nullableSha256" },
+    "history": { "$ref": "#/$defs/history" },
+    "operationRefs": { "type": "array", "items": { "$ref": "#/$defs/operationRef" } },
+    "beforeConstraintReportIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "afterConstraintReportIdentitySha256": { "$ref": "#/$defs/nullableSha256" },
+    "introducedHardFailures": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "diagnostics": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "receiptIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "nullableSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "stableId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$" },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parentReceiptSha256", "revertsReceiptSha256"],
+      "properties": {
+        "parentReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+        "revertsReceiptSha256": { "$ref": "#/$defs/nullableSha256" }
+      }
+    },
+    "operationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "nodeId", "field", "slot", "beforeContentFieldSha256", "afterContentFieldSha256"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "minLength": 1 },
+        "slot": { "$ref": "#/$defs/stableId" },
+        "beforeContentFieldSha256": { "$ref": "#/$defs/sha256" },
+        "afterContentFieldSha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

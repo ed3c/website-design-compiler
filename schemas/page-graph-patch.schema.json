@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/page-graph-patch.schema.json",
+  "title": "Page Graph Patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "patchId", "expectedBaseDigest", "actor", "evidenceSha256", "operations", "patchIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/page-graph-patch/v1" },
+    "patchId": { "$ref": "#/$defs/stableId" },
+    "expectedBaseDigest": { "$ref": "#/$defs/sha256" },
+    "actor": { "$ref": "#/$defs/actor" },
+    "evidenceSha256": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/sha256" }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/operation" }
+    },
+    "patchIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "stableId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$" },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "enum": ["HUMAN", "AGENT"] },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "jsonValue": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+      ]
+    },
+    "setField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "op", "nodeId", "expectedNodeKind", "field", "expectedValueSha256", "value", "fieldProvenance"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "op": { "const": "SET_SECTION_FIELD" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "expectedNodeKind": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,127}$" },
+        "expectedValueSha256": { "$ref": "#/$defs/sha256" },
+        "value": { "$ref": "#/$defs/jsonValue" },
+        "fieldProvenance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "setVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "op", "nodeId", "expectedNodeKind", "expectedVariant", "variant"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "op": { "const": "SET_VARIANT" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "expectedNodeKind": { "type": "string", "minLength": 1 },
+        "expectedVariant": { "type": "string", "minLength": 1 },
+        "variant": { "type": "string", "minLength": 1 }
+      }
+    },
+    "moveNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "op", "nodeId", "expectedNodeKind", "expectedFromIndex", "toIndex"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/stableId" },
+        "op": { "const": "MOVE_NODE" },
+        "nodeId": { "type": "string", "minLength": 1 },
+        "expectedNodeKind": { "type": "string", "minLength": 1 },
+        "expectedFromIndex": { "type": "integer", "minimum": 0 },
+        "toIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "operation": {
+      "oneOf": [
+        { "$ref": "#/$defs/setField" },
+        { "$ref": "#/$defs/setVariant" },
+        { "$ref": "#/$defs/moveNode" }
+      ]
+    }
+  }
+}

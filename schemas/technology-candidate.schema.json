@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/technology-candidate.schema.json",
+  "title": "Technology Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","candidateId","subjectKind","lifecycle","name","runtimeRole","optionality","replacementTarget","capabilityJustification","acceptanceCriteria","identity","licenseExpression","licenseTextSha256","noticeRequired","attributionRequired","transitiveDependencyCount","transitiveGraphSha256","evidenceAnchors","candidateIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/technology-candidate/v1" },
+    "candidateId": { "type": "string", "pattern": "^tech-[a-f0-9]{20}$" },
+    "subjectKind": { "enum": ["SOFTWARE_PACKAGE","GIT_REPOSITORY","MODEL_WEIGHT","GENERATED_OUTPUT_TERMS","HOSTED_SERVICE","DATA_USE_TERMS","ASSET","FONT","CODEC"] },
+    "lifecycle": { "enum": ["CANDIDATE","ADOPTED","REJECTED","OPTIONAL","OUT_OF_SCOPE"] },
+    "name": { "type": "string", "minLength": 1 },
+    "runtimeRole": { "type": "string", "minLength": 1 },
+    "optionality": { "enum": ["CORE","OPTIONAL","SEPARATE_PRODUCT"] },
+    "replacementTarget": { "type": ["string","null"], "minLength": 1 },
+    "capabilityJustification": { "type": "string", "minLength": 1 },
+    "acceptanceCriteria": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "identity": { "oneOf": [ { "$ref": "#/$defs/packageIdentity" }, { "$ref": "#/$defs/gitIdentity" }, { "$ref": "#/$defs/artifactIdentity" } ] },
+    "licenseExpression": { "type": ["string","null"], "minLength": 1 },
+    "licenseTextSha256": { "oneOf": [ { "$ref": "#/$defs/sha256" }, { "type": "null" } ] },
+    "noticeRequired": { "type": "boolean" },
+    "attributionRequired": { "type": "boolean" },
+    "transitiveDependencyCount": { "type": "integer", "minimum": 0 },
+    "transitiveGraphSha256": { "$ref": "#/$defs/sha256" },
+    "evidenceAnchors": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceAnchor" } },
+    "candidateIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "gitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "httpsUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "packageIdentity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind","packageName","version","registryUrl","distributionSha256"],
+      "properties": {
+        "kind": { "const": "PACKAGE" },
+        "packageName": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z._+-]*$" },
+        "registryUrl": { "$ref": "#/$defs/httpsUrl" },
+        "distributionSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "gitIdentity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind","repositoryUrl","commit","tree"],
+      "properties": {
+        "kind": { "const": "GIT" },
+        "repositoryUrl": { "type": "string", "format": "uri", "pattern": "^https://github\\.com/[^/]+/[^/?#]+/?$" },
+        "commit": { "$ref": "#/$defs/gitSha" },
+        "tree": { "$ref": "#/$defs/gitSha" }
+      }
+    },
+    "artifactIdentity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind","versionOrRevision","sourceUrl","sourceSha256"],
+      "properties": {
+        "kind": { "const": "ARTIFACT" },
+        "versionOrRevision": { "type": "string", "minLength": 1 },
+        "sourceUrl": { "$ref": "#/$defs/httpsUrl" },
+        "sourceSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "evidenceAnchor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sourceIdentitySha256","observationIdentitySha256"],
+      "properties": {
+        "sourceIdentitySha256": { "$ref": "#/$defs/sha256" },
+        "observationIdentitySha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

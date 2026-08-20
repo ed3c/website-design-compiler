@@ -12,6 +12,7 @@
     "playwright.runtime.config.ts",
     "tests/browser/**/*.ts",
     "scripts/browser-qa-receipt.ts",
+    "scripts/kernel-edited-page-browser-receipt.ts",
     "scripts/reference-media-fixture.ts",
     "scripts/reference-browser-fixture.ts"
   ],
