@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/source-inference.schema.json",
+  "title": "Source Inference Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "claimClass",
+    "inferenceId",
+    "statement",
+    "basisObservationIdentitySha256",
+    "modelIdentity",
+    "inferenceIdentitySha256"
+  ],
+  "properties": {
+    "schema": { "const": "website-design-compiler/source-inference/v1" },
+    "claimClass": { "const": "INFERENCE" },
+    "inferenceId": { "type": "string", "pattern": "^inf-[a-f0-9]{20}$" },
+    "statement": { "type": "string", "minLength": 1 },
+    "basisObservationIdentitySha256": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    },
+    "modelIdentity": { "type": "string", "minLength": 1 },
+    "inferenceIdentitySha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

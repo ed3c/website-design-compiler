@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/page-graph-constraint-report.schema.json",
+  "title": "Page Graph Constraint Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "graphDigest", "findings", "hardState", "softState", "reportIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/page-graph-constraint-report/v1" },
+    "graphDigest": { "$ref": "#/$defs/sha256" },
+    "findings": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/finding" } },
+    "hardState": { "enum": ["PASS", "FAIL", "BLOCKED"] },
+    "softState": { "enum": ["PASS", "FAIL", "NOT_EVALUATED"] },
+    "reportIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "class", "severity", "state", "diagnostics"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$" },
+        "class": { "enum": ["SEMANTIC", "CONTENT", "PROVENANCE", "ACCESSIBILITY", "RESPONSIVE", "RIGHTS", "DESIGN_QUALITY"] },
+        "severity": { "enum": ["HARD", "SOFT"] },
+        "state": { "enum": ["SATISFIED", "UNSATISFIED", "NOT_EVALUATED"] },
+        "diagnostics": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/pdf-parse-receipt.schema.json",
+  "title": "PDF Parse Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","requestIdentitySha256","sourceId","sourceClass","parserAdmissionIdentitySha256","state","reason","observations","parserOutputSha256","publicText","evaluatedAt","receiptIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/pdf-parse-receipt/v1" },
+    "requestIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "sourceId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$" },
+    "sourceClass": { "const": "PDF" },
+    "parserAdmissionIdentitySha256": { "type": "null" },
+    "state": { "const": "NOT_EXERCISED" },
+    "reason": { "const": "PARSER_ADMISSION_ABSENT" },
+    "observations": { "type": "array", "maxItems": 0 },
+    "parserOutputSha256": { "type": "null" },
+    "publicText": { "type": "null" },
+    "evaluatedAt": { "type": "string", "format": "date-time" },
+    "receiptIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
