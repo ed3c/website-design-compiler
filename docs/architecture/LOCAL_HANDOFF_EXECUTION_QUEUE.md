@@ -2,502 +2,529 @@
 
 ## Purpose
 
-This queue is the zero-context continuation boundary for work that cannot be truthfully completed by a public/cloud Agent alone.
+This queue is the zero-context continuation boundary for work that cannot be completed truthfully by a public/cloud Agent alone. It carries exact identities, commands, artifact expectations, and stop conditions to a local operator or Human authority without publishing secret values, private machine paths, protected source bytes, or unreviewed legal decisions.
 
 Program: [#45](https://github.com/ed3c/website-design-compiler/issues/45)
 
-Exact planning subject:
+## Reviewed subject
 
 ```yaml
 repository: ed3c/website-design-compiler
 canonical_main_sha: 4a79d9635911690950f02edda4505672ba7544f6
-convergence_parent:
-  pull_request: 44
-  branch: codex/pr42-delivery-v2
-  sha: 9e67222dea5580b1f807266162909422771da99e
-control_plane_branch: agent/shadow-architect-control-plane
-control_plane_pull_request: 54
+root_delivery_pr: 44
+root_delivery_branch: codex/pr42-delivery-v2
+root_delivery_head: 9e67222dea5580b1f807266162909422771da99e
+integration_pr: 54
+integration_branch: agent/shadow-architect-control-plane
+integrated_code_head_before_document_refresh: c58958ee30e76d8aa9ad9388e6bf10adbd5a7db5
 production_provider_issue: 25
+program_issue: 45
 ```
 
-The queue does not contain credential values, private machine paths, legal conclusions, unpublished source bytes, or active lease tokens. It names required inputs, commands, expected artifacts, completion gates and resume targets.
+Documentation commits after the integrated code head update the queue and indexes only. The local operator must fetch the latest branch and bind a new exact head before execution.
 
 ## Queue state model
 
 ```mermaid
 stateDiagram-v2
     [*] --> QUEUED
-    QUEUED --> READY: prerequisites and owner admitted
-    READY --> RUNNING: exact subject revalidated
-    RUNNING --> BLOCKED: missing input / failed negative control
-    BLOCKED --> READY: blocker resolved with new receipt
-    RUNNING --> REVIEW_REQUIRED: mechanical artifacts complete
-    REVIEW_REQUIRED --> COMPLETE: Human/local gate accepted
-    REVIEW_REQUIRED --> REJECTED: authority rejects subject
+    QUEUED --> READY: prerequisites and authority present
+    QUEUED --> BLOCKED: required external input absent
+    READY --> RUNNING: local attempt and lease recorded
+    RUNNING --> CHECKPOINTED: bounded partial evidence persisted
+    CHECKPOINTED --> RUNNING: resume exact attempt
+    RUNNING --> REVIEW_REQUIRED: execution complete, Human review required
+    RUNNING --> COMPLETE: independent verifier PASS
+    REVIEW_REQUIRED --> COMPLETE: Human/admission receipt accepted
+    RUNNING --> BLOCKED: failure, expiry, cancellation, or drift
+    BLOCKED --> READY: blocker resolved with new exact subject
     COMPLETE --> [*]
-    REJECTED --> [*]
 ```
 
-Allowed states:
+Allowed public states:
 
-`QUEUED | READY | RUNNING | BLOCKED | REVIEW_REQUIRED | COMPLETE | REJECTED | SUPERSEDED`
+`QUEUED | READY | RUNNING | CHECKPOINTED | REVIEW_REQUIRED | BLOCKED | COMPLETE`.
 
-A queue item is immutable with respect to its exact subject. A changed branch head, source digest, provider/model revision, policy, command set, or protected evidence identity creates a new queue revision.
+`COMPLETE` requires exact-subject artifacts and an independent verifier or named Human authority. A command being listed is not evidence that it ran.
 
-## Queue item contract
+## Queue summary
+
+| ID | Owner | Current state | Primary issue(s) | Resume target |
+|---|---|---|---|---|
+| LHQ-001 | Human rights/provider owner | BLOCKED | #25 | protected production provider execution and rights receipt |
+| LHQ-002 | Local Tech Lead / Git Town operator | REVIEW_REQUIRED | #49 | synchronize local topology and run active local carrier only if desired |
+| LHQ-003 | Source owner + local parser reviewer | BLOCKED | #46, #63 | select/admit parser and produce real PDF observations |
+| LHQ-004 | Google Workspace / CodeXdoc owner | BLOCKED | #50, #70, #73, #74, #75 | provider adapters and one-way write receipts |
+| LHQ-005 | Product owner + architecture reviewer | NEEDS_INPUT | #51, #62, #76 | freeze evidence-bound 3D/video/audio decisions |
+| LHQ-006 | Release owner | BLOCKED | #43, #44, #25 | exact-head PR #54/PR #44 verification, final main merge and release |
+| LHQ-007 | Network/source security owner | QUEUED | #46, #72 | admitted URL acquisition adapter |
+| LHQ-008 | Evidence-hardening worker + verifier | READY | #149 | self-verifying atomic edited-browser evidence package |
+
+`NEEDS_INPUT` is shown for LHQ-005 because a product decision is missing; it is not a runtime queue state and must become `READY` or `BLOCKED` after the owner decides.
+
+---
+
+## LHQ-001 — Production provider, rights, and protected execution
 
 ```yaml
-queue_id: LHQ-000
-revision: 1
+state: BLOCKED
+owner: Human rights/provider owner
+issues: [25]
+subject: PR #44 exact future head plus exact provider/model/revision/request/output subjects
+requires_secret_names:
+  - WDC_PRODUCTION_REQUEST_SECRET
+  - WDC_PRODUCTION_PROVIDER_CREDENTIAL
+requires_protected_names:
+  - WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64
+  - WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256
+  - WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256
+  - WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE
+```
+
+### Blocker
+
+No public repository evidence can supply credential values, billing/quota consent, provider account authority, model/output/service terms acceptance, geographic/usage restrictions, or a Human legal decision.
+
+### Prerequisites
+
+- exact provider and model/revision identity;
+- exact software/model/output/service/data-use rights subjects;
+- approved Human admission with expiry and trusted byte hash;
+- protected provider configuration bundle;
+- bounded request, retry, timeout, rate, quota, and cost policy;
+- exact Git subject that will consume the result.
+
+### Local commands
+
+```bash
+git fetch --all --prune
+git switch codex/pr42-delivery-v2
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm rights:clearance
+pnpm media:production-config
+pnpm media:production-status
+```
+
+Provider execution must use the repository's protected configuration path and must not print credentials, raw provider error bodies, private paths, or unredacted endpoints.
+
+### Expected artifacts
+
+- canonical repository-rights receipt;
+- signed Human/provider admission;
+- exact provider execution receipt;
+- validated asset bytes, MIME/extension/magic, dimensions/duration, and SHA-256;
+- release-safe status receipt with no secret leakage;
+- revocation record or explicit revocation lookup input.
+
+### Negative controls
+
+- non-ALLOW or semantically inconsistent rights stop before transport;
+- expired/tampered/untrusted Human admission stops before transport;
+- credentials never enter URLs, receipts, logs, or artifacts;
+- timeout, cancellation, rate limit, quota, retry exhaustion, malformed bytes, MIME mismatch, and provider seed drift fail deterministically;
+- deterministic mock `PASS` cannot satisfy production provider status.
+
+### Completion gate
+
+Independent verifier confirms exact provider/model/revision, rights subjects, admission digest, request, asset bytes, Git subject, and release profile. Issue #25 stays open until this gate passes.
+
+### Resume target
+
+PR #44 release evidence and LHQ-006.
+
+---
+
+## LHQ-002 — Local Git Town topology and active execution carrier
+
+```yaml
+state: REVIEW_REQUIRED
+owner: Local Tech Lead / Git Town operator
+issues: [49]
+public_contracts_integrated: true
+active_local_scheduler_exercised: false
+```
+
+### Current truth
+
+Cloud/GitHub integration has already converged the molecular source/kernel, technology, control-plane, projection, and decision-contract stacks into PR #54. Git Town is therefore no longer required to perform those historical merges.
+
+Local work remains useful for:
+
+- checking branch reachability and stale local refs;
+- pruning obsolete worktrees after Human review;
+- running a private lease/scheduler carrier if the product actually needs one;
+- reproducing exact commands with local protected inputs;
+- preparing a conflict decision when PR #54 or PR #44 moves.
+
+### Commands
+
+```bash
+git fetch --all --prune
+git switch agent/shadow-architect-control-plane
+git pull --ff-only
+git branch --contains c58958ee30e76d8aa9ad9388e6bf10adbd5a7db5
+git log --graph --decorate --oneline --all
+
+# Optional, only when Git Town is installed and configured locally
+git town status
+git town config
+```
+
+Do not run `git town ship`, force-push, delete audit branches, rewrite reviewed SHAs, or auto-resolve conflicts without a new exact task packet.
+
+### Expected artifacts
+
+- local topology readback with exact branch heads;
+- list of stale branches/worktrees proposed for Human-approved cleanup;
+- if an active carrier is required: private attempt/lease/checkpoint/result records and a public-safe verifier receipt containing digests only.
+
+### Completion gate
+
+Local operator confirms topology and either:
+
+1. records `NOT_REQUIRED` for an active scheduler; or
+2. runs the admitted private carrier and produces an independent public-safe verification receipt.
+
+### Resume target
+
+Issue #49 parent disposition and LHQ-006.
+
+---
+
+## LHQ-003 — Real PDF parser and source-publication decision
+
+```yaml
+state: BLOCKED
+owner: Source owner + local parser reviewer
+issues: [46, 63]
+current_boundary: DIGEST_ONLY / NOT_EXERCISED
+planning_pdf_sha256: 7350f0e3d29ace70a6c92343e5501b34763f452e057d9b8acef3829f57230ef6
+planning_pdf_byte_length: 1878749
+```
+
+### Blocker
+
+The repository has a parser-neutral PDF request/receipt boundary but no admitted parser implementation for the planning PDF. Source bytes are intentionally not committed.
+
+### Prerequisites
+
+- source-owner permission for local parsing and any excerpt publication;
+- exact parser package/version/distribution hash or Git commit/tree;
+- technology admission and rights evidence;
+- parser configuration and extraction-policy digest;
+- page/range anchoring policy, byte/output bounds, timeout, cancellation, malformed/encrypted document handling;
+- private local path supplied only to the local runner.
+
+### Commands
+
+Commands depend on the admitted parser. At minimum:
+
+```bash
+git fetch --all --prune
+git switch agent/shadow-architect-control-plane
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm build
+pnpm test
+```
+
+The parser command must be added only after exact technology admission; do not substitute a remembered or floating package.
+
+### Expected artifacts
+
+- parser admission receipt;
+- source manifest bound to exact input bytes;
+- parse receipt with parser/config/policy identity;
+- page/range observations with exact evidence digests;
+- warnings and unsupported/encrypted state;
+- public projection containing only permitted excerpts or hashes.
+
+### Negative controls
+
+- wrong PDF signature, byte/hash drift, parser/config/policy drift, oversized output, malformed pages, encryption, timeout, cancellation, traversal, and prohibited publication fail closed;
+- parser output cannot silently become observed fact without page/range anchors;
+- `NOT_EXERCISED` cannot be relabeled `PASS`.
+
+### Completion gate
+
+Independent verifier reproduces observation identities from the private exact bytes while confirming that public artifacts obey the publication decision.
+
+### Resume target
+
+Issue #46 source-plane parent and any article/PDF-derived implementation task.
+
+---
+
+## LHQ-004 — Google Docs, Google Sheets, and CodeXdoc projections
+
+```yaml
+state: BLOCKED
+owner: Google Workspace / CodeXdoc owner
+issues: [50, 70, 73, 74, 75]
+local_export_foundation: PASS_AND_INTEGRATED
+external_provider_adapters: NOT_IMPLEMENTED
+```
+
+### Blocker
+
+The repository can deterministically produce local Markdown, CSV, and JSON projection bundles. It has no admitted provider adapters, OAuth consent, target document IDs, scopes, or exact write/readback receipts.
+
+### Prerequisites
+
+- Human decision on which projections are actually required;
+- provider account and least-privilege scopes;
+- target document/sheet IDs and access classification;
+- exact adapter version/config/template identity;
+- one-way write policy first; no silent external-to-Git mutation;
+- retry, timeout, quota, idempotency, drift, and outage behavior.
+
+### Expected artifacts
+
+For each admitted provider:
+
+- source export-bundle identity;
+- target provider/document identity;
+- request digest with no credential values;
+- write result and provider revision/version;
+- readback digest and drift state;
+- failure receipt for permission, quota, timeout, conflict, or external edit.
+
+### Completion gate
+
+Independent verifier proves that provider output matches the exact local bundle and that provider outage does not block compiler build/test/release.
+
+### Resume target
+
+Close the corresponding provider child issue; update #50 parent state.
+
+---
+
+## LHQ-005 — Evidence-bound optional 3D, video, and audio decisions
+
+```yaml
+state: NEEDS_INPUT
+owner: Product owner + architecture reviewer
+issues: [51, 62, 76]
+decision_contract: PASS_AND_INTEGRATED
+human_product_decisions: ABSENT
+implementation_eligible: false
+```
+
+### Required decision per track
+
+- `THREE_D_PRODUCT_PHOTOSHOOT`
+- `MOTION_VIDEO_EXPORT`
+- `DJ_AUDIO_ENGINE`
+
+Each must become exactly one of:
+
+`ADOPT | DEFER | REJECT | SEPARATE_PRODUCT`.
+
+### Prerequisites
+
+- exact source/observation evidence anchors;
+- measured product need and baseline gap;
+- prerequisites and blocking issue IDs;
+- semantic/static fallback requirements;
+- dependency/provider/Human admission flags;
+- target product for `SEPARATE_PRODUCT`;
+- explicit implementation start condition.
+
+### Negative controls
+
+- synthetic fixtures do not count as Human decisions;
+- `ADOPT` cannot start implementation until every named issue gate is satisfied;
+- `DEFER` and `REJECT` never open an implementation DAG;
+- `SEPARATE_PRODUCT` cannot target `website-design-compiler`;
+- no package, provider, GPU, codec, model, audio, video, or 3D dependency is added from the decision contract alone.
+
+### Completion gate
+
+Human product owner signs exact decision packets; independent architecture reviewer verifies evidence and product boundary. Only an `ADOPT` packet with all gates satisfied may create a new implementation DAG.
+
+### Resume target
+
+Issue #76 convergence or a separate-product repository program.
+
+---
+
+## LHQ-006 — Exact-head integration, root delivery, main merge, and release
+
+```yaml
+state: BLOCKED
+owner: Release owner
+issues: [43, 44, 25]
+integration_pr: 54
+root_delivery_pr: 44
+main_merge_allowed: false
+```
+
+### Prerequisites
+
+1. Fetch the latest PR #54 head after documentation updates.
+2. Verify typecheck, build, unit tests, compiler stages, UI build, browser lanes, authoring, CMS, rights, and release receipts.
+3. Confirm any aggregate failure is limited to explicitly missing Human-controlled admissions; implementation regressions must be fixed first.
+4. Merge PR #54 only into PR #44's branch with expected-head protection.
+5. Re-run PR #44 on its new exact head.
+6. Satisfy issue #25 and all trusted visual/Storybook/rights/provider/release admissions.
+7. Obtain authorized final review and merge decision.
+
+### Commands
+
+```bash
+git fetch --all --prune
+git switch agent/shadow-architect-control-plane
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm ui:typecheck
+pnpm ui:build
+pnpm browser:typecheck
+pnpm storybook:typecheck
+pnpm arena:typecheck
+```
+
+Use GitHub Actions for the full browser/release workflow and preserve exact artifacts.
+
+### Stop conditions
+
+Stop and keep `BLOCKED` if:
+
+- any implementation/build/test/browser step fails;
+- branch head changes after verification;
+- a required child receipt is missing, stale, malformed, or bound to another SHA/ref;
+- rights/provider/visual/Storybook admission is absent;
+- release evidence is reconstructed from fixtures or a synthetic PR merge ref;
+- any credential, private path, or protected source byte appears in public output.
+
+### Completion gate
+
+PR #44 exact head passes the canonical release profile with all Human/provider admissions, then an authorized owner merges it to `main` and verifies the resulting canonical main SHA.
+
+### Resume target
+
+Close #43 and the completed program parent only after canonical main readback. Issue #25 closes only with its own provider/rights acceptance.
+
+---
+
+## LHQ-007 — Admitted URL acquisition adapter
+
+```yaml
 state: QUEUED
-program_issue: 45
-owning_issue: 0
+owner: Network/source security owner
+issues: [46, 72]
+implementation: NOT_IMPLEMENTED
+```
+
+### Required behavior
+
+Create an exact URL-capture adapter that reuses the repository's public-target policy and source manifest/observation contracts without leaking credentials, queries, private addresses, DNS details, or raw transport errors.
+
+### Prerequisites
+
+- exact task packet and disjoint writeset;
+- allowed schemes/media types, byte bounds, redirect count, timeout, retry, DNS and connected-peer policy;
+- publication classification and excerpt bounds;
+- deterministic injected transport fixtures plus a separately admitted live transport test;
+- no provider credential use.
+
+### Negative controls
+
+- loopback, private, link-local, metadata, mapped/embedded private addresses;
+- DNS rebinding and redirect-to-private;
+- credential/query-bearing public locators;
+- peer mismatch, oversized body, unsupported media, invalid UTF-8, timeout, cancellation, and raw error leakage.
+
+### Completion gate
+
+Exact-head tests and independent verifier prove source identity, redirect lineage, bounded bytes, anchored observations, and public-safe receipts. Cloud fixtures must not be relabeled as unrestricted internet proof.
+
+### Resume target
+
+Issue #72, then parent #46.
+
+---
+
+## LHQ-008 — Atomic, self-verifying edited-browser evidence package
+
+```yaml
+state: READY
+owner: Evidence-hardening worker + independent verifier
+issues: [149]
+base_evidence: PR #148 exact browser proof
+provider_or_human_admission_required: false
+```
+
+### Required behavior
+
+- versioned durable manifest schema;
+- receipt identity recomputation;
+- per-observation path, byte length, and SHA-256;
+- full observation-to-receipt field comparison;
+- project-owned path enforcement;
+- traversal, symlink, duplicate/missing project, stale extra, and partial-write refusal;
+- temporary directory plus atomic durable replacement;
+- standalone verifier over an uploaded artifact;
+- deterministic negative tests.
+
+### Suggested writeset
+
+```text
+scripts/persist-kernel-edited-page-browser-artifacts.ts
+scripts/verify-kernel-edited-page-browser-artifacts.ts
+schemas/kernel-edited-page-browser-artifact-manifest.schema.json
+tests/kernel-edited-page-browser-artifacts.test.ts
+README.md or docs/architecture/STACKED_PR_INDEX.md only through the named convergence/doc owner
+```
+
+### Completion gate
+
+One manifest digest transitively binds the exact receipt, four observations, and four screenshots. Every required mutation fails without leaving a partially promoted durable directory. A standalone verifier reproduces `PASS` from uploaded bytes only.
+
+### Resume target
+
+Close #149 and update the Shadow monitor with the new exact head/artifact digest.
+
+---
+
+## Handoff packet template
+
+Every local continuation must publish a public-safe packet using this shape:
+
+```yaml
+queue_id: LHQ-XXX
+program_id: wdc-architecture-program-45
 subject:
   repository: ed3c/website-design-compiler
-  base_ref: refs/heads/main
+  base_ref: <ref>
   base_sha: <sha>
   head_ref: <ref>
   head_sha: <sha>
-  source_digests: []
-owner:
-  role: <local-operator|legal-reviewer|provider-admin|release-owner>
-  github_identity: <identity-or-UNASSIGNED>
-blocking_reason: <reason>
+owner: <role>
+attempt_id: <id>
+lease_id: <id-or-NOT_APPLICABLE>
+state: <queue-state>
 prerequisites: []
-required_inputs:
-  non_secret: []
-  protected_names: []
-  hardware: []
+allowed_writeset: []
+excluded_paths: []
 commands: []
-expected_artifacts: []
+required_secret_names: []
+required_hardware_names: []
+produced_artifacts:
+  - path: <public-safe-path>
+    sha256: <digest>
 negative_controls: []
-completion_gate: <falsifiable condition>
-resume_target:
-  issue: <number>
-  pull_request: <number-or-null>
-  phase: <P0-P9>
-  command: <command-or-NOT_APPLICABLE>
-public_comment_template: <safe summary>
+verification_owner: <different-role-or-Human-authority>
+completion_gate: <exact condition>
+open_findings: []
+resume_target: <issue/pr/queue-id>
 ```
 
-## Active queue
-
-### LHQ-001 — Production rights and real-provider admission
-
-```yaml
-queue_id: LHQ-001
-revision: 1
-state: BLOCKED
-program_issue: 45
-owning_issue: 25
-subject:
-  repository: ed3c/website-design-compiler
-  convergence_parent_pr: 44
-  branch: codex/pr42-delivery-v2
-  sha: 9e67222dea5580b1f807266162909422771da99e
-owner:
-  role:
-    - legal_or_rights_reviewer
-    - provider_admin
-    - release_owner
-blocking_reason: >
-  Repository rights subjects, exact model/output/service admissions, protected
-  provider configuration, credentialed execution and canonical-main release
-  readback are not present as matching runtime evidence.
-prerequisites:
-  - review docs/issues/25-production-provider.md on the exact branch
-  - preserve fail-closed behavior in PR 44
-  - complete exact-subject technology admission under issue 48
-required_inputs:
-  non_secret:
-    - exact admitted image provider and model revision
-    - exact reviewed rights-evidence bytes and SHA-256
-    - exact trusted Git tree
-    - approved budget, quota, geography and data-use constraints
-    - trusted Ed25519 authority identity
-  protected_names:
-    - WDC_RIGHTS_WAIVERS_SHA256
-    - WDC_PRODUCTION_RIGHTS_EVIDENCE_SHA256
-    - WDC_PRODUCTION_CANDIDATE_TRUSTED_TREE
-    - WDC_PRODUCTION_PROVIDER_BUNDLE_BASE64
-    - WDC_PRODUCTION_PROVIDER_BUNDLE_SHA256
-    - WDC_PRODUCTION_REQUEST_SECRET
-    - WDC_PRODUCTION_PROVIDER_CREDENTIAL
-  hardware:
-    - provider runtime required by the admitted adapter
-commands:
-  - corepack enable
-  - pnpm install --frozen-lockfile
-  - pnpm typecheck
-  - pnpm build
-  - pnpm test
-  - pnpm rights:clearance
-  - pnpm media:fixture
-  - pnpm media:production-config
-  - pnpm media:production-status
-  - pnpm browser:qa
-  - pnpm browser:receipt
-  - pnpm release:receipt
-  - pnpm release:v2
-expected_artifacts:
-  - artifacts/rights-clearance/**
-  - artifacts/media-generator/production-provider-config.json
-  - artifacts/media-generator/production-provider-execution-input.json
-  - artifacts/media-generator/production-provider-execution-receipt.json
-  - artifacts/media-generator/production-provider-candidate-rejection-receipt.json
-  - artifacts/media-generator/production-provider-generated-asset.*
-  - artifacts/media-generator/production-provider-status.json
-  - artifacts/release-v2/release-policy-v2-receipt.json
-  - canonical GitHub Actions run bound to refs/heads/main and exact SHA
-negative_controls:
-  - missing, partial, malformed or mismatched protected input fails closed
-  - denied or unknown rights prevents credential-bearing transport
-  - provider outage/retry/cancel does not fabricate PASS
-  - generated asset, request ID, provenance or hash drift fails readback
-  - PR or merge-ref success cannot substitute for canonical main evidence
-completion_gate: >
-  Issue 25 may close only after an exact canonical main push persists and
-  independently reads back a real generated asset, provider request identity,
-  complete provenance, admitted rights subjects and COMMERCIAL_PRODUCTION PASS.
-resume_target:
-  issue: 25
-  pull_request: 44
-  phase: P9
-  command: pnpm release:v2
-```
-
-### LHQ-002 — Install and admit local Git Town stack operations
-
-```yaml
-queue_id: LHQ-002
-revision: 1
-state: QUEUED
-program_issue: 45
-owning_issue: 49
-subject:
-  repository: ed3c/website-design-compiler
-  parent_branch: codex/pr42-delivery-v2
-  parent_sha: 9e67222dea5580b1f807266162909422771da99e
-  child_branch: agent/shadow-architect-control-plane
-  child_pull_request: 54
-owner:
-  role: local_repository_operator
-blocking_reason: >
-  The repository control-plane profile records the Git Town installer as
-  NOT_IMPLEMENTED. Branch ancestry can be verified with Git today, but Git
-  Town commands must not be claimed as exercised until a local exact-version
-  run produces a receipt.
-prerequisites:
-  - clean local clone with authenticated GitHub remote
-  - review docs/architecture/STACKED_PR_INDEX.md
-required_inputs:
-  non_secret:
-    - installed Git Town version
-    - local repository path retained outside public receipts
-    - configured main branch and perennial/feature branch types
-  protected_names: []
-  hardware: []
-commands:
-  - git fetch --all --prune
-  - git rev-parse refs/heads/codex/pr42-delivery-v2
-  - git merge-base --is-ancestor 9e67222dea5580b1f807266162909422771da99e agent/shadow-architect-control-plane
-  - git town version
-  - git town init
-  - git town branch
-  - git town sync --stack
-expected_artifacts:
-  - public-safe stack topology receipt with Git Town version
-  - exact parent/child SHA and ancestry result
-  - no machine-private path or credential value
-negative_controls:
-  - wrong parent or stale base blocks synchronization
-  - independent branches are not forced into a false stack
-  - conflicts stop for the convergence owner
-  - Git Town success alone is not merge or runtime evidence
-completion_gate: >
-  Exact installed version and parent/child topology execute locally; the
-  public-safe receipt matches the current branch heads and all conflicts are
-  resolved by the named convergence owner.
-resume_target:
-  issue: 49
-  pull_request: 54
-  phase: P8
-  command: git town sync --stack
-```
-
-### LHQ-003 — Register the user-provided PDF without publishing its bytes
-
-```yaml
-queue_id: LHQ-003
-revision: 1
-state: REVIEW_REQUIRED
-program_issue: 45
-owning_issue: 46
-subject:
-  source_id: modern-web-design-architecture-extension-2026-08-18
-  title: 現代網頁設計架構擴充建議
-  media_type: application/pdf
-  byte_length: 1878749
-  sha256: 7350f0e3d29ace70a6c92343e5501b34763f452e057d9b8acef3829f57230ef6
-  locator_class: user_provided_attachment
-owner:
-  role: source_owner
-blocking_reason: >
-  Exact byte identity is available, but the repository needs an explicit
-  publication classification before any source bytes, excerpts or derived
-  fixtures are committed.
-prerequisites:
-  - confirm the SHA-256 against the local attachment
-required_inputs:
-  non_secret:
-    - publication decision: DIGEST_ONLY, PRIVATE_FIXTURE, or PUBLIC_FIXTURE
-    - allowed excerpt/anchor policy
-    - parser benchmark input made available to the local runner
-  protected_names: []
-  hardware: []
-commands:
-  - sha256sum <local-pdf-path>
-  - run the future issue-46 source-manifest command against the local path
-expected_artifacts:
-  - source-manifest/v1 JSON with exact byte and parser identity
-  - source-observation/v1 anchors for reviewed pages
-  - extraction-warning and publication-classification receipt
-negative_controls:
-  - no source byte or long excerpt enters the public repository without permission
-  - malformed/encrypted/parser-partial states cannot be COMPLETE
-  - page anchors cannot be invented from prose memory
-completion_gate: >
-  A deterministic issue-46 manifest records the exact SHA-256, parser identity,
-  page anchors and publication class; any committed fixture complies with the
-  source owner's decision.
-resume_target:
-  issue: 46
-  pull_request: null
-  phase: P1
-  command: NOT_APPLICABLE_UNTIL_ISSUE_46_CLI_EXISTS
-```
-
-### LHQ-004 — Provision optional Google Docs and Sheets projections
-
-```yaml
-queue_id: LHQ-004
-revision: 1
-state: QUEUED
-program_issue: 45
-owning_issue: 50
-subject:
-  canonical_source: repository artifacts and GitHub issue/PR identities
-  projection_targets:
-    - google_docs
-    - google_sheets
-owner:
-  role: google_workspace_admin
-blocking_reason: >
-  OAuth consent, least-privilege scopes, destination document IDs and target
-  permissions require a Human Workspace owner. These projections are optional
-  and cannot block compiler or release lanes.
-prerequisites:
-  - deterministic local export bundle from issue 50
-  - approved access classification for each projected artifact
-required_inputs:
-  non_secret:
-    - Google Cloud project/application identity
-    - target Doc ID or create-document authority
-    - target Spreadsheet ID or create-spreadsheet authority
-    - target sharing/permission policy
-    - one-way projection template version
-  protected_names:
-    - GOOGLE_OAUTH_CLIENT_ID
-    - GOOGLE_OAUTH_CLIENT_SECRET
-    - GOOGLE_OAUTH_REFRESH_TOKEN_OR_WORKLOAD_IDENTITY
-  hardware: []
-commands:
-  - run local projection export bundle
-  - run Google Docs adapter with source digest and target ID
-  - run Google Sheets adapter with source digest and target ID
-expected_artifacts:
-  - document-projection/v1 write receipt
-  - target provider/document ID
-  - exact source SHA-256 and template version
-  - drift state and last successful write time
-negative_controls:
-  - projection edits do not mutate canonical GitHub state
-  - stale projection is marked DRIFTED
-  - revoked access or quota failure is explicit and non-blocking
-  - private source content is not projected to an unauthorized target
-completion_gate: >
-  One-way adapters write approved data using least privilege and return
-  digest-bound receipts; disabling the adapters leaves all canonical lanes green.
-resume_target:
-  issue: 50
-  pull_request: null
-  phase: P9
-  command: NOT_APPLICABLE_UNTIL_ISSUE_50_ADAPTERS_EXIST
-```
-
-### LHQ-005 — Capture physical GPU/browser/device evidence for an adopted optional capability
-
-```yaml
-queue_id: LHQ-005
-revision: 1
-state: QUEUED
-program_issue: 45
-owning_issue: 51
-subject:
-  capability: PENDING_ADOPT_DECISION
-owner:
-  role: local_runtime_operator
-blocking_reason: >
-  Physical GPU/device behavior cannot be inferred from cloud CI. This item is
-  activated only after issue 51 records ADOPT for an exact capability and the
-  required technologies/providers are admitted under issues 48 and 25.
-prerequisites:
-  - issue 51 ADOPT decision
-  - exact runtime/device matrix
-  - issue 48 dependency admission
-  - issue 25 provider admission when applicable
-required_inputs:
-  non_secret:
-    - browser and operating-system versions
-    - GPU/device identity and capability flags
-    - performance and quality budgets
-    - exact build SHA
-  protected_names:
-    - capability-specific credential names only after admission
-  hardware:
-    - exact physical GPU/device named by the adopted decision
-commands:
-  - execute capability-specific local browser/device harness
-  - force unsupported, initialization-failure, device-loss and static-fallback paths
-expected_artifacts:
-  - exact-subject local runtime receipt
-  - screenshot/frame/audio/performance evidence as applicable
-  - teardown/resource-disposal evidence
-negative_controls:
-  - cloud CI is not relabeled as physical hardware proof
-  - provider/GPU failure preserves semantic content and approved fallback
-  - local evidence from a different SHA/device is stale
-completion_gate: >
-  The adopted capability's exact acceptance tests and negative controls pass on
-  the named physical subject, with public-safe receipts and no credential values.
-resume_target:
-  issue: 51
-  pull_request: null
-  phase: P7
-  command: CAPABILITY_SPECIFIC
-```
-
-### LHQ-006 — Final merge and release authority
-
-```yaml
-queue_id: LHQ-006
-revision: 1
-state: QUEUED
-program_issue: 45
-owning_issue: 45
-subject:
-  stack_root: pull_request_44
-  control_plane_pull_request: 54
-  control_plane_branch: agent/shadow-architect-control-plane
-  initial_control_plane_commit: 08cae80b31d3a2bca633a4c8553e71dc4c027cf4
-owner:
-  role:
-    - convergence_owner
-    - repository_maintainer
-    - release_owner
-blocking_reason: >
-  Automatic merge, automatic conflict resolution and production promotion are
-  outside Agent authority. Every PR must remain independently reviewable and
-  exact-head verified.
-prerequisites:
-  - required checks green for each exact PR head
-  - required Human/legal/provider admissions present
-  - no unresolved writeset overlap or stale child receipt
-  - issue and Stack PR index synchronized
-required_inputs:
-  non_secret:
-    - explicit review and merge decision
-    - chosen release profile
-    - confirmed merge order
-  protected_names: []
-  hardware: []
-commands:
-  - review exact PR diff and receipts
-  - merge oldest-first only when the parent gate permits
-  - synchronize and reverify every remaining child
-  - run canonical main release workflow
-expected_artifacts:
-  - merged commit SHAs and ancestry
-  - canonical main workflow receipts
-  - updated issue closure comments
-  - final release receipt or explicit BLOCKED state
-negative_controls:
-  - draft/failing PR is not merged
-  - previous child evidence is not reused after rebase/merge
-  - merge-ref success cannot substitute for main
-  - unresolved Human boundary remains open
-completion_gate: >
-  The repository maintainer explicitly merges the exact verified stack in valid
-  order and the chosen canonical-main release profile passes, or records a
-  truthful BLOCKED/REJECTED decision.
-resume_target:
-  issue: 45
-  pull_request: 54
-  phase: P9
-  command: NOT_APPLICABLE_HUMAN_AUTHORITY
-```
-
-## Queue ordering
-
-```text
-LHQ-003 source classification
-    -> issue 46 source-plane runtime work
-
-LHQ-002 local Git Town admission
-    -> issue 49 stack execution
-
-issue 48 exact rights subjects
-    -> LHQ-001 production provider admission
-    -> LHQ-006 final commercial release
-
-issue 50 local export bundle
-    -> LHQ-004 optional external projections
-
-issue 51 ADOPT decision + issue 48/#25 admission
-    -> LHQ-005 physical runtime evidence
-```
-
-LHQ-002, LHQ-003 and the non-credentialed part of LHQ-004 can proceed independently. LHQ-001 and LHQ-006 are ordered Human authority boundaries.
-
-## Public issue update template
-
-```markdown
-### Local Handoff `<QUEUE_ID>` — `<STATE>`
-
-- exact subject: `<ref>@<sha>` / source `<sha256>`
-- owner role: `<role>`
-- blocker: `<one sentence>`
-- required protected input names: `<names only>`
-- commands: `<commands>`
-- expected artifacts: `<paths>`
-- negative controls: `<summary>`
-- completion gate: `<falsifiable condition>`
-- resume target: `<issue/PR/phase>`
-
-No credential values, private paths, unpublished bytes or legal conclusions are included.
-```
-
-## Closure rule
-
-Closing a GitHub issue requires a public-safe summary that links:
-
-```text
-queue item revision
-  -> exact local/Human subject
-  -> produced artifact hashes
-  -> independent verification
-  -> canonical branch/PR/main identity
-  -> retained blockers, if any
-```
-
-A local action without this chain may be useful operationally, but it does not close the repository evidence loop.
+Never include secret values, private machine paths, protected source bytes, provider tokens, legal conclusions inferred by an Agent, or unredacted transport errors.
