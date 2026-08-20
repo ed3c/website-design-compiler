@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
-import { mkdir,writeFile } from "node:fs/promises";
+import { mkdir,readFile,writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect,test } from "@playwright/test";
-import projection from "../../apps/site/generated/benchmark-page-graphs.json";
 
 type ProofPage={signature:string;nodes:Array<{id:string;kind:string}>};
 type ProofSite={project:string;signature:string;source:{mode:string;artifacts:Record<string,string>};routes:Array<{route:string;page:ProofPage}>};
 type KernelEditProof={schema:string;subjectHeadSha:string;category:string;route:string;sourceManifestIdentitySha256:string;sourceObservationIdentitySha256:string;basePageDigest:string;patchIdentitySha256:string;patchReceiptIdentitySha256:string;resultPageDigest:string;editedHeadline:string;site:ProofSite};
-const proof=projection.kernelEditProof as KernelEditProof;
+const projection=JSON.parse(
+  await readFile(join(process.cwd(),"apps","site","generated","benchmark-page-graphs.json"),"utf8")
+) as {kernelEditProof?:KernelEditProof};
+const proof=projection.kernelEditProof;
+if(!proof)throw new Error("kernel edited-page browser subject is absent from the generated projection");
 
 test("browser binds the exact compiler-kernel edited page graph",async({page},testInfo)=>{
   if(testInfo.project.name==="reduced-motion-chromium")await page.emulateMedia({reducedMotion:"reduce"});
