@@ -2,315 +2,198 @@
 
 ## Purpose
 
-This index is the public delivery map for program [#45](https://github.com/ed3c/website-design-compiler/issues/45).
+This file is the canonical public delivery map for program [#45](https://github.com/ed3c/website-design-compiler/issues/45). It records actual branch ancestry, exact reviewed heads, convergence carriers, materialized molecular leaves, and the remaining path to `main`.
 
-It distinguishes:
+The index is descriptive evidence, not merge authority. Git Town may reproduce the topology locally, but Git ancestry, exact SHAs, PR state, CI receipts, and Human release decisions remain authoritative.
 
-- **true stacks** — child behavior cannot be reviewed or run without the parent behavior;
-- **parallel independent stacks** — leaves share a program but have no code dependency;
-- **convergence work** — shared files or semantics have one integration owner;
-- **Human/local admission** — no branch can manufacture the missing authority.
+## Evidence terms
 
-Branch names below are planned unless a PR/commit is explicitly recorded.
+- **MERGED** — GitHub records the PR as merged into its declared base.
+- **MATERIALIZED** — the exact leaf commits are reachable through a later convergence carrier; the leaf PR is closed without a separate merge.
+- **INTEGRATED** — the convergence carrier is reachable from PR #54's branch.
+- **BLOCKED** — a required Human/local/provider/release gate is absent.
 
-## Rules
+A materialized leaf is not discarded. Its PR body, exact head, tests, negative controls, and review history remain the molecular trace.
 
-1. One independently reviewable behavior per branch.
-2. A child PR targets its real parent branch, not automatically `main`.
-3. Independent leaves do not become a fake linear stack.
-4. Shared files have one convergence owner.
-5. Every PR body records:
-   - program/issue/task;
-   - parent branch and PR;
-   - exact base/head SHA;
-   - writeset and excluded paths;
-   - commands and negative controls;
-   - artifacts and evidence state;
-   - local/Human blockers.
-6. Worker, verifier, convergence and Stack PR roles remain distinct.
-7. Merge oldest-first.
-8. Automatic merge and automatic conflict resolution are disabled.
-9. Parent movement invalidates child head receipts until synchronized and reverified.
-10. Active local leases/worktrees and secret values are not published.
-
-## Active root stack
+## Current delivery spine
 
 ```text
-refs/heads/main
-  4a79d9635911690950f02edda4505672ba7544f6
-    |
-    `-- PR #44: codex/pr42-delivery-v2
-          9e67222dea5580b1f807266162909422771da99e
-            |
-            `-- PR #54: agent/shadow-architect-control-plane
-                  initial commit: 08cae80b31d3a2bca633a4c8553e71dc4c027cf4
-                  program: #45
+main@4a79d9635911690950f02edda4505672ba7544f6
+└── codex/pr42-delivery-v2@9e67222dea5580b1f807266162909422771da99e   PR #44 [OPEN, DRAFT, MAIN MERGE BLOCKED]
+    └── agent/shadow-architect-control-plane                               PR #54 [OPEN, DRAFT, INTERNAL INTEGRATION]
+        ├── source + compiler-kernel carrier                              PR #148 [MERGED]
+        ├── technology-governance carrier                                PR #136 [MERGED]
+        ├── executable control-plane carrier                             PR #138 [MERGED]
+        ├── local projection foundation                                  PR #129 [MERGED]
+        └── optional-decision contract                                   PR #130 [MERGED, CONTRACT ONLY]
 ```
 
-The control-plane documentation branch is a child of PR #44 because it describes and routes the exact convergence branch state. It must not be rebased onto another subject without updating every exact identity and rerunning review.
+Reviewed code convergence head before documentation refresh:
 
-## Wave map
+```text
+agent/shadow-architect-control-plane@c58958ee30e76d8aa9ad9388e6bf10adbd5a7db5
+```
+
+Documentation commits after that head update routing truth only. Any later implementation change requires a new exact-head verification.
+
+## Integration order
+
+| Order | Carrier PR | Exact verified head | Internal merge commit on PR #54 branch | Scope |
+|---:|---:|---|---|---|
+| 1 | #148 | `b1b5da6d8d8e71a87de8cb1fbeb32a93fd69e880` | `ace73bc7b9eba7c460c3489a18ccd4b0ba1fc6a0` | source plane, patch/constraint kernel, production content patch, exact edited-page browser proof |
+| 2 | #136 | `1a1a8307f053d89fa55424f560f5ac8840578513` | `13711eb0e3adad1479cc059252fbea55a208b650` | exact technology identities, SPDX evaluation, SBOM/notice evidence, engineering convergence |
+| 3 | #138 | `4f2c9d96bcdcc08447542c4faadd83183c9ee2ee` | `905fc4320f8ffc39dc104b373c1bafcc5783773a` | task/DAG/start rules, replay-safe leases, verifier handoff, Local Handoff Queue compiler |
+| 4 | #129 | `d7fd8b0946b21187a0c8fc677a93d1a9192c3e6c` | `270d32402da1404c5e412077ccbf9d4e6805d887` | deterministic credential-free Markdown/CSV/JSON projection |
+| 5 | #130 | `15b9e7a7b66b171553d7b5f405024eee07465903` | `c58958ee30e76d8aa9ad9388e6bf10adbd5a7db5` | evidence-bound optional-capability decision packet contract only |
+
+## Source and compiler-kernel stack
 
 ```mermaid
 flowchart TD
-    S0[PR 44 convergence parent] --> S1[Control-plane docs PR 54 / #45]
-
-    S1 --> A1[Source contracts #46]
-    S1 --> C1[Technology admission contracts #48]
-    S1 --> D1[Control-plane contracts #49]
-    S1 --> E1[Projection export bundle #50]
-    S1 --> F1[Optional-track decisions #51]
-
-    A1 --> A2[Article adapter]
-    A1 --> A3[PDF adapter]
-    A1 --> A4[Repository adapter]
-    A2 --> A5[Source integration]
-    A3 --> A5
-    A4 --> A5
-
-    A5 --> B1[Patch contract #47]
-    B1 --> B2[Conflict/history]
-    B1 --> B3[Constraint model]
-    B3 --> B4{Measured solver needed?}
-    B4 -->|yes| B5[Solver adapter]
-    B4 -->|no| B6[No-solver decision receipt]
-    B2 --> B7[Kernel integration]
-    B5 --> B7
-    B6 --> B7
-
-    C1 --> C2[SPDX evaluator]
-    C1 --> C3[SBOM/notice evidence]
-    C2 --> C4[Rights integration]
-    C3 --> C4
-    C4 --> P25[#25 provider admission]
-
-    D1 --> D2[DAG/start assertions]
-    D1 --> D3[Lease lifecycle]
-    D1 --> D4[Worker/verifier receipts]
-    D2 --> D5[Control-plane convergence]
-    D3 --> D5
-    D4 --> D5
-    D5 --> D6[Local Handoff runner]
-
-    E1 --> E2[Google Docs adapter]
-    E1 --> E3[Google Sheets adapter]
-    E1 --> E4[CodeXdoc adapter]
+    P55[PR #55 source contracts\nMERGED] --> P132[PR #132 PDF digest boundary\nMATERIALIZED]
+    P55 --> P124[PR #124 article adapter\nMATERIALIZED]
+    P55 --> P125[PR #125 repository adapter\nMATERIALIZED]
+    P132 --> P137[PR #137 source convergence\nMATERIALIZED]
+    P124 --> P137
+    P125 --> P137
+    P137 --> P142[PR #142 page-graph patch\nMATERIALIZED]
+    P137 --> P143[PR #143 constraints/solver admission\nMATERIALIZED]
+    P142 --> P144[PR #144 compiler-kernel convergence\nMATERIALIZED]
+    P143 --> P144
+    P144 --> P147[PR #147 production content patch\nMATERIALIZED]
+    P147 --> P148[PR #148 edited-page browser proof\nMERGED INTO PR #54]
 ```
 
-The fan-out branches after A1/C1/D1/E1 are independent stacks based on an accepted contract branch or its merged result. They may run in parallel. A convergence branch starts only after all required predecessors are independently verified.
+| PR | Exact head | Disposition | Owning issue | Accepted behavior |
+|---:|---|---|---:|---|
+| #55 | `8d973b78ffda47f22cc5e32acef8247520e40169` | MERGED | #46 foundation | immutable source manifests, anchored observations, separate inference |
+| #124 | `c067fe175744dcc12717abc91fd13b6dbbb57f61` | MATERIALIZED | #56 | supplied UTF-8 article/Markdown adapter |
+| #125 | `97d2ea711fe27ee230dea35c828b20c21f6e0b62` | MATERIALIZED | #57 | exact Git repository snapshot adapter |
+| #132 | `9e15e6b03825f95d02340976600ad2c29d8d4612` | MATERIALIZED | #63 | digest-only PDF boundary; parser remains `NOT_EXERCISED` |
+| #137 | `be6845c57ddd8d708b9c4886a13b27da0956bcf4` | MATERIALIZED | #58 | normalized article/repository/PDF source API |
+| #142 | `2a7af65a00b2e1870aef1568066656b4080dd422` | MATERIALIZED | #139 | typed exact-base page-graph patch and inverse history |
+| #143 | `1ab736dd247bb0a218b5e33701c70ba89808a470` | MATERIALIZED | #140 | hard/soft constraint report and falsifiable solver-admission decision |
+| #144 | `6099890d9986a7d6e1ba22e5c341ce1ebf04b026` | MATERIALIZED | #141 | patch/constraint convergence and hard-failure comparison |
+| #147 | `cf8abbeae9c99fc954a17f645e8a37ec1267bd0f` | MATERIALIZED | #145 | atomic production content slot + content-contract synchronization |
+| #148 | `b1b5da6d8d8e71a87de8cb1fbeb32a93fd69e880` | MERGED | #146 | exact source/base/patch/result/head browser proof across four projects |
 
-## Stack A — Source plane (#46)
+Non-blocking follow-on: [#149](https://github.com/ed3c/website-design-compiler/issues/149) hardens the durable browser package with observation-byte binding, schema validation, symlink/stale-file refusal, atomic replacement, and standalone verification.
 
-### A1 foundation
+## Technology-governance stack
 
-| Stack ID | Branch | Parent | Purpose |
-|---|---|---|---|
-| A1 | `feat/source-manifest-contracts` | PR #54 control-plane docs | source manifest, observation, publication and drift schemas/fixtures |
-
-### Parallel adapter stacks
-
-| Stack ID | Branch | Parent | Purpose | Writeset ownership |
-|---|---|---|---|---|
-| A2 | `feat/source-adapter-article` | accepted A1 subject | article byte/parser/anchor adapter | article adapter, fixtures/tests only |
-| A3 | `feat/source-adapter-pdf` | accepted A1 subject | PDF byte/parser/page-anchor adapter | PDF adapter, fixtures/tests only |
-| A4 | `feat/source-adapter-repository` | accepted A1 subject | exact repo/commit/tree/path adapter | repository adapter, fixtures/tests only |
-
-### A5 convergence
-
-| Stack ID | Branch | Parents | Purpose |
-|---|---|---|---|
-| A5 | `feat/source-plane-convergence` | verified A2 + A3 + A4 | shared manifest factory, CLI/receipts and cross-adapter tests |
-
-Only A5 edits shared source registry/CLI/convergence files.
-
-## Stack B — Patch and constraint kernel (#47)
-
-Starts only after A5 source-plane convergence is accepted.
-
-| Stack ID | Branch | Parent | Purpose |
-|---|---|---|---|
-| B1 | `feat/page-graph-patch-contracts` | A5 accepted subject | typed patch operations, node/base identity and refusal states |
-| B2 | `feat/page-graph-conflict-history` | B1 | stale/conflict handling and provenance-preserving reversible history |
-| B3 | `feat/constraint-model` | B1 | hard/soft constraints, satisfaction and unresolved-violation receipts |
-| B4 | `feat/solver-decision` | B3 | measured decision whether deterministic passes are sufficient |
-| B5 | `feat/bounded-solver-adapter` | B4 = solver required | adapter identity/config/timeout/non-convergence/fallback |
-| B6 | `docs/no-solver-sufficiency` | B4 = solver unnecessary | falsifiable no-solver decision receipt |
-| B7 | `feat/compiler-kernel-convergence` | B2 + B5 or B6 | Puck/Payload/page-graph/browser integration |
-
-B5 and B6 are mutually exclusive decision outcomes, not parallel implementations to merge together.
-
-## Stack C — Technology admission (#48)
-
-Independent from source adapter implementation after PR #54.
-
-| Stack ID | Branch | Parent | Purpose |
-|---|---|---|---|
-| C1 | `feat/technology-admission-contracts` | PR #54 | candidate, rights-subject, admission and revocation schemas/fixtures |
-| C2 | `feat/spdx-expression-evaluator` | C1 | expression-aware policy and negative fixtures |
-| C3 | `feat/sbom-notice-evidence` | C1 | exact lockfile/package/bundle subject and notice candidates |
-| C4 | `feat/rights-subject-convergence` | C2 + C3 accepted | canonical repository/model/provider rights subject bridge |
-
-C2 and C3 may run as independent sibling stacks after C1 is accepted. C4 starts after both are verified.
-
-C4 does not make legal decisions and does not close #25. It gives #25 one canonical rights subject graph.
-
-## Stack D — Executable control plane (#49)
-
-Independent product-control stack.
-
-| Stack ID | Branch | Parent | Purpose |
-|---|---|---|---|
-| D1 | `feat/control-plane-contracts` | PR #54 | program/task/DAG/lease/result/verifier/handoff schemas |
-| D2 | `feat/control-plane-dag-admission` | D1 | true dependency and start-eligibility assertions |
-| D3 | `feat/control-plane-lease-lifecycle` | D1 | attempt/lease/checkpoint/result terminal separation |
-| D4 | `feat/control-plane-worker-verifier` | D1 | worker and independent verifier receipt assertions |
-| D5 | `feat/control-plane-convergence` | D2 + D3 + D4 accepted | writeset collisions, convergence ownership, global objective retention |
-| D6 | `feat/local-handoff-queue` | D5 | zero-context local queue compiler and public-safe issue summary |
-
-D2–D4 are parallel sibling stacks after D1. D5 has one integration owner.
-
-## Stack E — Projection plane (#50)
-
-Optional and never a core release dependency.
-
-| Stack ID | Branch | Parent | Purpose |
-|---|---|---|---|
-| E1 | `feat/projection-export-bundle` | PR #54 | local deterministic Markdown/CSV/JSON bundle and projection receipt |
-| E2 | `feat/google-docs-projection` | E1 | one-way digest-bound Docs write adapter |
-| E3 | `feat/google-sheets-projection` | E1 | one-way registry/dashboard write adapter |
-| E4 | `feat/codexdoc-projection` | E1 | optional hosted documentation adapter |
-
-E2–E4 are independent and may be accepted, deferred or rejected separately. External outages remain non-blocking.
-
-## Stack F — Optional product tracks (#51)
-
-Decision packets precede implementation.
-
-| Track | Decision branch | Allowed result |
-|---|---|---|
-| 3D product photoshoot | `docs/decision-3d-photoshoot` | `ADOPT | DEFER | REJECT | SEPARATE_PRODUCT` |
-| motion/video composition | `docs/decision-video-composition` | `ADOPT | DEFER | REJECT | SEPARATE_PRODUCT` |
-| DJ/audio DSP | `docs/decision-dj-audio` | `ADOPT | DEFER | REJECT | SEPARATE_PRODUCT` |
-
-Default expectation:
-
-- 3D photoshoot — `DEFER` until a product requirement and #25/#48 admission exist;
-- motion/video composition — `DEFER` or a separate capability profile;
-- DJ/audio — `SEPARATE_PRODUCT` unless the product scope changes.
-
-An `ADOPT` decision creates a new issue DAG and Stack PR index. It does not reuse the decision branch as an implementation mega-branch.
-
-## Production/Human stack (#25)
-
-Issue #25 is not a normal autonomous stack.
-
-Current mechanical parent:
-
-- PR #44 preserves fail-closed rights/provider artifacts and must remain unmerged while required gates fail.
-
-Remaining ordered admission:
-
-1. exact distributed dependency/bundle subjects receive scoped decisions;
-2. protected rights digest and trusted tree bind the reviewed snapshot;
-3. one exact image provider/model has software/model/output/service subjects `ALLOW`;
-4. protected provider bundle, signing secret, credential, budget/quota and trusted authority are provisioned;
-5. exact canonical `main` push executes and persists provider request ID, generated asset/provenance, status and commercial release receipt.
-
-Branch names are not pre-created for steps that depend on Human decisions or secret-bearing configuration. The Local Handoff Queue owns continuation.
-
-## PR body template
-
-```markdown
-Part of #<program-or-issue>
-Parent PR: #<number or none>
-Parent branch: `<branch>`
-Task: `<task-id>`
-
-## Exact subject
-- base SHA: `<sha>`
-- head SHA: `<sha>`
-- source manifest digest: `<sha256>`
-- task contract digest: `<sha256>`
-
-## Atomic behavior
-<one behavior>
-
-## Writeset
-- `<glob>`
-
-## Excluded paths
-- `<glob>`
-
-## Verification
-- `<command>` — `<state>`
-- negative: `<command>` — `<state>`
-
-## Artifacts
-- `<path>` — `<sha256>`
-
-## Evidence boundary
-- runtime state: `<state>`
-- Human/local state: `<state>`
-- unresolved findings: ...
-
-## Stack
-`parent -> current -> child/planned`
-
-## Safety
-- no secret values
-- no private skill bodies
-- no automatic merge
-- no automatic conflict resolution
+```mermaid
+flowchart TD
+    P126[PR #126 exact technology contracts\nMERGED] --> P127[PR #127 SPDX expressions\nMATERIALIZED]
+    P126 --> P128[PR #128 SBOM/notices\nMATERIALIZED]
+    P127 --> P136[PR #136 technology convergence\nMERGED INTO PR #54]
+    P128 --> P136
 ```
 
-## Git Town local sequence
+| PR | Exact head | Disposition | Owning issue | Accepted behavior |
+|---:|---|---|---:|---|
+| #126 | `9b9a2f1262a8fe2f104c326a842199ea8effc7f0` | MERGED | #59 | exact candidate identities, separate rights subjects, engineering admission, revocation |
+| #127 | `b0029c7df6ddad3d5b8e228752d15073cd041fd4` | MATERIALIZED | #64 | `AND`/`OR`/`WITH` SPDX expression evaluator |
+| #128 | `3b2c46b49b9190dbc7fc8be9c0b199371098e24a` | MATERIALIZED | #65 | exact-build SBOM and notice evidence |
+| #136 | `1a1a8307f053d89fa55424f560f5ac8840578513` | MERGED | #71 | canonical engineering evidence join |
 
-Git Town is not currently a repository-proven installed capability. The local operator first completes queue item `LHQ-002`.
+This stack never supplies a legal decision. `ENGINEERING_ADMISSION_NOT_LEGAL_ADVICE` remains mandatory; issue #25 owns real provider/model/output/service-right and protected execution admission.
 
-Representative sequence after local admission:
+## Executable control-plane stack
+
+```mermaid
+flowchart TD
+    P131[PR #131 public execution contracts\nMERGED] --> P133[PR #133 DAG/start gates\nMATERIALIZED]
+    P131 --> P134[PR #134 lease lifecycle\nMATERIALIZED]
+    P131 --> P135[PR #135 verified handoff\nMATERIALIZED]
+    P133 --> P138[PR #138 control-plane convergence\nMERGED INTO PR #54]
+    P134 --> P138
+    P135 --> P138
+```
+
+| PR | Exact head | Disposition | Owning issue | Accepted behavior |
+|---:|---|---|---:|---|
+| #131 | `a4f0f7c0a1214dafa3d9dd301a490e05cfb9d62f` | MERGED | #60 | program/task/lease/result/verifier/queue contracts |
+| #133 | `638ef2baa11b46044cb95da4aa0dcef23c3bd9dd` | MATERIALIZED | #66 | executable DAG validation and start eligibility |
+| #134 | `60cab783c19aba27468975e289674b8c8ca94987` | MATERIALIZED | #67 | replay-safe lease lifecycle |
+| #135 | `b6ce086f14e0a5706361eeabf224fa6daed96259` | MATERIALIZED | #68 | independent worker/verifier handoff packets |
+| #138 | `4f2c9d96bcdcc08447542c4faadd83183c9ee2ee` | MERGED | #69 | queue-state compilation from exact execution evidence |
+
+Cloud verification proves deterministic contracts and state transitions. It does not prove an active private worktree/scheduler/heartbeat carrier. Local execution remains in the Local Handoff queue.
+
+## Projection and optional-decision stacks
+
+| PR | Exact head | Disposition | Scope | Remaining work |
+|---:|---|---|---|---|
+| #129 | `d7fd8b0946b21187a0c8fc677a93d1a9192c3e6c` | MERGED | local deterministic Markdown/CSV/JSON export | Google Docs/Sheets/CodeXdoc adapters, OAuth, target IDs, provider receipts: #50/#70/#73/#74/#75 |
+| #130 | `15b9e7a7b66b171553d7b5f405024eee07465903` | MERGED, CONTRACT ONLY | decision packet schema/constructor for 3D/video/audio tracks | real evidence-bound Human outcomes and any new capability DAG: #51/#62/#76 |
+
+## Closed molecular branches
+
+Molecular branches were closed only after their exact commits became reachable through a verified convergence carrier. They are marked **MATERIALIZED**, not falsely described as independently merged into `main`.
+
+This preserves both review economy and auditability:
+
+1. leaf PR retains the one-behavior diff and negative controls;
+2. convergence PR records the semantic join;
+3. carrier PR proves the integrated exact subject;
+4. PR #54 records program-level integration;
+5. PR #44 remains the sole root delivery PR to `main`.
+
+## Remaining open PRs
+
+| PR | Base | State | Merge rule |
+|---:|---|---|---|
+| #54 | `codex/pr42-delivery-v2` | open integration PR | rerun exact-head CI; may merge only into PR #44's branch after implementation checks pass and known Human gates remain explicit |
+| #44 | `main` | open draft root delivery | **BLOCKED** until #25 and every required visual/Storybook/rights/provider/release admission passes |
+
+No other implementation PR should remain open merely because it was part of the historical stack.
+
+## Git Town local reconstruction
+
+Git Town is optional local tooling. It may help inspect or synchronize the remaining spine:
 
 ```bash
 git fetch --all --prune
 git switch codex/pr42-delivery-v2
 git pull --ff-only
-git town init
-git town append agent/shadow-architect-control-plane
-git town propose --draft
-git town sync --stack
-git town branch
+git switch agent/shadow-architect-control-plane
+git pull --ff-only
+git log --graph --decorate --oneline --all
 ```
 
-Exact commands must be checked against the installed Git Town version and repository configuration. Secret/token values never enter committed configuration.
+Do not run `git town ship`, force-push, rebase shared reviewed heads, delete audit branches, or resolve conflicts automatically without an explicit Local Handoff packet and Human authority.
 
-## Merge order
+## Required PR metadata
 
-1. PR #44 only after its required gates and Human decisions permit.
-2. PR #54 control-plane documentation.
-3. Contract foundations A1, C1, D1 and E1 in any order after PR #54, subject to review capacity.
-4. Independent leaves within each accepted foundation.
-5. Convergence branch for each workstream.
-6. Cross-workstream integration only when a true dependency exists.
-7. Optional projection/product tracks independently.
-8. Production provider only through #25 Human/local sequence.
+Every future molecular PR must record:
 
-After any parent merge, remaining children must be synchronized and reverified. Previous head receipts become stale if the head changes.
-
-## Traceability requirements
-
-Every stack entry must remain traceable through:
-
-```text
-source manifest
-  -> architecture finding
-  -> issue
-  -> task packet
-  -> attempt + lease
-  -> branch + commits
-  -> worker result
-  -> independent verifier
-  -> convergence decision
-  -> PR
-  -> canonical main receipt or Local Handoff Queue
+```yaml
+program_issue: <number>
+owning_issue: <number>
+parent_pr: <number-or-NOT_APPLICABLE>
+base_ref: <exact-ref>
+base_sha: <exact-sha>
+head_ref: <exact-ref>
+head_sha: <exact-sha>
+writeset: []
+excluded_paths: []
+commands: []
+negative_controls: []
+artifacts: []
+verification_state: <state>
+convergence_owner: <pr-or-NOT_APPLICABLE>
+release_authority: false
 ```
 
-Missing any required link blocks closure.
+## Merge invariants
+
+1. One behavior per molecular branch.
+2. True dependencies use parent/child ancestry; independent leaves remain siblings.
+3. Shared semantic files have one convergence owner.
+4. A worker never accepts its own result.
+5. Parent movement invalidates child receipts until synchronized and reverified.
+6. Exact commit reachability is checked before closing a molecular PR.
+7. Internal integration does not imply Human admission or production release.
+8. Automatic conflict resolution, automatic `main` merge, and release promotion remain forbidden.
+9. PR #44 is the only current route to `main`.
+10. The latest [Shadow Architect Monitor](SHADOW_ARCHITECT_MONITOR.md) and [Local Handoff Queue](LOCAL_HANDOFF_EXECUTION_QUEUE.md) govern blockers.
