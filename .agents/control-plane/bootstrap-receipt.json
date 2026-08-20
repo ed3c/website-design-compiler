@@ -1,0 +1,177 @@
+{
+  "artifacts": [
+    {
+      "managed_block_sha256": "f989a1c9e4253baa771e9d729fcbd9b75096f7609d44da7af9d4c63c90d3de8f",
+      "path": ".agents/README.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "path": ".agents/bindings/repository-control-plane.json",
+      "sha256": "59dbe06647ad7aaa58fc5ce8084982586547b4cbbd25d7a8a5ca1b725c48465a",
+      "state": "GENERATED"
+    },
+    {
+      "managed_block_sha256": "793b40856e2a5b689c25a0abef4b94a0719fe166f67f2ef7ba5bc0a7fc7a88db",
+      "path": ".agents/control-plane/README.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "path": ".agents/control-plane/profile.json",
+      "sha256": "f7ed3ad7b4409df9d2185b1b4442fadf7ed063f9e2c8ec67273bf15f7e3e3f19",
+      "state": "GENERATED"
+    },
+    {
+      "path": ".agents/control-plane/requirements.json",
+      "sha256": "f526ed0f91cc3a45c5077fe58a4b5eaa5e41f1a778fb6fa969cac9a9b8e1e175",
+      "state": "GENERATED"
+    },
+    {
+      "path": ".agents/control-plane/source.json",
+      "sha256": "f7722191fbe0f54be3f03fa437802d4980abd41daab20278a88c076cfe69197b",
+      "state": "GENERATED"
+    },
+    {
+      "path": ".github/workflows/domain-decoupling-bootstrap.yml",
+      "sha256": "eb1214617b09a054bff1ff36deb5abfcdbaa8551d058db4368cce5291c9a557f",
+      "state": "GENERATED"
+    },
+    {
+      "managed_block_sha256": "d9d842ae181599f5667738cd45cd2b48161bca54aa4fb4fb8e80a2661b571108",
+      "path": "AGENTS.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "35af5772b04acf91c1acf5e137c8c704d6bfe050e0cad8cf3d0ad1bea46e7c96",
+      "path": "ARCHITECTURE.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "209d9f2b0de3fb79bd3ee3759208521c102deddb4324f4ba28220658ee68744c",
+      "path": "CLAUDE.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "85beaf9a56d27964cac9d6cc4aa757ad1265c284f1cd0ea1cc6d08584cf8201f",
+      "path": "CONTEXT.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "2609bd07b3deacd705637191531ec4b74cbdb2c02b334098434eeb2bece9f415",
+      "path": "README.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "bf61a97c93d400d8bb93031f4d406029787bc07c2722c2319288559df5c8e04e",
+      "path": "docs/INDEX.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "746043335c49c0288166440fc469163cf54568e2070fe9545f423bd99db80e08",
+      "path": "docs/architecture/AGENTS.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "20a573b3d86595f83a28b4d9931aa928994847d15cd16112bdd5c4ca9d7ffda8",
+      "path": "docs/architecture/DOCUMENT_ROUTING.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "e2607a46d6c3a30cd2dd795fa26e2a6802c64eea6628d7a88af2d739883cac17",
+      "path": "docs/architecture/DOMAIN_DECOUPLING.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "d24f6d4243935b0d3bbd896470c78ca92104b56ddd0ca6206307eef048c208e5",
+      "path": "docs/architecture/STATE_MACHINES.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "d3a3880804cf84498677f18806b65d73f6d75269f8416bdb5411a18099c615c4",
+      "path": "docs/integration/CROSS_REPO_INTEGRATION.md",
+      "state": "MANAGED_BLOCK"
+    },
+    {
+      "managed_block_sha256": "9bea31e8e80f13d4f9ce68e8e29acc9fb854f174e7ebd515d9d0348525a06b9b",
+      "path": "docs/traceability/TRACEABILITY_INDEX.md",
+      "state": "MANAGED_BLOCK"
+    }
+  ],
+  "authority": {
+    "automatic_conflict_resolution": false,
+    "automatic_merge": false,
+    "credential_values": false,
+    "production_writeback": false,
+    "provider_activation": false,
+    "visibility_change": false
+  },
+  "binding": {
+    "content_sha256": "592f279eb593b3b636de46de39d0108a1c4baf48ebb0bc25383274c77b8e604d",
+    "path": ".agents/bindings/repository-control-plane.json",
+    "semantic_sha256": "0d609a572a3dc83f45f90a475ff023520e3969f5d551550ebc4e1894db375508"
+  },
+  "consumer": {
+    "generated_subject_sha256": "5bb48d30d469f7615534a87c020296329cf5c510aca2cc2ef0f17cd1227a8b78",
+    "repository": "ed3c/website-design-compiler"
+  },
+  "decision_record_policy": "OBSERVATIONS_AND_DECISIONS_ONLY",
+  "evidence": {
+    "agent_runtime_execution": "NOT_EXERCISED",
+    "byte_readback": "PASS",
+    "consumer_binding_generation": "PASS",
+    "host_skill_discovery": "NOT_EXERCISED",
+    "immutable_source_binding": "PASS",
+    "merge": "HUMAN_ADMIT_REQUIRED",
+    "provider_execution": "NOT_EXERCISED",
+    "release": "HUMAN_ADMIT_REQUIRED",
+    "rollback_execution": "NOT_EXERCISED",
+    "route_scaffold": "PASS"
+  },
+  "profile": {
+    "id": "default",
+    "sha256": "4b97a2b2be777eba064ce6a02a6cf44bbf61f5a5dcc853527641e42525cfc280",
+    "skills": [
+      "shared-skills-infra",
+      "procedural-shadow-runtime",
+      "agentic-tech-lead-orchestration",
+      "spatial-loop-systems-engineering",
+      "git-town-stacked-pr-worker",
+      "dual-forge-repository-loop"
+    ]
+  },
+  "receipt_sha256": "5878e8deca9f443d71390acd0a17066477dac0148658d84875911ce51debe591",
+  "rollback": {
+    "commit": "56d6233da046592a7d734918b1bb8b3c1c845b2f",
+    "tree": "1f1d46057cb4e704617bb184adde44ad368b8020"
+  },
+  "schema": "shared-skills/consumer-bootstrap-receipt/v1",
+  "shared_source": {
+    "adapter": {
+      "git_blob": "731e6292c19fbbe1066a84b555a3657cce1884ee",
+      "id": "github-actions-consumer-bootstrap/v1",
+      "path": "skills/shared-skills-infra/modules/github-actions-consumer-bootstrap.yml",
+      "sha256": "eb1214617b09a054bff1ff36deb5abfcdbaa8551d058db4368cce5291c9a557f"
+    },
+    "generator": {
+      "git_blob": "efaacb6f0caad26a318234aa38833d4676f32a63",
+      "path": "skills/shared-skills-infra/scripts/shared_skills.py",
+      "sha256": "cbfd944cfb8dc2f849592b5dec7ba4d66492fbc086f37b2139312c4d63cb9ae3"
+    },
+    "interface": {
+      "git_blob": "a8725a09bae14dd606ca627d3c41a5c9e699620c",
+      "id": "DOMAIN-DECOUPLING-V1",
+      "path": "docs/architecture/DOMAIN_DECOUPLING.md",
+      "sha256": "c4b2c7edb36cd86bd2792471703704d411e94a8e66052eccb4214ca72e819329"
+    },
+    "profile": {
+      "git_blob": "0bbc22e24e1f19b6dd7cae529652412bdac8f6f2",
+      "path": "skills/shared-skills-infra/references/repository-control-plane-profile.default.json",
+      "sha256": "144b8e0a7c118a356aeb7fb90be4e5d1996bd474b73e8dbde287bbfa647a4a94"
+    },
+    "schema": "shared-skills/source-pin/v1",
+    "source": {
+      "commit": "ccef97dedd7ea8b1873e3afa130ca82b8eabb413",
+      "repository": "https://github.com/ed3c/skills-shared",
+      "tree": "fa804c843df0eead9f00df3d752522d6f95e8968"
+    }
+  }
+}
