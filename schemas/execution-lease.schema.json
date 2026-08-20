@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://ed3c.github.io/website-design-compiler/schemas/execution-lease.schema.json",
+  "title":"Execution Lease","type":"object","additionalProperties":false,
+  "required":["schema","leaseId","taskIdentitySha256","attemptId","headSha","writeset","state","issuedAt","expiresAt","leaseIdentitySha256"],
+  "properties":{
+    "schema":{"const":"website-design-compiler/execution-lease/v1"},"leaseId":{"$ref":"#/$defs/id"},"taskIdentitySha256":{"$ref":"#/$defs/sha256"},"attemptId":{"$ref":"#/$defs/id"},"headSha":{"$ref":"#/$defs/gitSha"},
+    "writeset":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/path"}},"state":{"enum":["PROPOSED","ACTIVE","CHECKPOINTED","RELEASED","LOST","EXPIRED"]},"issuedAt":{"type":"string","format":"date-time"},"expiresAt":{"type":"string","format":"date-time"},"leaseIdentitySha256":{"$ref":"#/$defs/sha256"}
+  },
+  "$defs":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{2,127}$"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"gitSha":{"type":"string","pattern":"^[a-f0-9]{40}$"},"path":{"type":"string","pattern":"^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\).+$"}}
+}

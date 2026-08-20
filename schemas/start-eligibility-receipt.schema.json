@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ed3c.github.io/website-design-compiler/schemas/start-eligibility-receipt.schema.json",
+  "title": "Start Eligibility Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","programIdentitySha256","taskId","taskIdentitySha256","dependencySatisfied","exactSubjectBound","state","diagnostics","receiptIdentitySha256"],
+  "properties": {
+    "schema": { "const": "website-design-compiler/start-eligibility-receipt/v1" },
+    "programIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "taskId": { "type": "string", "minLength": 3 },
+    "taskIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "dependencySatisfied": { "type": "boolean" },
+    "exactSubjectBound": { "type": "boolean" },
+    "state": { "enum": ["STARTABLE","BLOCKED"] },
+    "diagnostics": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "receiptIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
